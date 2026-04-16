@@ -26,15 +26,13 @@ if (process.env.NODE_ENV !== "production") {
 const logger = pino(loggerOptions);
 
 const app: Express = express();
-
-app.use(
-  cors({
-    origin: ["http://localhost:5173", "https://project-yu-diji-crypto-a1qwh8ahv-jtech1805-7503s-projects.vercel.app"], // The exact URL of your Vite frontend (NO trailing slash!)
-    credentials: true,               // THIS is what allows the httpOnly cookies to pass
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-request-id"],
-  })
-);
+// The Bulletproof CORS Configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Fallback to local Vite
+  credentials: true, // THIS IS REQUIRED FOR JWT COOKIES
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+}));
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 app.use((req: Request, _res: Response, next: NextFunction): void => {
