@@ -93,14 +93,14 @@
 //   //         apiClient.get('/monitors'),
 //   //         apiClient.get('/alerts')
 //   //       ]);
-        
+
 //   //       setMonitors(monitorsRes.data);
 //   //       setInitialAlerts(alertsRes.data);
 
 //   //       // Tell WS to subscribe to these symbols
 //   //       const symbols = monitorsRes.data.map((m: Monitor) => m.symbol);
 //   //       if (symbols.length > 0) updateSubscriptions(symbols, []);
-        
+
 //   //     } catch (error) {
 //   //       console.error("Failed to fetch dashboard data");
 //   //     }
@@ -114,7 +114,7 @@
 //           apiClient.get('/monitors'),
 //           apiClient.get('/alerts')
 //         ]);
-        
+
 //         // BULLETPROOFING: Force React to find the array, no matter how the backend wraps it.
 //         const monitorsArray = Array.isArray(monitorsRes.data) ? monitorsRes.data : (monitorsRes.data?.data || []);
 //         const alertsArray = Array.isArray(alertsRes.data) ? alertsRes.data : (alertsRes.data?.data || []);
@@ -124,7 +124,7 @@
 
 //         const symbols = monitorsArray.map((m: Monitor) => m.symbol);
 //         if (symbols.length > 0) updateSubscriptions(symbols, []);
-        
+
 //       } catch (error) {
 //         console.error("Failed to fetch dashboard data", error);
 //       }
@@ -157,7 +157,7 @@
 //       </div>
 
 //       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
 //         {/* Left Column: Active Monitors */}
 //         <div className="lg:col-span-1 space-y-4">
 //           <h2 className="text-lg font-semibold text-zinc-400 mb-4 px-1">Active Tripwires</h2>
@@ -190,7 +190,7 @@
 //           <h2 className="text-lg font-semibold text-zinc-400 mb-4 px-1 flex items-center">
 //             <Sparkles className="w-4 h-4 mr-2 text-purple-500" /> Intelligence Feed
 //           </h2>
-          
+
 //           <div className="space-y-4">
 //             <AnimatePresence>
 //               {alerts.length === 0 && (
@@ -217,7 +217,7 @@
 //                       {new Date(alert.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
 //                     </div>
 //                   </div>
-                  
+
 //                   {/* AI Output Box */}
 //                   <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-4">
 //                     <div className="flex items-center mb-2">
@@ -245,11 +245,11 @@
 //     </div>
 //   );
 // }
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Trash2, Sparkles, TrendingDown, TrendingUp, Clock,
+  Plus, Trash2, Sparkles, TrendingDown,
   LogOut, Search, Wifi, AlertTriangle, BarChart3, Settings, Share2, X, Rocket
 } from 'lucide-react';
 import { apiClient } from '../api/client';
@@ -307,7 +307,7 @@ function MonitorItem({
   onDelete: (id: string, symbol: string) => void;
 }) {
   // Simulate a subtle change % for display (real data would come from WS)
-  const changePercent = null; // set to real value if available
+  // const changePercent = null; // set to real value if available
   const positive = true;
 
   return (
@@ -445,7 +445,7 @@ interface Alert {
 }
 
 const sentimentConfig: Record<string, { label: string; classes: string }> = {
-  Panic:   { label: 'Panic',   classes: 'text-red-400 border-red-400/30 bg-red-400/10' },
+  Panic: { label: 'Panic', classes: 'text-red-400 border-red-400/30 bg-red-400/10' },
   Bearish: { label: 'Bearish', classes: 'text-orange-400 border-orange-400/30 bg-orange-400/10' },
 };
 
@@ -477,7 +477,7 @@ function AlertCard({ alert }: { alert: Alert }) {
             <div className="flex items-center gap-1.5 mt-0.5">
               <TrendingDown className="w-3.5 h-3.5 text-red-400" />
               <span className="text-sm font-semibold text-red-400">
-                Dropped {alert.dropPercentage}% 
+                Dropped {alert.dropPercentage}%
               </span>
             </div>
           </div>
@@ -620,11 +620,10 @@ function AddMonitorModal({ open, onClose }: { open: boolean; onClose: () => void
                 <button
                   key={type}
                   onClick={() => setSelectedTrigger(type)}
-                  className={`flex-1 px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
-                    selectedTrigger === type
-                      ? 'bg-violet-600 text-white'
-                      : 'bg-white/[0.03] text-zinc-500 hover:bg-white/[0.07] hover:text-zinc-300'
-                  }`}
+                  className={`flex-1 px-3 py-2.5 text-xs font-medium transition-all duration-200 ${selectedTrigger === type
+                    ? 'bg-violet-600 text-white'
+                    : 'bg-white/[0.03] text-zinc-500 hover:bg-white/[0.07] hover:text-zinc-300'
+                    }`}
                 >
                   {type}
                 </button>
@@ -669,7 +668,7 @@ export function Dashboard() {
   const [showModal, setShowModal] = useState(false);
   const { livePrices, alerts, setInitialAlerts, updateSubscriptions } = useWebSocket();
   const { logout } = useAuth();
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -698,7 +697,7 @@ export function Dashboard() {
     fetchData();
   }, []);
 
-  const deleteMonitor = async (id: string, symbol: string) => {
+  const deleteMonitor = async (id: string) => {
     try {
       await apiClient.delete(`/monitors/${id}`);
       setMonitors((prev) => prev.filter((m) => m._id !== id));

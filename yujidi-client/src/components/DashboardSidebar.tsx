@@ -1,4 +1,4 @@
-import { TrendingDown, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { useWebSocket } from "../context/WebSocketContext";
 import { apiClient } from "../api/client";
@@ -67,10 +67,10 @@ export function DashboardSidebar({ monitors, onAddMonitor, refreshData }: Dashbo
         <div className="space-y-1 mt-3">
           {monitors.length === 0 && <p className="text-xs text-muted-foreground px-4 text-center mt-6">No active tripwires.</p>}
           {monitors.map((monitor) => (
-            <AssetItem 
-              key={monitor._id} 
-              monitor={monitor} 
-              livePrice={livePrices[monitor.symbol]} 
+            <AssetItem
+              key={monitor._id}
+              monitor={monitor}
+              livePrice={livePrices[monitor.symbol]}
               onDelete={handleDelete}
             />
           ))}

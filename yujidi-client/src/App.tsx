@@ -6,7 +6,7 @@ import { ProtectedRoute } from './components/layout/ProtectedRoute'
 import { useAuth } from './context/AuthContext'
 import { Dashboard } from './pages/Dashboard'
 import { DetailedReport } from './pages/DetailedReport'
-import { Login } from './pages/Login'
+// import { Login } from './pages/Login'
 import { SetupMonitor } from './pages/SetupMonitor'
 import LandingPage from './pages/LandingPage'
 

@@ -1,4 +1,4 @@
-import { Sparkles, Settings, Share2, TrendingDown, TrendingUp, AlertTriangle, BarChart3 } from "lucide-react";
+import { Sparkles, TrendingDown, TrendingUp, AlertTriangle, BarChart3 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { useWebSocket } from "../context/WebSocketContext";
 import { formatDistanceToNow } from "date-fns"; // Make sure to npm install date-fns
@@ -12,7 +12,7 @@ const urgencyStyles: Record<string, string> = {
 
 function AlertCard({ alert }: { alert: any }) {
   const isDrop = alert.dropPercentage > 0;
-  
+
   return (
     <div className="glass-card p-6 hover:border-white/[0.12] transition-all duration-300 animate-slide-up group">
       <div className="flex items-center justify-between mb-4">

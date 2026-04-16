@@ -35,7 +35,7 @@ export function FeatureGrid() {
           Three layers of detection working together to give you an unfair advantage.
         </p>
         <div className="grid md:grid-cols-3 gap-6">
-          {features.map((feature, i) => (
+          {features.map((feature) => (
             <div
               key={feature.title}
               className={`glass-card p-8 ${feature.glowClass} hover:-translate-y-1 transition-all duration-300 group`}

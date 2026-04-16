@@ -101,7 +101,7 @@
 // }
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 
-interface Alert {
+export interface Alert {
   _id: string;
   symbol: string;
   triggerPrice: number;
@@ -133,12 +133,12 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        
+
         // Handle Binance Price Ticks
         if (data.currentPrice && data.symbol) {
           setLivePrices((prev) => ({ ...prev, [data.symbol]: parseFloat(data.currentPrice) }));
         }
-        
+
         // Handle AI Alerts
         if (data.type === 'NEW_ALERT' && data.payload) {
           setAlerts((prev) => [data.payload, ...prev]);
