@@ -29,7 +29,7 @@ const app: Express = express();
 
 app.use(
   cors({
-    origin: "http://localhost:5173", // The exact URL of your Vite frontend (NO trailing slash!)
+    origin: ["http://localhost:5173", "https://project-yu-diji-crypto-a1qwh8ahv-jtech1805-7503s-projects.vercel.app"], // The exact URL of your Vite frontend (NO trailing slash!)
     credentials: true,               // THIS is what allows the httpOnly cookies to pass
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "x-request-id"],
