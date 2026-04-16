@@ -100,7 +100,11 @@
 //   return context
 // }
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-
+const isProd = import.meta.env.PROD;
+// Notice the 'wss://' for production!
+const WS_URL = isProd
+  ? 'wss://project-yudiji-crypto.onrender.com'
+  : 'ws://localhost:3006';
 export interface Alert {
   _id: string;
   symbol: string;
@@ -127,7 +131,7 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
 
   useEffect(() => {
     // Connect to your WebSocket server
-    const ws = new WebSocket('ws://localhost:3006');
+    const ws = new WebSocket(WS_URL);
     wsRef.current = ws;
 
     ws.onmessage = (event) => {
