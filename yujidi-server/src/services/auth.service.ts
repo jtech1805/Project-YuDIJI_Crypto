@@ -16,7 +16,8 @@ const credentialSchema = z.object({
     .string()
     .min(8, "Password must contain at least 8 characters")
     .max(128, "Password is too long"),
-    name:z.string()
+  name: z
+    .string()
 });
 const logincredentialSchema = z.object({
   email: z.string().email().transform((value): string => value.toLowerCase().trim()),
@@ -34,6 +35,7 @@ export interface AuthTokens {
 export interface RegisterInput {
   email: string;
   password: string;
+  name: string
 }
 
 export interface LoginInput {
@@ -75,7 +77,7 @@ export class AuthService {
     const user = await UserModel.create({
       email: parsedInput.data.email,
       password: parsedInput.data.password,
-      name:parsedInput.data.name
+      name: parsedInput.data.name
     });
 
     return {

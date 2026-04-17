@@ -1,4 +1,4 @@
-import type { Request, Response,NextFunction } from "express";
+import type { Request, Response, NextFunction } from "express";
 // Adjust the import path/extension if needed
 import { AppError } from "../errors/AppError.js";
 import { AuthService } from "../services/auth.service.js";
@@ -40,6 +40,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   const result = await authService.registerUser({
     email: req.body.email as string,
     password: req.body.password as string,
+    name: req.body.name as string
   });
 
   res.status(201).json({
@@ -94,7 +95,7 @@ export const getCurrentUser = async (
   try {
     // Note: Adjust `req.userId` to `req.user.id` or `req.user` depending on exactly 
     // how your requireAuth middleware attaches the ID to the request object.
-    const userId = (req as any).userId || (req as any).user; 
+    const userId = (req as any).userId || (req as any).user;
 
     if (!userId) {
       return next(new AppError("Not authenticated", 401));

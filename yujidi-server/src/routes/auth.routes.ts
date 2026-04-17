@@ -12,21 +12,26 @@ const authBodySchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).max(128),
 });
+const authResgBodySchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8).max(128),
+  name: z.string()
+});
 
 const validateBody =
   <T extends z.ZodType>(schema: T) =>
-  (req: Request, _res: Response, next: NextFunction): void => {
-    const parsedBody = schema.safeParse(req.body);
-    if (!parsedBody.success) {
-      next(new AppError("Invalid request body", 400));
-      return;
-    }
+    (req: Request, _res: Response, next: NextFunction): void => {
+      const parsedBody = schema.safeParse(req.body);
+      if (!parsedBody.success) {
+        next(new AppError("Invalid request body", 400));
+        return;
+      }
 
-    req.body = parsedBody.data;
-    next();
-  };
+      req.body = parsedBody.data;
+      next();
+    };
 
-authRouter.post("/register", validateBody(authBodySchema), asyncHandler(register));
+authRouter.post("/register", validateBody(authResgBodySchema), asyncHandler(register));
 authRouter.post("/login", validateBody(authBodySchema), asyncHandler(login));
 authRouter.post("/refresh", asyncHandler(refresh));
 authRouter.post("/logout", asyncHandler(logout));
