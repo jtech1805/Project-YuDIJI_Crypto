@@ -100,6 +100,7 @@
 //   return context
 // }
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { useAuth } from './AuthContext';
 const isProd = import.meta.env.PROD;
 // Notice the 'wss://' for production!
 const WS_URL = isProd
@@ -128,34 +129,79 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
+  const { user } = useAuth();
 
+  // useEffect(() => {
+  //   // Connect to your WebSocket server
+  //   const ws = new WebSocket(WS_URL);
+  //   wsRef.current = ws;
+
+  //   ws.onmessage = (event) => {
+  //     try {
+  //       const data = JSON.parse(event.data);
+
+  //       // Handle Binance Price Ticks
+  //       if (data.currentPrice && data.symbol) {
+  //         setLivePrices((prev) => ({ ...prev, [data.symbol]: parseFloat(data.currentPrice) }));
+  //       }
+
+  //       // Handle AI Alerts
+  //       if (data.type === 'NEW_ALERT' && data.payload) {
+  //         setAlerts((prev) => [data.payload, ...prev]);
+  //       }
+  //     } catch (err) {
+  //       console.error('Error parsing WS message', err);
+  //     }
+  //   };
+
+  //   return () => {
+  //     ws.close();
+  //   };
+  // }, []);
   useEffect(() => {
-    // Connect to your WebSocket server
-    const ws = new WebSocket(WS_URL);
-    wsRef.current = ws;
+    // 1. Connect if user logs in
+    if (user && !wsRef.current) {
+      const ws = new WebSocket(WS_URL);
+      wsRef.current = ws;
 
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-
-        // Handle Binance Price Ticks
-        if (data.currentPrice && data.symbol) {
-          setLivePrices((prev) => ({ ...prev, [data.symbol]: parseFloat(data.currentPrice) }));
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.currentPrice && data.symbol) {
+            setLivePrices((prev) => ({ ...prev, [data.symbol]: parseFloat(data.currentPrice) }));
+          }
+          if (data.type === 'NEW_ALERT' && data.payload) {
+            setAlerts((prev) => [data.payload, ...prev]);
+          }
+        } catch (err) {
+          console.error('Error parsing WS message', err);
         }
+      };
+    }
 
-        // Handle AI Alerts
-        if (data.type === 'NEW_ALERT' && data.payload) {
-          setAlerts((prev) => [data.payload, ...prev]);
-        }
-      } catch (err) {
-        console.error('Error parsing WS message', err);
+    // 2. Disconnect and wipe data if user logs out
+    if (!user && wsRef.current) {
+      console.log('User logged out. Closing WebSocket...');
+      
+      // Force close the socket. Your backend will automatically detect this 
+      // via the 'close' event and clear the memory on the server side.
+      wsRef.current.close();
+      wsRef.current = null;
+      
+      // Wipe the frontend memory
+      setLivePrices({});
+      setAlerts([]);
+    }
+
+    // 3. Safety cleanup on unmount
+    return () => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.close();
+        wsRef.current = null;
       }
     };
-
-    return () => {
-      ws.close();
-    };
-  }, []);
+  // CRITICAL FIX: Only watch 'user'. Do NOT watch 'livePrices' here!
+  }, [user]);
 
   const updateSubscriptions = (subscribe: string[], unsubscribe: string[]) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
