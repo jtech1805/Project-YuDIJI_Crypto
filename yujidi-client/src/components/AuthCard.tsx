@@ -18,19 +18,43 @@ export function AuthCard() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+//   const handleSubmit = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     setError("");
+//     setIsLoading(true);
+
+//     try {
+//       if (isSignUp) {
+//         await apiClient.post("/auth/register", { name, email, password });
+//         login({ email, password });
+//       } else {
+//         // const { data } = await apiClient.post("/auth/login", { email, password });
+//         login({ email, password });
+//       }
+//       navigate("/dashboard");
+//     } catch (err: any) {
+//       setError(err.response?.data?.message || "Authentication failed");
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-
+  
     try {
       if (isSignUp) {
         await apiClient.post("/auth/register", { name, email, password });
-        login({ email, password });
+        // Add await here!
+        await login({ email, password }); 
       } else {
-        // const { data } = await apiClient.post("/auth/login", { email, password });
-        login({ email, password });
+        // If the API call is happening inside your Context's login function:
+        // Add await here!
+        await login({ email, password });
       }
+      
+      // Now it will only navigate AFTER the auth state is fully confirmed
       navigate("/dashboard");
     } catch (err: any) {
       setError(err.response?.data?.message || "Authentication failed");
