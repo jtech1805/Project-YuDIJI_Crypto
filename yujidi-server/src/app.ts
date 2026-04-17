@@ -26,6 +26,8 @@ if (process.env.NODE_ENV !== "production") {
 const logger = pino(loggerOptions);
 
 const app: Express = express();
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: true }));
 // The Bulletproof CORS Configuration
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Fallback to local Vite
