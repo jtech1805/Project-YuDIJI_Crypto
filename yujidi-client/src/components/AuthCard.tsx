@@ -10,50 +10,50 @@ import { apiClient } from "../api/client";
 export function AuthCard() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("founder@yujidi.com");
-  const [password, setPassword] = useState("FAANGSecure!2026");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
 
-//   const handleSubmit = async (e: React.FormEvent) => {
-//     e.preventDefault();
-//     setError("");
-//     setIsLoading(true);
+  //   const handleSubmit = async (e: React.FormEvent) => {
+  //     e.preventDefault();
+  //     setError("");
+  //     setIsLoading(true);
 
-//     try {
-//       if (isSignUp) {
-//         await apiClient.post("/auth/register", { name, email, password });
-//         login({ email, password });
-//       } else {
-//         // const { data } = await apiClient.post("/auth/login", { email, password });
-//         login({ email, password });
-//       }
-//       navigate("/dashboard");
-//     } catch (err: any) {
-//       setError(err.response?.data?.message || "Authentication failed");
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
-const handleSubmit = async (e: React.FormEvent) => {
+  //     try {
+  //       if (isSignUp) {
+  //         await apiClient.post("/auth/register", { name, email, password });
+  //         login({ email, password });
+  //       } else {
+  //         // const { data } = await apiClient.post("/auth/login", { email, password });
+  //         login({ email, password });
+  //       }
+  //       navigate("/dashboard");
+  //     } catch (err: any) {
+  //       setError(err.response?.data?.message || "Authentication failed");
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   };
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-  
+
     try {
       if (isSignUp) {
         await apiClient.post("/auth/register", { name, email, password });
         // Add await here!
-        await login({ email, password }); 
+        await login({ email, password });
       } else {
         // If the API call is happening inside your Context's login function:
         // Add await here!
         await login({ email, password });
       }
-      
+
       // Now it will only navigate AFTER the auth state is fully confirmed
       navigate("/dashboard");
     } catch (err: any) {

@@ -26,13 +26,18 @@ body {
 
 
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-/* 1. Define the custom Lovable colors for Tailwind v4 */
+/* 1. Tailwind v4 Theme Configuration (The Missing Link!) */
 @theme {
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
+  /* This tells Tailwind v4 to generate classes like bg-background, text-primary, and border-border */
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
   --color-secondary: hsl(var(--secondary));
@@ -41,49 +46,97 @@ body {
   --color-muted-foreground: hsl(var(--muted-foreground));
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
+  
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
-  
-  /* Trading Specific Colors */
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  /* Custom Trading Colors */
   --color-bullish: hsl(var(--bullish));
   --color-bearish: hsl(var(--bearish));
+  --color-bull: hsl(var(--bull));
+  --color-bear: hsl(var(--bear));
 
-  /* Custom Animations */
+  /* Animations */
   --animate-slide-up: slide-up 0.4s ease-out forwards;
   --animate-fade-in: fade-in 0.3s ease-out forwards;
 }
 
-/* 2. Assign the actual raw HSL color values to the CSS variables */
+/* 2. Base Layer & Root Variables (Dark Mode Exclusive) */
 @layer base {
   :root {
-    --background: 0 0% 4%; /* #0A0A0A */
-    --foreground: 0 0% 98%;
-    --border: 0 0% 12%;
-    --input: 0 0% 15%;
-    --primary: 270 100% 60%; /* Neon Purple */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 65%;
-    --accent: 270 100% 60%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 85% 60%;
-    --destructive-foreground: 0 0% 98%;
-    
-    --bullish: 142 71% 45%; /* Neon Green */
-    --bearish: 0 85% 55%;   /* Neon Red */
+    --background: 222 47% 4%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 40% 6%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 5%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 100% 60%;
+    --primary-foreground: 222 47% 4%;
+    --primary-glow: 210 100% 70%;
+
+    --secondary: 222 30% 12%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 222 30% 10%;
+    --muted-foreground: 215 20% 60%;
+
+    --accent: 222 30% 14%;
+    --accent-foreground: 210 40% 98%;
+
+    --bullish: 152 76% 50%;
+    --bearish: 0 84% 60%;
+    --bull: 152 76% 50%;
+    --bear: 0 84% 60%;
+    --bull-glow: 152 90% 60%;
+    --bear-glow: 0 90% 65%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 20% 14%;
+    --input: 220 20% 14%;
+    --ring: 210 100% 60%;
+    --radius: 0.75rem;
+
+    --gradient-hero: radial-gradient(ellipse at top, hsl(210 100% 50% / 0.15), transparent 60%);
+    --gradient-panel: linear-gradient(135deg, hsl(222 40% 8% / 0.8), hsl(222 47% 5% / 0.8));
+    --gradient-bull: linear-gradient(135deg, hsl(var(--bull)), hsl(var(--bull-glow)));
+    --gradient-bear: linear-gradient(135deg, hsl(var(--bear)), hsl(var(--bear-glow)));
+
+    --glow-primary: 0 0 40px hsl(var(--primary) / 0.4);
+    --glow-bull: 0 0 30px hsl(var(--bull) / 0.5);
+    --glow-bear: 0 0 30px hsl(var(--bear) / 0.5);
   }
 
-  /* Apply base styling to the app */
+  /* This will now work perfectly! */
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
     -webkit-font-smoothing: antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
   }
 }
 
-/* 3. Define Keyframes for Framer-Motion alternatives */
+/* 3. Keyframes */
 @keyframes slide-up {
   0% { opacity: 0; transform: translateY(20px); }
   100% { opacity: 1; transform: translateY(0); }
@@ -93,12 +146,51 @@ body {
   100% { opacity: 1; }
 }
 
-/* 4. Define custom UI utility classes */
+/* 4. Components */
 @layer components {
   .glass-card {
-    @apply bg-zinc-900/50 border border-white/5 backdrop-blur-md rounded-2xl;
+    @apply bg-card/40 border border-white/5 backdrop-blur-md rounded-2xl;
   }
   .glow-green {
-    @apply shadow-[0_0_15px_rgba(168,85,247,0.3)];
+    box-shadow: 0 0 15px hsl(var(--bull) / 0.3);
+  }
+}
+
+/* 5. Custom Utilities */
+@layer utilities {
+  .grid-bg {
+    background-image:
+      linear-gradient(hsl(var(--border) / 0.5) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.5) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 80%);
+  }
+
+  .glass {
+    @apply backdrop-blur-md bg-card/40 border border-white/10;
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, hsl(var(--foreground)) 0%, hsl(var(--muted-foreground)) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .glow-primary {
+    box-shadow: var(--glow-primary);
+  }
+  .glow-bull {
+    box-shadow: var(--glow-bull);
+  }
+  .glow-bear {
+    box-shadow: var(--glow-bear);
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    scrollbar-width: none;
   }
 }
