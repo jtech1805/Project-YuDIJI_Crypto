@@ -1,104 +1,3 @@
-// import {
-//   createContext,
-//   useCallback,
-//   useContext,
-//   useEffect,
-//   useMemo,
-//   useRef,
-//   useState,
-//   type PropsWithChildren,
-// } from 'react'
-
-// export type Alert = {
-//   id: string
-//   symbol: string
-//   message: string
-//   severity: 'low' | 'medium' | 'high'
-//   createdAt: string
-// }
-
-// type WebSocketContextValue = {
-//   alerts: Alert[]
-//   subscribe: (symbols: string[]) => void
-// }
-
-// const WebSocketContext = createContext<WebSocketContextValue | undefined>(
-//   undefined,
-// )
-
-// export function WebSocketProvider({ children }: PropsWithChildren) {
-//   const wsRef = useRef<WebSocket | null>(null)
-//   const subscriptionsRef = useRef<Set<string>>(new Set())
-//   const [alerts, setAlerts] = useState<Alert[]>([])
-
-//   useEffect(() => {
-//     const ws = new WebSocket('ws://localhost:3000')
-//     wsRef.current = ws
-
-//     ws.onopen = () => {
-//       if (subscriptionsRef.current.size > 0) {
-//         ws.send(
-//           JSON.stringify({
-//             type: 'subscribe',
-//             symbols: [...subscriptionsRef.current],
-//           }),
-//         )
-//       }
-//     }
-
-//     ws.onmessage = (event) => {
-//       try {
-//         const data = JSON.parse(event.data) as
-//           | { type: 'alert'; payload: Alert }
-//           | { type: string }
-//         if (data.type === 'alert' && 'payload' in data) {
-//           setAlerts((prev) => [data.payload, ...prev].slice(0, 100))
-//         }
-//       } catch {
-//         // Ignore non-JSON messages while backend schema evolves.
-//       }
-//     }
-
-//     return () => {
-//       ws.close()
-//       wsRef.current = null
-//     }
-//   }, [])
-
-//   const subscribe = useCallback((symbols: string[]) => {
-//     subscriptionsRef.current = new Set(symbols)
-//     const ws = wsRef.current
-//     if (!ws || ws.readyState !== WebSocket.OPEN) {
-//       return
-//     }
-
-//     ws.send(
-//       JSON.stringify({
-//         type: 'subscribe',
-//         symbols,
-//       }),
-//     )
-//   }, [])
-
-//   const value = useMemo<WebSocketContextValue>(
-//     () => ({ alerts, subscribe }),
-//     [alerts, subscribe],
-//   )
-
-//   return (
-//     <WebSocketContext.Provider value={value}>
-//       {children}
-//     </WebSocketContext.Provider>
-//   )
-// }
-
-// export function useWebSocket() {
-//   const context = useContext(WebSocketContext)
-//   if (!context) {
-//     throw new Error('useWebSocket must be used within a WebSocketProvider')
-//   }
-//   return context
-// }
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useAuth } from './AuthContext';
 const isProd = import.meta.env.PROD;
@@ -118,6 +17,7 @@ export interface Alert {
 
 interface WebSocketContextType {
   livePrices: Record<string, number>;
+  livePriceschange: Record<string, number>;
   alerts: Alert[];
   updateSubscriptions: (subscribe: string[], unsubscribe: string[]) => void;
   setInitialAlerts: (historicalAlerts: Alert[]) => void;
@@ -127,6 +27,7 @@ const WebSocketContext = createContext<WebSocketContextType | undefined>(undefin
 
 export const WebSocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
+  const [livePriceschange, setLivePriceschange] = useState<Record<string, number>>({});
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
   const { user } = useAuth();
@@ -169,6 +70,7 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
           const data = JSON.parse(event.data);
           if (data.currentPrice && data.symbol) {
             setLivePrices((prev) => ({ ...prev, [data.symbol]: parseFloat(data.currentPrice) }));
+            setLivePriceschange((prev) => ({ ...prev, [data.symbol]: parseFloat(data.priceChangePercent) }));
           }
           if (data.type === 'NEW_ALERT' && data.payload) {
             setAlerts((prev) => [data.payload, ...prev]);
@@ -182,12 +84,12 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
     // 2. Disconnect and wipe data if user logs out
     if (!user && wsRef.current) {
       console.log('User logged out. Closing WebSocket...');
-      
+
       // Force close the socket. Your backend will automatically detect this 
       // via the 'close' event and clear the memory on the server side.
       wsRef.current.close();
       wsRef.current = null;
-      
+
       // Wipe the frontend memory
       setLivePrices({});
       setAlerts([]);
@@ -200,7 +102,7 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
         wsRef.current = null;
       }
     };
-  // CRITICAL FIX: Only watch 'user'. Do NOT watch 'livePrices' here!
+    // CRITICAL FIX: Only watch 'user'. Do NOT watch 'livePrices' here!
   }, [user]);
 
   const updateSubscriptions = (subscribe: string[], unsubscribe: string[]) => {
@@ -218,7 +120,7 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
   };
 
   return (
-    <WebSocketContext.Provider value={{ livePrices, alerts, updateSubscriptions, setInitialAlerts }}>
+    <WebSocketContext.Provider value={{ livePrices, livePriceschange, alerts, updateSubscriptions, setInitialAlerts }}>
       {children}
     </WebSocketContext.Provider>
   );
