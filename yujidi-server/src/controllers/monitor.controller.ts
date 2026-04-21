@@ -38,6 +38,7 @@ export const createMonitor = async (req: Request, res: Response): Promise<void> 
     symbol: req.body.symbol as string,
     thresholdPercentage: req.body.thresholdPercentage as number,
     timeWindowMinutes: req.body.timeWindowMinutes as number,
+    trigger: req.body.trigger as string
   });
 
   res.status(201).json({
