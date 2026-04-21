@@ -110,7 +110,9 @@ function MonitorItem({
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-foreground">{symbol}</span>
-            <span className="text-xs font-mono text-muted-foreground">{price}</span>
+            <span className="text-xs font-mono text-muted-foreground">{price != null
+              ? `$${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+              : '---'}</span>
           </div>
           <div className="flex items-center justify-between mt-1">
             <MiniSparkline symbol={symbol} positive={positive} />
