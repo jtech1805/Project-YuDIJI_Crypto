@@ -3,19 +3,44 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Trash2, Sparkles, TrendingDown,
-  Search, Wifi, AlertTriangle, BarChart3, Settings, Share2, TrendingUp,
+  Search, Wifi, AlertTriangle, BarChart3, Settings, Share2, TrendingUp, Zap, ArrowDownRight, Activity, CheckCircle2
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { useWebSocket } from '../context/WebSocketContext';
 import { AddMonitorModal } from '../components/dashboard/AddMonitorModal';
 // ─── Types ───────────────────────────────────────────────────────────────────
+type TriggerType = "spike" | "drop" | "Pattern";
 
 interface Monitor {
   _id: string;
   symbol: string;
   thresholdPercentage: number;
+  trigger: TriggerType;
+  timeWindowMinutes: number
 }
-
+const triggerMeta: Record<TriggerType, { icon: typeof Zap; label: string; color: string; bg: string; ring: string }> = {
+  spike: {
+    icon: Zap,
+    label: "Spike",
+    color: "text-bullish",
+    bg: "bg-bullish/10",
+    ring: "ring-bullish/20",
+  },
+  drop: {
+    icon: ArrowDownRight,
+    label: "Drop",
+    color: "text-bearish",
+    bg: "bg-bearish/10",
+    ring: "ring-bearish/20",
+  },
+  Pattern: {
+    icon: Activity,
+    label: "Pattern",
+    color: "text-ai-accent",
+    bg: "bg-ai-accent/10",
+    ring: "ring-ai-accent/20",
+  },
+};
 // ─── Mini Sparkline ───────────────────────────────────────────────────────────
 
 const MOCK_SPARKLINES: Record<string, number[]> = {
@@ -57,43 +82,87 @@ function MonitorItem({
 }: {
   monitor: Monitor;
   price: number | undefined;
-  change: number | undefined;
+  change: number;
   onDelete: (id: string, symbol: string) => void;
 }) {
   // Simulate a subtle change % for display (real data would come from WS)
   // const changePercent = null; // set to real value if available
-  const positive = true;
+  const positive = change ? change >= 0 : false;
+  const trigger = monitor?.trigger ? monitor?.trigger : 'spike'
+  const threshold = monitor.thresholdPercentage
+  const symbol = monitor.symbol
   // const positive = change ? change >= 0 : 0;
+  const meta = triggerMeta[trigger];
+  const TriggerIcon = meta?.icon;
+  // Determine if the move toward the trigger direction has breached threshold
+  const movement = trigger === "drop" ? -change : change; // Drop watches negative moves
+  const breached =
+    trigger === "Pattern" ? Math.abs(change) >= threshold : movement >= threshold;
+  const progress = Math.min(100, (Math.abs(movement) / threshold) * 100);
+  const distance = +(threshold - movement).toFixed(2);
   return (
-    <div className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-lg transition-colors cursor-pointer group">
-      <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-        {monitor.symbol.slice(0, 2)}
+    <div className="flex flex-col gap-2 px-3 py-3 hover:bg-secondary/40 rounded-lg transition-colors cursor-pointer group border border-transparent hover:border-border">
+      {/* Top row: identity + price */}
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-foreground flex-shrink-0">
+          {symbol.slice(0, 2)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-foreground">{symbol}</span>
+            <span className="text-xs font-mono text-muted-foreground">{price}</span>
+          </div>
+          <div className="flex items-center justify-between mt-1">
+            <MiniSparkline symbol={symbol} positive={positive} />
+            <span className={`text-xs font-mono flex items-center gap-0.5 ${positive ? "text-bullish" : "text-bearish"}`}>
+              {positive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {positive ? "+" : ""}{change}%
+            </span>
+          </div>
+        </div>
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-white">{monitor.symbol}</span>
-          <span className="text-xs font-mono text-zinc-400">
-            {price != null
-              ? `$${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-              : '---'}
-          </span>
-        </div>
-        <div className="flex items-center justify-between mt-1">
-          <MiniSparkline symbol={monitor.symbol} positive={positive} />
-          <span className={`text-xs font-mono flex items-center gap-0.5 ${positive ? "text-bullish" : "text-bearish"}`}>
-            {positive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-            {positive ? "+" : ""}{change}%
-          </span>
-        </div>
-        <div className='flex items-end justify-end'><button
-          onClick={(e) => { e.stopPropagation(); onDelete(monitor._id, monitor.symbol); }}
-          className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-500 transition-all ml-2"
-          title="Remove monitor"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button></div>
 
+      {/* Trigger row */}
+      <div className="flex items-center justify-between gap-2">
+        <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md ring-1 ${meta.bg} ${meta.ring}`}>
+          <TriggerIcon className={`w-3 h-3 ${meta.color}`} />
+          <span className={`text-[10px] font-semibold uppercase tracking-wider ${meta.color}`}>
+            {meta.label}
+          </span>
+          <span className="text-[10px] font-mono text-muted-foreground">
+            ≥ {threshold}%
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          {breached ? (
+            <span className="flex items-center gap-1 text-[10px] font-mono text-bullish">
+              <AlertTriangle className="w-3 h-3" />
+              TRIGGERED
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground">
+              <CheckCircle2 className="w-3 h-3" />
+              {distance > 0 ? `${distance}% away` : "armed"}
+            </span>
+          )}
+        </div>
       </div>
+
+      {/* Threshold progress bar */}
+      <div className="h-1 w-full bg-secondary/60 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${breached ? meta.color.replace("text-", "bg-") : "bg-muted-foreground/40"
+            }`}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <div className='flex items-end justify-end'><button
+        onClick={(e) => { e.stopPropagation(); onDelete(monitor._id, monitor.symbol); }}
+        className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-500 transition-all ml-2"
+        title="Remove monitor"
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button></div>
     </div>
   );
 }
