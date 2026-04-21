@@ -17,20 +17,21 @@ const createMonitorSchema = z.object({
   symbol: z.string().min(1),
   thresholdPercentage: z.number().positive().max(100),
   timeWindowMinutes: z.number().int().positive().max(24 * 60),
+  trigger: z.string().min(1).max(10)
 });
 
 const validateBody =
   <T extends z.ZodType>(schema: T) =>
-  (req: Request, _res: Response, next: NextFunction): void => {
-    const parsedBody = schema.safeParse(req.body);
-    if (!parsedBody.success) {
-      next(new AppError("Invalid request body", 400));
-      return;
-    }
+    (req: Request, _res: Response, next: NextFunction): void => {
+      const parsedBody = schema.safeParse(req.body);
+      if (!parsedBody.success) {
+        next(new AppError("Invalid request body", 400));
+        return;
+      }
 
-    req.body = parsedBody.data;
-    next();
-  };
+      req.body = parsedBody.data;
+      next();
+    };
 
 monitorRouter.get("/symbols", asyncHandler(getSymbols));
 monitorRouter.get("/", requireAuth, asyncHandler(getUserMonitors));

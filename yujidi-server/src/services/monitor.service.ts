@@ -13,6 +13,7 @@ const createMonitorSchema = z.object({
   symbol: z.string().min(1).transform((value): string => value.toUpperCase().trim()),
   thresholdPercentage: z.number().positive().max(100),
   timeWindowMinutes: z.number().int().positive().max(24 * 60),
+  trigger: z.string().min(1).max(10)
 });
 
 export type CreateMonitorInput = z.infer<typeof createMonitorSchema>;
@@ -62,6 +63,7 @@ export class MonitorService {
           isActive: 1,
           createdAt: 1,
           updatedAt: 1,
+          trigger: 1,
           symbolMeta: {
             baseAsset: "$symbolMeta.baseAsset",
             quoteAsset: "$symbolMeta.quoteAsset",
@@ -104,9 +106,9 @@ export class MonitorService {
       symbol: parsedPayload.data.symbol,
       thresholdPercentage: parsedPayload.data.thresholdPercentage,
       timeWindowMinutes: parsedPayload.data.timeWindowMinutes,
+      trigger: parsedPayload.data.trigger,
       isActive: true,
     });
-
     return monitor.toObject() as TripwireConfig;
   }
 

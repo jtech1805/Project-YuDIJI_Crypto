@@ -30,6 +30,10 @@ const tripwireConfigSchema = new Schema(
       required: true,
       default: true,
     },
+    trigger: {
+      type: String,
+      enum: ['spike', 'drop']
+    }
   },
   {
     timestamps: true,
@@ -39,7 +43,7 @@ const tripwireConfigSchema = new Schema(
 
 export type TripwireConfig = InferSchemaType<typeof tripwireConfigSchema>;
 
-export interface TripwireConfigModel extends Model<TripwireConfig> {}
+export interface TripwireConfigModel extends Model<TripwireConfig> { }
 
 export interface TripwireConfigWithSymbolMetadata {
   _id: Types.ObjectId;
@@ -50,6 +54,7 @@ export interface TripwireConfigWithSymbolMetadata {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  trigger: string;
   symbolMeta: {
     baseAsset: string;
     quoteAsset: string;
