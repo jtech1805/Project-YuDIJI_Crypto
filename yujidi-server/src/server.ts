@@ -7,8 +7,8 @@ import { z } from "zod";
 
 import { app, logger } from "./app.js";
 import { syncBinanceSymbols } from "./services/binance.service.js";
-import { WebSocketManager } from "./services/websocket.service.js";
-
+// import { WebSocketManager } from "./services/websocket.service.js";
+import { sharedWebsocketManager } from "./services/websocket.service.js";
 const envSchema = z.object({
   MONGO_URI: z.string().min(1, "MONGO_URI is required"),
   PORT: z.coerce.number().int().positive("PORT must be a positive integer"),
@@ -23,7 +23,7 @@ if (!env.success) {
 const { MONGO_URI, PORT } = env.data;
 
 let server: Server | null = null;
-const websocketManager = new WebSocketManager();
+// const websocketManager = new WebSocketManager();
 
 const startServer = async (): Promise<void> => {
   await mongoose.connect(MONGO_URI);
@@ -36,7 +36,9 @@ const startServer = async (): Promise<void> => {
     logger.info({ port: PORT }, "HTTP server started");
   });
 
-  websocketManager.initialize(server);
+  // websocketManager.initialize(server);
+  // 3. USE THE SHARED INSTANCE HERE
+  sharedWebsocketManager.initialize(server);
   logger.info("WebSocket manager initialized");
 };
 

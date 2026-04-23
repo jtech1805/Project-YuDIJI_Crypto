@@ -2,9 +2,9 @@ import type { Request, Response } from "express";
 
 import { AppError } from "../errors/AppError.js";
 import { MonitorService } from "../services/monitor.service.js";
+import { sharedWebsocketManager } from "../services/websocket.service.js";
 
 const monitorService = new MonitorService();
-
 export const getSymbols = async (_req: Request, res: Response): Promise<void> => {
   const symbols = await monitorService.getSymbols();
 
@@ -63,5 +63,15 @@ export const deleteMonitor = async (req: Request, res: Response): Promise<void> 
   res.status(200).json({
     status: "success",
     message: "Monitor deleted",
+  });
+};
+
+export const debugEngineState = async (req: Request, res: Response): Promise<void> => {
+
+  const snapshot = sharedWebsocketManager.getEngineSnapshot()
+
+  res.status(200).json({
+    status: "success",
+    data: snapshot,
   });
 };
