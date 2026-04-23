@@ -6,6 +6,7 @@ import {
   deleteMonitor,
   getSymbols,
   getUserMonitors,
+  debugEngineState
 } from "../controllers/monitor.controller.js";
 import { AppError } from "../errors/AppError.js";
 import { asyncHandler } from "../middlewares/errorHandler.js";
@@ -37,5 +38,6 @@ monitorRouter.get("/symbols", asyncHandler(getSymbols));
 monitorRouter.get("/", requireAuth, asyncHandler(getUserMonitors));
 monitorRouter.post("/", requireAuth, validateBody(createMonitorSchema), asyncHandler(createMonitor));
 monitorRouter.delete("/:id", requireAuth, asyncHandler(deleteMonitor));
+monitorRouter.get('/debug/engine-state', requireAuth, asyncHandler(debugEngineState))
 
 export { monitorRouter };

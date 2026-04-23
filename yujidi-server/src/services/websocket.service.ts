@@ -16,6 +16,8 @@ interface BinanceTickerMessage {
   x: string;
   P: string;
   E: number;
+  m: boolean;
+  q: string;
 }
 
 interface OutboundTickerPayload {
@@ -40,7 +42,11 @@ interface OutboundAlertPayload {
   type: "NEW_ALERT";
   payload: unknown;
 }
-
+export interface BinanceDepthMessage {
+  lastUpdateId: number;
+  bids: string[][];
+  asks: string[][];
+}
 const subscriptionMessageSchema = z.object({
   action: z.literal("UPDATE_SUBSCRIPTIONS"),
   subscribe: z.array(z.string()).default([]),
@@ -72,7 +78,8 @@ export class WebSocketManager {
     this.binanceSocket = null;
     this.reconnectTimer = null;
     this.reconnectDelayMs = 3000;
-    this.binanceUrl = "wss://stream.binance.com:9443/ws";
+    // this.binanceUrl = "wss://stream.binance.com:9443/ws";
+    this.binanceUrl = "wss://stream.binance.com:9443/stream";
     this.activeBinanceSymbols = new Set<string>();
     this.authenticatedRequestUsers = new WeakMap<IncomingMessage, string>();
 
@@ -418,86 +425,158 @@ export class WebSocketManager {
     }, this.reconnectDelayMs);
   }
 
+  private isBinanceDepthMessage(payload: unknown): payload is { bids: string[][], asks: string[][], s?: string, stream?: string } {
+    if (!payload || typeof payload !== "object") return false;
+
+    // Check if it's a Combined Stream payload (e.g., {"stream": "btcusdt@depth", "data": {...}})
+    const candidate = payload as any;
+    if (candidate.data && Array.isArray(candidate.data.bids)) {
+      return true;
+    }
+
+    // Check if it's a Raw Stream payload
+    return (
+      Array.isArray(candidate.bids) &&
+      Array.isArray(candidate.asks)
+    );
+  }
+  // 1. The Ticker Guard (You already have this one!)
+  private isBinanceTickerMessage(payload: unknown): payload is BinanceTickerMessage {
+    if (!payload || typeof payload !== "object") return false;
+    const candidate = payload as Record<string, unknown>;
+    return (
+      candidate.e === "24hrTicker" && // Safer to check the exact event type!
+      typeof candidate.s === "string" &&
+      typeof candidate.c === "string"
+    );
+  }
+
+  // 2. THE NEW AGGTRADE GUARD
+  private isBinanceAggTradeMessage(payload: unknown): payload is any { // Replace 'any' with your interface
+    if (!payload || typeof payload !== "object") return false;
+    const candidate = payload as Record<string, unknown>;
+
+    return (
+      candidate.e === "aggTrade" &&
+      typeof candidate.s === "string" &&
+      typeof candidate.p === "string" &&
+      typeof candidate.q === "string" &&
+      typeof candidate.m === "boolean"
+    );
+  }
   private handleBinanceMessage(rawData: WebSocket.RawData): void {
-    let parsedPayload: unknown;
+    // let parsedPayload: unknown;
+    // try {
+    //   parsedPayload = JSON.parse(rawData.toString());
+    // } catch {
+    //   return;
+    // }
+    let parsedPayload: any;
     try {
-      parsedPayload = JSON.parse(rawData.toString()) as unknown;
+      parsedPayload = JSON.parse(rawData.toString());
     } catch {
       return;
     }
 
-    if (!this.isBinanceTickerMessage(parsedPayload)) {
-      return;
+    // 🎁 THE UNWRAPPER (Add this at the very top!)
+    let streamSymbol = "UNKNOWN";
+    if (parsedPayload && parsedPayload.stream && parsedPayload.data) {
+      // Extract "ETCUSDT" from "etcusdt@depth20@100ms"
+      streamSymbol = parsedPayload.stream.split('@')[0].toUpperCase();
+
+      // Strip the wrapper away so the rest of your code works normally
+      parsedPayload = parsedPayload.data;
     }
+    // ==========================================
+    // 🚦 ROUTE 1: THE UI STREAM
+    // ==========================================
+    if (this.isBinanceTickerMessage(parsedPayload)) {
+      const symbol = parsedPayload.s.toUpperCase();
 
-    const symbol = parsedPayload.s.toUpperCase();
-    const currentPrice = Number(parsedPayload.c);
-    const timestamp = Number(parsedPayload.E);
-
-    logger.info(
-      {
-        event: "BINANCE_TICK_RECEIVED",
+      // Add the explicit type right here! 👇
+      const outboundPayload: OutboundTickerPayload = {
+        type: "TICKER_UPDATE",
         symbol,
-        currentPrice,
+        currentPrice: parsedPayload.c,
         previousClose: parsedPayload.x,
         priceChangePercent: parsedPayload.P,
-        timestamp,
-      },
-      "Received Binance ticker payload",
-    );
+      };
+      for (const [client, subscriptions] of this.clientSubscriptions.entries()) {
+        if (subscriptions.has(symbol)) {
+          this.sendToClient(client, outboundPayload);
+        }
+      }
+      return; // Message handled, exit function
+    }
 
-    void this.analyzerEngine
-      .processTick(symbol, currentPrice, timestamp)
-      .catch((error: unknown): void => {
-        logger.error({ error, symbol }, "Analyzer engine processing failed");
-      });
+    // ==========================================
+    // 🧠 ROUTE 2: THE AI ENGINE STREAM
+    // ==========================================
+    if (this.isBinanceAggTradeMessage(parsedPayload)) {
+      const symbol = parsedPayload.s.toUpperCase();
+      const currentPrice = parseFloat(parsedPayload.p);
+      const quantity = parseFloat(parsedPayload.q);
+      const timestamp = Number(parsedPayload.E);
+      const isbuyermaker = parsedPayload.m;
 
-    const outboundPayload: OutboundTickerPayload = {
-      type: "TICKER_UPDATE",
-      symbol,
-      currentPrice: parsedPayload.c,
-      previousClose: parsedPayload.x,
-      priceChangePercent: parsedPayload.P,
-    };
+      // Pass it to the engine!
+      void this.analyzerEngine
+        .processTick(symbol, currentPrice, timestamp, isbuyermaker, quantity)
+        .catch((error: unknown): void => {
+          logger.error({ error, symbol }, "Analyzer engine processing failed");
+        });
 
-    for (const [client, subscriptions] of this.clientSubscriptions.entries()) {
-      if (!subscriptions.has(symbol)) {
-        continue;
+      return; // Message handled, exit function
+    }
+    // ==========================================
+    // 📊 ROUTE 3: THE ORDER BOOK STREAM
+    // ==========================================
+    if (this.isBinanceDepthMessage(parsedPayload)) {
+      let symbol = "UNKNOWN";
+      let bids: string[][] = [];
+      let asks: string[][] = [];
+
+      const candidate = parsedPayload as any;
+
+      // Logic to extract the symbol and data based on Binance's payload format
+      if (candidate.stream && candidate.data) {
+        // Combined Stream format: "stream": "btcusdt@depth20@100ms"
+        symbol = candidate.stream.split('@')[0].toUpperCase();
+        bids = candidate.data.bids;
+        asks = candidate.data.asks;
+      } else {
+        // Raw Stream format
+        // If 's' exists, great. If not, we have to rely on a fallback (like if you only track one coin per WS connection)
+        symbol = candidate.s ? candidate.s.toUpperCase() : "BTCUSDT"; // Change fallback if needed
+        bids = candidate.bids;
+        asks = candidate.asks;
       }
 
-      this.sendToClient(client, outboundPayload);
+      // 🛑 The Bouncer: Don't update if we couldn't figure out the symbol
+      if (symbol === "UNKNOWN") return;
+
+      // ✅ Now it will pass "BTCUSDT", "ETCUSDT", etc., perfectly!
+      this.analyzerEngine.updateOrderBook(streamSymbol, bids, asks);
+      return;
+
+      return; // Message handled, exit function
     }
-    logger.info(
-      {
-        event: "WS_TICK_FANOUT_COMPLETE",
-        symbol,
-        connectedClients: this.clientSubscriptions.size,
-      },
-      "Completed ticker fanout to subscribed clients",
-    );
+    // If it reaches here, it's an unknown message from Binance. Just ignore it.
   }
-
-  private isBinanceTickerMessage(payload: unknown): payload is BinanceTickerMessage {
-    if (!payload || typeof payload !== "object") {
-      return false;
-    }
-
-    const candidate = payload as Record<string, unknown>;
-    return (
-      typeof candidate.s === "string" &&
-      typeof candidate.c === "string" &&
-      typeof candidate.x === "string" &&
-      typeof candidate.P === "string" &&
-      typeof candidate.E === "number"
-    );
-  }
-
   private sendBinanceControlMessage(action: "SUBSCRIBE" | "UNSUBSCRIBE", symbols: string[]): void {
     if (!this.binanceSocket || this.binanceSocket.readyState !== WebSocket.OPEN) {
       return;
     }
 
-    const params = symbols.map((symbol): string => `${symbol.toLowerCase()}@ticker`);
+    // const params = symbols.map((symbol): string => `${symbol.toLowerCase()}@ticker`);
+    const params = symbols.flatMap((symbol) => {
+      const lowerSymbol = symbol.toLowerCase();
+      return [
+        `${lowerSymbol}@aggTrade`,  // 2. Feeds your new CVD Risk Engine
+        `${lowerSymbol}@ticker`,   // 1. Keeps your React UI happy
+        `${lowerSymbol}@depth20@100ms`
+      ];
+    })
     const requestId = Date.now();
     logger.info(
       {
@@ -533,4 +612,9 @@ export class WebSocketManager {
       logger.warn({ error }, "Failed to send payload to websocket client");
     }
   }
+  public getEngineSnapshot() {
+    return this.analyzerEngine.getEngineStateSnapshot();
+  }
 }
+// This creates the single "bucket" that the whole app will share
+export const sharedWebsocketManager = new WebSocketManager();
