@@ -8,6 +8,8 @@ import {
 import { apiClient } from '../api/client';
 import { useWebSocket } from '../context/WebSocketContext';
 import { AddMonitorModal } from '../components/dashboard/AddMonitorModal';
+import { FullAnalysisModal } from '../components/dashboard/FullAnalysisModal';
+import { formatGlobalTime } from '../lib/utils';
 // ─── Types ───────────────────────────────────────────────────────────────────
 type TriggerType = "spike" | "drop" | "Pattern";
 
@@ -268,24 +270,112 @@ function DashboardHeader() {
 
 // ─── Alert Card ───────────────────────────────────────────────────────────────
 
-interface Alert {
+// interface Alert {
+//   _id: string;
+//   symbol: string;
+//   dropPercentage: number;
+//   sentiment: string;
+//   aiRootCause: string;
+//   createdAt: string;
+// }
+// src/types.ts
+export interface Alert {
   _id: string;
   symbol: string;
+  triggerPrice: number;
   dropPercentage: number;
-  sentiment: string;
-  aiRootCause: string;
+  catalyst: string;
+  threatLevel: string;
+  support: string;
+  resistance: string;
+  summary: string;
+  cvdAtTrigger: number;
   createdAt: string;
 }
 
-const sentimentConfig: Record<string, { label: string; classes: string }> = {
-  Panic: { label: 'Panic', classes: 'text-red-400 border-red-400/30 bg-red-400/10' },
-  Bearish: { label: 'Bearish', classes: 'text-orange-400 border-orange-400/30 bg-orange-400/10' },
-};
 
-function AlertCard({ alert }: { alert: Alert }) {
-  const sentiment = sentimentConfig[alert.sentiment] ?? {
-    label: alert.sentiment,
-    classes: 'text-zinc-400 border-zinc-400/30 bg-zinc-400/10',
+// function AlertCard({ alert }: { alert: Alert }) {
+//   const sentiment = sentimentConfig[alert.sentiment] ?? {
+//     label: alert.sentiment,
+//     classes: 'text-zinc-400 border-zinc-400/30 bg-zinc-400/10',
+//   };
+
+//   return (
+//     <motion.div
+//       initial={{ opacity: 0, y: -16 }}
+//       animate={{ opacity: 1, y: 0 }}
+//       exit={{ opacity: 0, scale: 0.97 }}
+//       transition={{ duration: 0.25 }}
+//       className="bg-zinc-900/60 border border-white/[0.06] hover:border-white/[0.10] rounded-xl p-5 transition-all duration-300"
+//     >
+//       {/* Card Header */}
+//       <div className="flex items-center justify-between mb-4">
+//         <div className="flex items-center gap-3">
+//           <div className="w-9 h-9 rounded-full bg-white/8 flex items-center justify-center text-sm font-bold text-white border border-white/10">
+//             {alert.symbol.slice(0, 2)}
+//           </div>
+//           <div>
+//             <div className="flex items-center gap-2">
+//               <span className="font-semibold text-white">{alert.symbol}</span>
+//               <span className="text-xs text-zinc-500">{new Date(alert.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+//             </div>
+//             <div className="flex items-center gap-1.5 mt-0.5">
+//               <TrendingDown className="w-3.5 h-3.5 text-red-400" />
+//               <span className="text-sm font-semibold text-red-400">
+//                 Dropped {alert.dropPercentage}%
+//               </span>
+//             </div>
+//           </div>
+//         </div>
+//         <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${sentiment.classes}`}>
+//           {sentiment.label}
+//         </span>
+//       </div>
+
+//       {/* AI Analysis Box */}
+//       <div className="bg-violet-500/[0.04] border border-violet-500/20 rounded-lg p-4 mb-4">
+//         <div className="flex items-center gap-2 mb-2">
+//           <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+//           <span className="text-[10px] font-semibold text-violet-400 tracking-widest uppercase">
+//             AI Root Cause Analysis
+//           </span>
+//         </div>
+//         <p className="text-sm text-zinc-300 leading-relaxed">{alert.aiRootCause}</p>
+//       </div>
+
+//       {/* Actions */}
+//       <div className="flex items-center gap-2">
+//         <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 text-violet-300 hover:text-violet-200 text-xs font-medium transition-all duration-200">
+//           <BarChart3 className="w-3.5 h-3.5" />
+//           Full Analysis
+//         </button>
+//         <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/[0.08] text-zinc-400 hover:text-zinc-300 text-xs font-medium transition-all duration-200">
+//           <Settings className="w-3.5 h-3.5" />
+//           Adjust Tripwire
+//         </button>
+//         <button className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/[0.08] text-zinc-500 hover:text-zinc-300 transition-all duration-200">
+//           <Share2 className="w-3.5 h-3.5" />
+//         </button>
+//       </div>
+//     </motion.div>
+//   );
+// }
+
+// ─── Alert Feed ───────────────────────────────────────────────────────────────
+
+
+interface AlertCardProps {
+  alert: Alert;
+  onOpenAnalysis: (alert: Alert) => void;
+}
+
+export function AlertCard({ alert, onOpenAnalysis }: AlertCardProps) {
+  // Dynamically style the badge based on the AI's emoji prefix
+  const getThreatLevelStyle = (level: string) => {
+    if (level.includes('🔴')) return 'text-red-400 border-red-400/30 bg-red-400/10';
+    if (level.includes('🟡')) return 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10';
+    if (level.includes('🟢')) return 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10';
+    return 'text-zinc-400 border-zinc-400/30 bg-zinc-400/10';
   };
 
   return (
@@ -305,35 +395,43 @@ function AlertCard({ alert }: { alert: Alert }) {
           <div>
             <div className="flex items-center gap-2">
               <span className="font-semibold text-white">{alert.symbol}</span>
-              <span className="text-xs text-zinc-500">{new Date(alert.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <span className="text-xs text-zinc-500">
+                {/* {new Date(alert.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} */}
+                {formatGlobalTime(alert.createdAt)}
+              </span>
             </div>
             <div className="flex items-center gap-1.5 mt-0.5">
               <TrendingDown className="w-3.5 h-3.5 text-red-400" />
               <span className="text-sm font-semibold text-red-400">
-                Dropped {alert.dropPercentage}%
+                Dropped {alert.dropPercentage.toFixed(2)}%
               </span>
             </div>
           </div>
         </div>
-        <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${sentiment.classes}`}>
-          {sentiment.label}
+
+        {/* New Threat Level Badge */}
+        <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${getThreatLevelStyle(alert.threatLevel)}`}>
+          {alert.threatLevel}
         </span>
       </div>
 
-      {/* AI Analysis Box */}
+      {/* AI Analysis Box (Now uses Catalyst) */}
       <div className="bg-violet-500/[0.04] border border-violet-500/20 rounded-lg p-4 mb-4">
         <div className="flex items-center gap-2 mb-2">
           <Sparkles className="w-3.5 h-3.5 text-violet-400" />
           <span className="text-[10px] font-semibold text-violet-400 tracking-widest uppercase">
-            AI Root Cause Analysis
+            AI Catalyst
           </span>
         </div>
-        <p className="text-sm text-zinc-300 leading-relaxed">{alert.aiRootCause}</p>
+        <p className="text-sm text-zinc-300 leading-relaxed">{alert.catalyst}</p>
       </div>
 
       {/* Actions */}
       <div className="flex items-center gap-2">
-        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 text-violet-300 hover:text-violet-200 text-xs font-medium transition-all duration-200">
+        <button
+          onClick={() => onOpenAnalysis(alert)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 text-violet-300 hover:text-violet-200 text-xs font-medium transition-all duration-200"
+        >
           <BarChart3 className="w-3.5 h-3.5" />
           Full Analysis
         </button>
@@ -348,10 +446,9 @@ function AlertCard({ alert }: { alert: Alert }) {
     </motion.div>
   );
 }
-
-// ─── Alert Feed ───────────────────────────────────────────────────────────────
-
 function AlertFeed({ alerts }: { alerts: Alert[] }) {
+  // 1. Add state to track which alert is currently selected for the modal
+  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   return (
     <div className="space-y-4 p-6 max-w-3xl">
       <div className="flex items-center justify-between mb-2">
@@ -365,7 +462,7 @@ function AlertFeed({ alerts }: { alerts: Alert[] }) {
         </span>
       </div>
 
-      <AnimatePresence>
+      {/* <AnimatePresence>
         {alerts.length === 0 ? (
           <div className="text-zinc-600 text-sm p-6 border border-dashed border-white/[0.06] rounded-xl text-center">
             Awaiting market anomalies...
@@ -373,7 +470,30 @@ function AlertFeed({ alerts }: { alerts: Alert[] }) {
         ) : (
           alerts.map((alert) => <AlertCard key={alert._id} alert={alert} />)
         )}
+      </AnimatePresence> */}
+      <AnimatePresence>
+        {alerts.length === 0 ? (
+          <div className="text-zinc-600 text-sm p-6 border border-dashed border-white/[0.06] rounded-xl text-center">
+            Awaiting market anomalies...
+          </div>
+        ) : (
+          alerts.map((alert) => (
+            // 2. Pass the state-setting function down to the card
+            <AlertCard
+              key={alert._id}
+              alert={alert}
+              onOpenAnalysis={(clickedAlert) => setSelectedAlert(clickedAlert)}
+            />
+          ))
+        )}
       </AnimatePresence>
+
+      {/* 3. Render the Modal (it handles its own AnimatePresence and visibility based on selectedAlert) */}
+      <FullAnalysisModal
+        isOpen={selectedAlert !== null}
+        onClose={() => setSelectedAlert(null)}
+        alert={selectedAlert}
+      />
     </div>
   );
 }

@@ -10,8 +10,12 @@ export interface Alert {
   symbol: string;
   triggerPrice: number;
   dropPercentage: number;
-  aiRootCause: string;
-  sentiment: 'Panic' | 'Bearish' | 'Neutral' | 'Bullish';
+  catalyst: string;
+  threatLevel: string;
+  support: string;
+  resistance: string;
+  summary: string;
+  cvdAtTrigger: number;
   createdAt: string;
 }
 
