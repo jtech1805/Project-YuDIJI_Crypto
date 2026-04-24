@@ -2,9 +2,11 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { useAuth } from './AuthContext';
 const isProd = import.meta.env.PROD;
 // Notice the 'wss://' for production!
-const WS_URL = isProd
-  ? 'wss://project-yudiji-crypto.onrender.com'
-  : 'ws://localhost:3006';
+// const WS_URL = isProd
+//   ? 'wss://project-yudiji-crypto.onrender.com'
+//   : 'ws://localhost:3006';
+// Export the WebSocket URL for your real-time data streams
+export const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3006';
 export interface Alert {
   _id: string;
   symbol: string;
