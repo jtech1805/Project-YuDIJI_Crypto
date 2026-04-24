@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useAuth } from './AuthContext';
-const isProd = import.meta.env.PROD;
+// const isProd = import.meta.env.PROD;
 // Notice the 'wss://' for production!
 // const WS_URL = isProd
 //   ? 'wss://project-yudiji-crypto.onrender.com'
