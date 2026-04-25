@@ -1,7 +1,5 @@
 name: Deploy Backend to AWS Production
 
-# This pipeline only runs when code is pushed to the 'main' branch
-# AND only if changes were made inside the yujidi-server folder.
 on:
   push:
     branches: [ "main" ]
@@ -20,13 +18,10 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # 0. Inject the exact Node bin folder into the system PATH
-            export PATH="/home/ubuntu/.nvm/versions/node/v20.19.1/bin:$PATH"
-
             # 1. Enter the project folder
             cd ~/Project-YuDIJI_Crypto/yujidi-server
 
-            # 2. Pull the latest code from GitHub
+            # 2. Pull the latest code
             git pull origin main
 
             # 3. Install packages
