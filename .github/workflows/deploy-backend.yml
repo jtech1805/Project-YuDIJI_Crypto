@@ -27,7 +27,7 @@ jobs:
             git pull origin main
 
             # 3. Install packages using the absolute NPM path
-            /home/ubuntu/.nvm/versions/node/v20/bin/npm install
+            /home/ubuntu/.nvm/versions/node/v20.19.1/bin/npm install
 
             # 4. Restart the engine using the absolute PM2 path
-            /home/ubuntu/.nvm/versions/node/v20/bin/pm2 restart yujidi-engine
+            /home/ubuntu/.nvm/versions/node/v20.19.1/bin/pm2 restart yujidi-engine
