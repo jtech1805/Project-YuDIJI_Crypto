@@ -20,14 +20,17 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # 0. Inject the exact Node bin folder into the system PATH
+            export PATH="/home/ubuntu/.nvm/versions/node/v20.19.1/bin:$PATH"
+
             # 1. Enter the project folder
             cd ~/Project-YuDIJI_Crypto/yujidi-server
 
             # 2. Pull the latest code from GitHub
             git pull origin main
 
-            # 3. Install packages using the absolute NPM path
-            /home/ubuntu/.nvm/versions/node/v20.19.1/bin/npm install
+            # 3. Install packages
+            npm install
 
-            # 4. Restart the engine using the absolute PM2 path
-            /home/ubuntu/.nvm/versions/node/v20.19.1/bin/pm2 restart yujidi-engine
+            # 4. Restart the engine
+            pm2 restart yujidi-engine
