@@ -20,6 +20,10 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # 0. Force the automated shell to load Node and PM2 paths
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
             # 1. Enter the project folder
             cd ~/Project-YuDIJI_Crypto/yujidi-server
 
