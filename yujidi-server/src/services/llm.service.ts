@@ -6,16 +6,6 @@ import { AppError } from "../errors/AppError.js";
 
 const logger = pino({ name: "llm-service" });
 
-// const llmResponseSchema = z.object({
-//   aiRootCause: z.string().min(1),
-//   sentiment: z.enum(["Panic", "Bearish", "Neutral", "Bullish"]),
-// });
-
-// export interface AlertReport {
-//   aiRootCause: string;
-//   sentiment: "Panic" | "Bearish" | "Neutral" | "Bullish";
-// }
-// 1. Define the NEW schema with our 5 playbook properties
 export const llmResponseSchema = z.object({
   catalyst: z.string(),
   threatLevel: z.string(),
