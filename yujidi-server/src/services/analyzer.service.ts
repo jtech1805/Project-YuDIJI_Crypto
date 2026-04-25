@@ -354,7 +354,6 @@ export class AnalyzerEngine {
             symbol: normalizedSymbol,
             monitorId,
             userId: monitor.user.toString(),
-            // sentiment: report.sentiment,
             // aiRootCauseLength: report.aiRootCause.length,
           },
           "Groq report generated successfully",
