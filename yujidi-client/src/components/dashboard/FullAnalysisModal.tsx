@@ -108,7 +108,8 @@ export function FullAnalysisModal({ isOpen, onClose, alert }: FullAnalysisModalP
                             <div className="space-y-3">
                                 <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                                     <Zap className="w-4 h-4 text-violet-400" />
-                                    AI Execution Playbook
+                                    {/* AI Execution Playbook */}
+                                    Semantic Data Analysis
                                 </h3>
                                 <div className="bg-violet-500/10 border border-violet-500/20 rounded-xl p-5 space-y-4 shadow-[0_0_15px_rgba(139,92,246,0.05)_inset]">
                                     <div>
@@ -117,7 +118,7 @@ export function FullAnalysisModal({ isOpen, onClose, alert }: FullAnalysisModalP
                                     </div>
                                     <div className="h-px w-full bg-violet-500/20" />
                                     <div>
-                                        <span className="text-violet-300 font-semibold text-sm mb-1 block">Tactical Summary</span>
+                                        <span className="text-violet-300 font-semibold text-sm mb-1 block">Contextual Analysis</span>
                                         <p className="text-zinc-300 text-sm leading-relaxed">{alert.summary}</p>
                                     </div>
                                 </div>
@@ -133,14 +134,20 @@ export function FullAnalysisModal({ isOpen, onClose, alert }: FullAnalysisModalP
                                     {/* Support Wall */}
                                     <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4 relative overflow-hidden">
                                         <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500/50" />
-                                        <span className="text-emerald-400/80 text-xs font-bold uppercase tracking-wider mb-2 block">Nearest Support</span>
+                                        <span className="text-emerald-400/80 text-xs font-bold uppercase tracking-wider mb-2 block">
+                                            {/* Nearest Support */}
+                                            Primary Liquidity Floor
+                                        </span>
                                         <div className="text-lg font-mono font-medium text-emerald-100">{alert.support}</div>
                                     </div>
 
                                     {/* Resistance Wall */}
                                     <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4 relative overflow-hidden">
                                         <div className="absolute top-0 right-0 w-1 h-full bg-red-500/50" />
-                                        <span className="text-red-400/80 text-xs font-bold uppercase tracking-wider mb-2 block">Nearest Resistance</span>
+                                        <span className="text-red-400/80 text-xs font-bold uppercase tracking-wider mb-2 block">
+                                            {/* Nearest Resistance */}
+                                            Primary Liquidity Ceiling
+                                        </span>
                                         <div className="text-lg font-mono font-medium text-red-100">{alert.resistance}</div>
                                     </div>
                                 </div>

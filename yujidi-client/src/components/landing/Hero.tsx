@@ -37,7 +37,7 @@ export const Hero = ({ onEnterApp }: HeroProps) => {
         <div className="flex items-center gap-2 font-mono">
           <Activity className="h-5 w-5 text-primary" />
           <span className="font-semibold tracking-tight">YuJiDi</span>
-          <span className="text-xs text-muted-foreground hidden sm:inline">/ AI Crypto Risk Agent</span>
+          <span className="text-xs text-muted-foreground hidden sm:inline">AI Crypto Pattern Monitor</span>
         </div>
         <Button variant="ghost" size="sm" onClick={onEnterApp} className="font-mono text-xs">
           SIGN IN
@@ -52,7 +52,8 @@ export const Hero = ({ onEnterApp }: HeroProps) => {
           className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass mb-8 font-mono text-xs text-muted-foreground"
         >
           <span className="h-1.5 w-1.5 rounded-full bg-bull animate-pulse" />
-          LIVE · v1.0 · Real-time anomaly detection
+          {/* LIVE · v1.0 · Real-time anomaly detection */}
+          BETA · For Research & Performance Benchmarking Only
         </motion.div>
 
         <motion.h1
@@ -63,13 +64,20 @@ export const Hero = ({ onEnterApp }: HeroProps) => {
         >
           Don't just watch <br className="hidden md:block" />
           the market.{" "}
-          <span className="text-gradient italic">Understand</span>{" "}
+          {/* <span className="text-gradient italic">Understand</span>{" "}
           <span className="relative inline-block">
             the
             <span className="text-bear"> crash</span>
             <span className="absolute -inset-1 bg-bear/20 blur-2xl -z-10" />
           </span>
-          .
+          . */}
+          <span className="text-gradient italic">Analyze</span>{" "}
+          <span className="relative inline-block">
+            market
+            <span className="text-bear"> volatility</span>
+            <span className="absolute -inset-1 bg-bear/20 blur-2xl -z-10" />
+          </span>{" "}
+          in real-time.
         </motion.h1>
 
         <motion.p
@@ -78,7 +86,8 @@ export const Hero = ({ onEnterApp }: HeroProps) => {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="mt-8 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto"
         >
-          AI-driven volatility scanning and root-cause analysis delivered in milliseconds.
+          {/* AI-driven volatility scanning and root-cause analysis delivered in milliseconds. */}
+          LLM-based RAG pipelines for semantic anomaly retrieval and technical pattern analysis — delivered in milliseconds.
         </motion.p>
 
         <motion.div
