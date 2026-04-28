@@ -194,7 +194,7 @@ function DashboardSidebar({
           <div className="w-6 h-6 rounded bg-violet-500/20 flex items-center justify-center">
             <Sparkles className="w-3.5 h-3.5 text-violet-400" />
           </div>
-          <span className="font-semibold text-white text-sm tracking-wide">CryptoWatch</span>
+          <span className="font-semibold text-white text-sm tracking-wide">Crypto Monitor</span>
         </div>
         <button
           onClick={onAddMonitor}
@@ -208,7 +208,8 @@ function DashboardSidebar({
       {/* Monitors List */}
       <div className="p-3 flex-1 overflow-y-auto">
         <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-widest px-4 mb-3 block">
-          Active Tripwires
+          {/* Active Tripwires */}
+          Logic Triggers
         </span>
 
         {monitors.length === 0 ? (
@@ -437,7 +438,8 @@ export function AlertCard({ alert, onOpenAnalysis }: AlertCardProps) {
         </button>
         <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/[0.08] text-zinc-400 hover:text-zinc-300 text-xs font-medium transition-all duration-200">
           <Settings className="w-3.5 h-3.5" />
-          Adjust Tripwire
+          {/* Adjust Tripwire */}
+          Edit Threshold
         </button>
         <button className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/[0.08] text-zinc-500 hover:text-zinc-300 transition-all duration-200">
           <Share2 className="w-3.5 h-3.5" />
@@ -454,7 +456,8 @@ function AlertFeed({ alerts }: { alerts: Alert[] }) {
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-base font-semibold text-white flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-violet-400" />
-          Intelligence Feed
+          {/* Intelligence Feed */}
+          Activity Stream
         </h2>
         <span className="text-xs text-zinc-500 font-mono flex items-center gap-1">
           <AlertTriangle className="w-3 h-3 text-violet-400 inline" />

@@ -18,29 +18,29 @@ interface AuthCardProps {
 export const AuthCard = ({ onSuccess }: AuthCardProps) => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("analyst@yujidi.ai");
+  const [password, setPassword] = useState("password123");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
-//   const handleSubmit = async (e: React.FormEvent) => {
-//     e.preventDefault();
-//     setError("");
-//     setIsLoading(true);
+  //   const handleSubmit = async (e: React.FormEvent) => {
+  //     e.preventDefault();
+  //     setError("");
+  //     setIsLoading(true);
 
-//     try {
-//       // TODO: replace with real auth call (Lovable Cloud / your backend)
-//       await new Promise((r) => setTimeout(r, 700));
-//       onSuccess?.({ email, name: isSignUp ? name : undefined });
-//     } catch (err) {
-//       setError(err instanceof Error ? err.message : "Authentication failed");
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
-const handleSubmit = async (e: React.FormEvent) => {
+  //     try {
+  //       // TODO: replace with real auth call (Lovable Cloud / your backend)
+  //       await new Promise((r) => setTimeout(r, 700));
+  //       onSuccess?.({ email, name: isSignUp ? name : undefined });
+  //     } catch (err) {
+  //       setError(err instanceof Error ? err.message : "Authentication failed");
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   };
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
@@ -172,7 +172,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         <div className="h-px flex-1 bg-border" />
       </div>
 
-      <Button
+      {/* <Button
         type="button"
         variant="outline"
         className="relative w-full h-11 font-mono text-sm border-border bg-secondary/30 hover:bg-secondary/60"
@@ -196,7 +196,10 @@ const handleSubmit = async (e: React.FormEvent) => {
           />
         </svg>
         Sign in with Google
-      </Button>
+      </Button> */}
+      <div className="rounded-lg border border-border bg-card/40 p-5 font-mono text-[10px] leading-relaxed text-muted-foreground">
+        <span className="text-foreground font-semibold tracking-widest text-[10px]">DISCLAIMER · </span>
+        Project YuJiDi is a non-commercial technical research project demonstrating RAG (Retrieval-Augmented Generation) architectures. This platform is NOT registered with SEBI. We do not provide investment advice, trading signals, or financial research. All data is for algorithmic testing and educational purposes only        </div>
 
       <p className="relative mt-6 text-center text-sm text-muted-foreground">
         {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
