@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Activity } from "lucide-react";
 import { Button } from "../ui/button";
+import { Link } from "react-router-dom";
 
 interface HeroProps {
   onEnterApp?: () => void;
@@ -32,7 +33,7 @@ export const Hero = ({ onEnterApp }: HeroProps) => {
         })}
       </div>
 
-      {/* Top nav */}
+      {/* Top nav
       <nav className="absolute top-0 inset-x-0 z-20 flex items-center justify-between px-6 md:px-12 py-6">
         <div className="flex items-center gap-2 font-mono">
           <Activity className="h-5 w-5 text-primary" />
@@ -42,8 +43,26 @@ export const Hero = ({ onEnterApp }: HeroProps) => {
         <Button variant="ghost" size="sm" onClick={onEnterApp} className="font-mono text-xs">
           SIGN IN
         </Button>
+      </nav> */}
+      {/* Top nav */}
+      <nav className="absolute top-0 inset-x-0 z-20 flex items-center justify-between px-6 md:px-12 py-6">
+        <div className="flex items-center gap-2 font-mono">
+          <Activity className="h-5 w-5 text-primary" />
+          <span className="font-semibold tracking-tight">YuJiDi</span>
+          <span className="text-xs text-muted-foreground hidden sm:inline">/ AI Crypto Risk Agent</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/engine"
+            className="font-mono text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
+          >
+            ENGINE
+          </Link>
+          <Button variant="ghost" size="sm" onClick={onEnterApp} className="font-mono text-xs">
+            SIGN IN
+          </Button>
+        </div>
       </nav>
-
       <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

@@ -9,6 +9,7 @@ import { DetailedReport } from './pages/DetailedReport'
 // import { Login } from './pages/Login'
 import { SetupMonitor } from './pages/SetupMonitor'
 import LandingPage from './pages/LandingPage'
+import Engine from './pages/Engine'
 
 function AnimatedRoutes() {
   const location = useLocation()
@@ -19,6 +20,7 @@ function AnimatedRoutes() {
       <Routes location={location} key={location.pathname}>
         {/* <Route path="/login" element={<Login />} /> */}
         <Route path="/login" element={<LandingPage />} />
+        <Route path="/engine" element={<Engine />} />
         <Route
           path="/dashboard"
           element={
