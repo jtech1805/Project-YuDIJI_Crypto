@@ -1,4 +1,4 @@
-import jwt, { type JwtPayload, type Secret } from "jsonwebtoken";
+import jwt, { type JwtPayload, type Secret, type SignOptions } from "jsonwebtoken";
 import { z } from "zod";
 
 import { AppError } from "../errors/AppError.js";
@@ -6,6 +6,8 @@ import { AppError } from "../errors/AppError.js";
 const jwtEnvSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(1, "JWT_ACCESS_SECRET is required"),
   JWT_REFRESH_SECRET: z.string().min(1, "JWT_REFRESH_SECRET is required"),
+  JWT_ACCESS_EXPIRY: z.string().min(1, "JWT_ACCESS_EXPIRY is required"),
+  JWT_REFRESH_EXPIRY: z.string().min(1, "JWT_REFRESH_EXPIRY is required")
 });
 
 const parsedJwtEnv = jwtEnvSchema.safeParse(process.env);
@@ -14,7 +16,7 @@ if (!parsedJwtEnv.success) {
   throw new Error(`JWT environment validation failed: ${reason}`);
 }
 
-const { JWT_ACCESS_SECRET, JWT_REFRESH_SECRET } = parsedJwtEnv.data;
+const { JWT_ACCESS_SECRET, JWT_REFRESH_SECRET, JWT_ACCESS_EXPIRY, JWT_REFRESH_EXPIRY } = parsedJwtEnv.data;
 
 type TokenKind = "access" | "refresh";
 
@@ -26,27 +28,32 @@ export interface TokenPayload extends JwtPayload {
 const signToken = (
   userId: string,
   secret: Secret,
-  expiresIn: "15m" | "7d",
+  expiresIn: string, // REMOVED the hardcoded "15m" | "7d" restriction
   tokenType: TokenKind,
 ): string => {
+  // 1. Build the base options
+  const options: jwt.SignOptions = {
+    subject: userId,
+  };
+
+  // 2. Safely attach expiresIn to bypass the exactOptionalPropertyTypes strictness
+  // and the branded StringValue conflict.
+  options.expiresIn = expiresIn as any;
   return jwt.sign(
     {
       tokenType,
     },
     secret,
-    {
-      subject: userId,
-      expiresIn,
-    },
+    options
   );
 };
 
 export const generateAccessToken = (userId: string): string => {
-  return signToken(userId, JWT_ACCESS_SECRET, "15m", "access");
+  return signToken(userId, JWT_ACCESS_SECRET, JWT_ACCESS_EXPIRY, "access");
 };
 
 export const generateRefreshToken = (userId: string): string => {
-  return signToken(userId, JWT_REFRESH_SECRET, "7d", "refresh");
+  return signToken(userId, JWT_REFRESH_SECRET, JWT_REFRESH_EXPIRY, "refresh");
 };
 
 const verifyTypedToken = (token: string, secret: Secret, expectedType: TokenKind): TokenPayload => {

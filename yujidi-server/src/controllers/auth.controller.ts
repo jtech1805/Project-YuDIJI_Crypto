@@ -20,8 +20,12 @@ const buildCookieOptions = (maxAgeMs: number) => {
 };
 
 const attachAuthCookies = (res: Response, accessToken: string, refreshToken: string): void => {
-  res.cookie(ACCESS_COOKIE_NAME, accessToken, buildCookieOptions(15 * 60 * 1000));
-  res.cookie(REFRESH_COOKIE_NAME, refreshToken, buildCookieOptions(7 * 24 * 60 * 60 * 1000));
+  // Parse from .env, fallback to 30 days (2592000000 ms) if undefined
+  const accessExpiry = parseInt(process.env.COOKIE_ACCESS_EXPIRY_MS || '2592000000', 10);
+  const refreshExpiry = parseInt(process.env.COOKIE_REFRESH_EXPIRY_MS || '2592000000', 10);
+
+  res.cookie(ACCESS_COOKIE_NAME, accessToken, buildCookieOptions(accessExpiry));
+  res.cookie(REFRESH_COOKIE_NAME, refreshToken, buildCookieOptions(refreshExpiry));
 };
 
 const clearAuthCookies = (res: Response): void => {
