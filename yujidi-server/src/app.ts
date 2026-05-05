@@ -26,11 +26,15 @@ if (process.env.NODE_ENV !== "production") {
 const logger = pino(loggerOptions);
 
 const app: Express = express();
-app.use(express.json()); 
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // The Bulletproof CORS Configuration
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:5173',
+  process.env.MEDO_URL
+].filter(Boolean) as string[];
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Fallback to local Vite
+  origin: allowedOrigins, // Fallback to local Vite
   credentials: true, // THIS IS REQUIRED FOR JWT COOKIES
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
