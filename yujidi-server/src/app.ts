@@ -36,7 +36,7 @@ const allowedOrigins = [
 app.use(cors({
   origin: allowedOrigins, // Fallback to local Vite
   credentials: true, // THIS IS REQUIRED FOR JWT COOKIES
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
 app.use(express.json({ limit: "1mb" }));
