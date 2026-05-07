@@ -6,9 +6,9 @@ import { userRateLimiter } from "../middlewares/rateLimiter.js";
 const alertRouter = Router();
 
 // Protect all alert routes
+alertRouter.get("/ltp/:symbol", getLtp);
 alertRouter.use(requireAuth);
 alertRouter.use('/api', userRateLimiter);
 alertRouter.get("/", getUserAlerts);
 alertRouter.get("/:id", getAlertById);
-alertRouter.get("/ltp/:symbol", getLtp);
 export { alertRouter };
