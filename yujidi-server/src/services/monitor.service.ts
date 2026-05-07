@@ -8,7 +8,13 @@ import {
   type TripwireConfig,
   type TripwireConfigWithSymbolMetadata,
 } from "../models/TripwireConfig.js";
-
+// Define an interface for the fields a user is allowed to edit
+export interface UpdateMonitorDTO {
+  thresholdPercentage?: number;
+  trigger?: 'spike' | 'drop';
+  timeWindowMinutes?: number;
+  isActive?: boolean;
+}
 const createMonitorSchema = z.object({
   symbol: z.string().min(1).transform((value): string => value.toUpperCase().trim()),
   thresholdPercentage: z.number().positive().max(100),
@@ -111,7 +117,41 @@ export class MonitorService {
     });
     return monitor.toObject() as TripwireConfig;
   }
+  public async updateMonitor(
+    userId: string,
+    monitorId: string,
+    updateData: UpdateMonitorDTO
+  ): Promise<any> { // Replace 'any' with your actual ITripwireConfig interface
+    if (!isValidObjectId(userId)) {
+      throw new AppError("Invalid user id", 400);
+    }
+    if (!isValidObjectId(monitorId)) {
+      throw new AppError("Invalid monitor id", 400);
+    }
+    // Ensure we don't accidentally update read-only fields like _id or user
+    const sanitizedUpdate = { ...updateData };
+    console.log(sanitizedUpdate)
+    delete (sanitizedUpdate as any)._id;
+    delete (sanitizedUpdate as any).user;
 
+    const updatedMonitor = await TripwireConfigModel.findOneAndUpdate(
+      {
+        _id: monitorId,
+        user: userId,
+      },
+      { $set: sanitizedUpdate },
+      {
+        new: true, // Returns the updated document instead of the old one
+        runValidators: true // Ensures the new threshold meets your Mongoose schema rules
+      }
+    ).exec();
+
+    if (!updatedMonitor) {
+      throw new AppError("Monitor not found", 404);
+    }
+
+    return updatedMonitor;
+  }
   public async deleteMonitor(userId: string, monitorId: string): Promise<void> {
     if (!isValidObjectId(userId)) {
       throw new AppError("Invalid user id", 400);
