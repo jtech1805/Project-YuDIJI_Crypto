@@ -46,7 +46,35 @@ export const createMonitor = async (req: Request, res: Response): Promise<void> 
     data: monitor,
   });
 };
+export const updateMonitor = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const monitorId = req.params.id as string;
+    // Extract userId from your auth middleware (adjust 'sub' or 'id' based on your JWT setup)
+    const userId = (req.user as any).sub || (req.user as any).id;
+    const updateData = req.body;
 
+    if (!updateData || Object.keys(updateData).length === 0) {
+      throw new AppError("Please provide fields to update", 400);
+    }
+
+    const updatedMonitor = await monitorService.updateMonitor(userId, monitorId, updateData);
+
+    res.status(200).json({
+      status: "success",
+      message: "Monitor updated successfully",
+      data: updatedMonitor
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Monitor Error",
+      data: error
+    });
+  }
+};
 export const deleteMonitor = async (req: Request, res: Response): Promise<void> => {
   const userId = req.user?.id;
   if (!userId) {
