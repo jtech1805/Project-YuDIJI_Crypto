@@ -3,6 +3,8 @@ import type { Request, Response, NextFunction } from "express";
 import { AppError } from "../errors/AppError.js";
 import { AuthService } from "../services/auth.service.js";
 import { UserModel } from "../models/User.js";
+import { TripwireConfigModel } from "../models/TripwireConfig.js";
+import { AlertModel } from "../models/Alert.js";
 
 const authService = new AuthService();
 
@@ -46,7 +48,49 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     password: req.body.password as string,
     name: req.body.name as string
   });
+  // ==========================================
+  // 🚀 THE COLD-START SEED PIPELINE
+  // ==========================================
+  // 3. Seed 2 Default Algorithmic Monitors
+  const defaultMonitors = [
+    {
+      user: result.user.id,
+      symbol: "BTCUSDT",
+      trigger: "drop", // Liquidity sweep detection
+      thresholdPercentage: 2.5,
+      timeWindowMinutes: 5,
+      isActive: true
+    },
+    {
+      user: result.user.id,
+      symbol: "ETHUSDT",
+      trigger: "spike", // Upside breakout detection
+      thresholdPercentage: 3.5,
+      timeWindowMinutes: 5,
+      isActive: true
+    }
+  ];
 
+  await TripwireConfigModel.insertMany(defaultMonitors);
+  // 2. Fetch the latest market alerts to use as a template
+  const latestAlerts = await AlertModel.find({ symbol: { $in: ["BTCUSDT", "ETHUSDT"] } })
+    .sort({ createdAt: -1 })
+    .limit(4)
+    .lean(); // Use .lean() to get raw JSON objects, making them easy to clone
+
+  // 3. Clone the alerts, strip the old DB IDs, and assign them to the new User
+  if (latestAlerts.length > 0) {
+    const clonedAlerts = latestAlerts.map(alert => {
+      const { _id, ...alertData } = alert; // Remove the original _id
+      return {
+        ...alertData,
+        user: result.user.id, // Assign to the brand new user
+        createdAt: new Date() // Refresh the timestamp so it looks like it just happened
+      };
+    });
+
+    await AlertModel.insertMany(clonedAlerts);
+  }
   res.status(201).json({
     status: "success",
     user: result.user,
