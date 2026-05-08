@@ -29,9 +29,6 @@ const startServer = async (): Promise<void> => {
   await mongoose.connect(MONGO_URI);
   logger.info("MongoDB connection established");
 
-  const syncedCount = await syncBinanceSymbols();
-  logger.info({ syncedCount }, "Binance symbols synchronized");
-
   server = app.listen(PORT, (): void => {
     logger.info({ port: PORT }, "HTTP server started");
   });
@@ -40,6 +37,8 @@ const startServer = async (): Promise<void> => {
   // 3. USE THE SHARED INSTANCE HERE
   sharedWebsocketManager.initialize(server);
   logger.info("WebSocket manager initialized");
+  const syncedCount = await syncBinanceSymbols();
+  logger.info({ syncedCount }, "Binance symbols synchronized");
 };
 
 const shutdown = async (signal: string): Promise<void> => {
