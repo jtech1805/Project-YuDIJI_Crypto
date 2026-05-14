@@ -2,7 +2,7 @@ import pino from "pino";
 
 import { AlertModel, type Alert } from "../models/Alert.js";
 import { TripwireConfigModel } from "../models/TripwireConfig.js";
-import { LlmService } from "./llm.service.js";
+import { sharedLlmService } from "./llm.service.js";
 import { fetchRecentHeadlines } from "./news.service.js";
 
 const logger = pino({ name: "analyzer-engine" });
@@ -27,7 +27,8 @@ const COOLDOWN_MS = 15 * 60 * 1000;
 const CVD_BUFFER_WINDOW_MS = 60 * 1000;
 const WHALE_THRESHOLD_BTC = 0.1; // Filter out retail noise
 export class AnalyzerEngine {
-  private readonly llmService: LlmService;
+  // private readonly llmService: LlmService;
+  private readonly llmService = sharedLlmService;
   private readonly emitAlert: AlertEmitter;
 
   public readonly priceBuffer: Map<string, PriceTick[]>;
@@ -39,7 +40,7 @@ export class AnalyzerEngine {
   public readonly orderBookSnapshot: Map<string, { bids: string[][], asks: string[][] }>;
 
   public constructor(emitAlert: AlertEmitter) {
-    this.llmService = new LlmService();
+    // this.llmService = new sharedLlmService();
     this.emitAlert = emitAlert;
     this.priceBuffer = new Map<string, PriceTick[]>();
     this.cooldowns = new Map<string, number>();
@@ -54,48 +55,388 @@ export class AnalyzerEngine {
     this.orderBookSnapshot.set(symbol, { bids, asks });
   }
 
-  public findHeavySupportResistance(symbol: string) {
+  // public findHeavySupportResistance(symbol: string) {
+  //   const book = this.orderBookSnapshot.get(symbol);
+
+  //   if (!book) {
+  //     return { support: "Unknown", resistance: "Unknown" };
+  //   }
+
+  //   // Find heaviest Support (Bids)
+  //   let maxBidVol = 0;
+  //   let supportPrice = "0";
+  //   for (const entry of book.bids) {
+  //     const price = entry[0];
+  //     const qty = entry[1];
+
+  //     // 🛑 The Bouncer: Skip if Binance sent a malformed array row
+  //     if (!price || !qty) continue;
+
+  //     if (parseFloat(qty) > maxBidVol) {
+  //       maxBidVol = parseFloat(qty);
+  //       supportPrice = price; // ✅ TypeScript now knows this is strictly a string
+  //     }
+  //   }
+
+  //   // Find heaviest Resistance (Asks)
+  //   let maxAskVol = 0;
+  //   let resistancePrice = "0";
+  //   for (const entry of book.asks) {
+  //     const price = entry[0];
+  //     const qty = entry[1];
+
+  //     // 🛑 The Bouncer: Skip if Binance sent a malformed array row
+  //     if (!price || !qty) continue;
+
+  //     if (parseFloat(qty) > maxAskVol) {
+  //       maxAskVol = parseFloat(qty);
+  //       resistancePrice = price; // ✅ TypeScript now knows this is strictly a string
+  //     }
+  //   }
+
+  //   return {
+  //     support: `$${parseFloat(supportPrice).toLocaleString()} (${maxBidVol} coins)`,
+  //     resistance: `$${parseFloat(resistancePrice).toLocaleString()} (${maxAskVol} coins)`
+  //   };
+  // }
+  // public findStructuralSupportResistance(symbol: string) {
+  //   const book = this.orderBookSnapshot.get(symbol);
+
+  //   // Added extra safety checks for the bids/asks arrays
+  //   if (!book || !book.bids || !book.asks || !book.bids.length || !book.asks.length) {
+  //     return { currentPrice: "Unknown", support: "Unknown", resistance: "Unknown" };
+  //   }
+
+  //   // 1. Safe access for the spread baseline using optional chaining (?.)
+  //   const topBidStr = book.bids[0]?.[0];
+  //   const topAskStr = book.asks[0]?.[0];
+  //   console.log(topBidStr, topAskStr)
+  //   if (!topBidStr || !topAskStr) {
+  //     return { currentPrice: "Unknown", support: "Unknown", resistance: "Unknown" };
+  //   }
+
+  //   const topBid = parseFloat(topBidStr);
+  //   const topAsk = parseFloat(topAskStr);
+  //   const currentPrice = (topBid + topAsk) / 2;
+
+  //   // 2. Define Engine Parameters
+  //   const MIN_DISTANCE_PERCENT = 0.008;
+  //   const WHALE_THRESHOLD_VOL = 0;
+
+  //   const minValidAskPrice = currentPrice * (1 + MIN_DISTANCE_PERCENT);
+  //   const maxValidBidPrice = currentPrice * (1 - MIN_DISTANCE_PERCENT);
+
+  //   // 3. Find Structural Support
+  //   let structuralSupportPrice: string = "0";
+  //   let supportVol: number = 0;
+
+  //   for (const entry of book.bids) {
+  //     // A. Extract raw values first
+  //     const priceStr = entry[0];
+  //     const qtyStr = entry[1];
+
+  //     // B. STRICT TS BOUNCER: If Binance sends a malformed row, skip it
+  //     if (priceStr === undefined || qtyStr === undefined) continue;
+
+  //     // C. Now that TS knows they are strings, it is safe to parse
+  //     const price = parseFloat(priceStr);
+  //     const qty = parseFloat(qtyStr);
+
+  //     if (isNaN(price) || isNaN(qty)) continue;
+  //     console.log(qty, supportVol, price, maxValidBidPrice, 'quantity and supportvol')
+  //     // Distance Filter
+  //     // if (price > maxValidBidPrice) continue;
+  //     // Whale Threshold Filter
+  //     if (qty > supportVol && qty >= WHALE_THRESHOLD_VOL) {
+  //       supportVol = qty;
+  //       structuralSupportPrice = priceStr; // ✅ TS knows this is safely a string now
+  //     }
+  //   }
+
+  //   // 4. Find Structural Resistance
+  //   let structuralResistancePrice: string = "0";
+  //   let resistanceVol: number = 0;
+
+  //   for (const entry of book.asks) {
+  //     const priceStr = entry[0];
+  //     const qtyStr = entry[1];
+
+  //     if (priceStr === undefined || qtyStr === undefined) continue;
+
+  //     const price = parseFloat(priceStr);
+  //     const qty = parseFloat(qtyStr);
+
+  //     if (isNaN(price) || isNaN(qty)) continue;
+
+  //     // Distance Filter
+  //     console.log(qty, resistanceVol, price, minValidAskPrice, 'quantity and resistanceVol')
+  //     // if (price < minValidAskPrice) continue;
+  //     // Whale Threshold Filter
+  //     if (qty > resistanceVol && qty >= WHALE_THRESHOLD_VOL) {
+  //       resistanceVol = qty;
+  //       structuralResistancePrice = priceStr; // ✅ TS knows this is safely a string now
+  //     }
+  //   }
+
+  //   // 5. Final Formatting
+  //   const finalSupport = supportVol > 0
+  //     ? `$${parseFloat(structuralSupportPrice).toLocaleString()} (${supportVol} coins)`
+  //     : "No strong support found";
+
+  //   const finalResistance = resistanceVol > 0
+  //     ? `$${parseFloat(structuralResistancePrice).toLocaleString()} (${resistanceVol} coins)`
+  //     : "No strong resistance found";
+
+  //   return {
+  //     currentPrice: `$${currentPrice.toLocaleString()}`,
+  //     support: finalSupport,
+  //     resistance: finalResistance
+  //   };
+  // }
+  public findStructuralSupportResistance(symbol: string) {
     const book = this.orderBookSnapshot.get(symbol);
 
-    if (!book) {
-      return { support: "Unknown", resistance: "Unknown" };
+    if (!book || !book.bids || !book.asks || !book.bids.length || !book.asks.length) {
+      return { currentPrice: "Unknown", support: "Unknown", resistance: "Unknown" };
     }
 
-    // Find heaviest Support (Bids)
-    let maxBidVol = 0;
-    let supportPrice = "0";
+    // 1. Safe access for the spread baseline
+    const topBidStr = book.bids[0]?.[0];
+    const topAskStr = book.asks[0]?.[0];
+
+    if (!topBidStr || !topAskStr) {
+      return { currentPrice: "Unknown", support: "Unknown", resistance: "Unknown" };
+    }
+
+    const topBid = parseFloat(topBidStr);
+    const topAsk = parseFloat(topAskStr);
+    const currentPrice = (topBid + topAsk) / 2;
+
+    // // ==========================================
+    // // 2. THE RELATIVE MATH (DYNAMIC AVERAGES)
+    // // ==========================================
+
+    // // Calculate Average Bid Size
+    // let totalBidVolume = 0;
+    // let validBidLevels = 0;
+    // for (const entry of book.bids) {
+    //   const qty = parseFloat(entry[1] ?? "0");
+    //   if (!isNaN(qty)) {
+    //     totalBidVolume += qty;
+    //     validBidLevels++;
+    //   }
+    // }
+    // const avgBidVolume = validBidLevels > 0 ? (totalBidVolume / validBidLevels) : 0;
+
+    // // Calculate Average Ask Size
+    // let totalAskVolume = 0;
+    // let validAskLevels = 0;
+    // for (const entry of book.asks) {
+    //   const qty = parseFloat(entry[1] ?? "0");
+    //   if (!isNaN(qty)) {
+    //     totalAskVolume += qty;
+    //     validAskLevels++;
+    //   }
+    // }
+    // const avgAskVolume = validAskLevels > 0 ? (totalAskVolume / validAskLevels) : 0;
+    // ==========================================
+    // 2. THE RELATIVE MATH (DYNAMIC AVERAGES)
+    // ==========================================
+    const IGNORE_TOP_N_LEVELSDavg = 3;
+
+    // Calculate Average Bid Size (IGNORING THE NOISE)
+    let totalBidVolume = 0;
+    let validBidLevels = 0;
+    let bidCalcLevel = 0;
+
     for (const entry of book.bids) {
-      const price = entry[0];
-      const qty = entry[1];
+      bidCalcLevel++;
+      // 🔥 Skip the massive spoof orders so they don't skew the average!
+      if (bidCalcLevel <= IGNORE_TOP_N_LEVELSDavg) continue;
 
-      // 🛑 The Bouncer: Skip if Binance sent a malformed array row
-      if (!price || !qty) continue;
-
-      if (parseFloat(qty) > maxBidVol) {
-        maxBidVol = parseFloat(qty);
-        supportPrice = price; // ✅ TypeScript now knows this is strictly a string
+      const qty = parseFloat(entry[1] ?? "0");
+      if (!isNaN(qty)) {
+        totalBidVolume += qty;
+        validBidLevels++;
       }
     }
+    const avgBidVolume = validBidLevels > 0 ? (totalBidVolume / validBidLevels) : 0;
 
-    // Find heaviest Resistance (Asks)
-    let maxAskVol = 0;
-    let resistancePrice = "0";
+    // Calculate Average Ask Size (IGNORING THE NOISE)
+    let totalAskVolume = 0;
+    let validAskLevels = 0;
+    let askCalcLevel = 0;
+
     for (const entry of book.asks) {
-      const price = entry[0];
-      const qty = entry[1];
+      askCalcLevel++;
+      // 🔥 Skip the massive spoof orders so they don't skew the average!
+      if (askCalcLevel <= IGNORE_TOP_N_LEVELSDavg) continue;
 
-      // 🛑 The Bouncer: Skip if Binance sent a malformed array row
-      if (!price || !qty) continue;
-
-      if (parseFloat(qty) > maxAskVol) {
-        maxAskVol = parseFloat(qty);
-        resistancePrice = price; // ✅ TypeScript now knows this is strictly a string
+      const qty = parseFloat(entry[1] ?? "0");
+      if (!isNaN(qty)) {
+        totalAskVolume += qty;
+        validAskLevels++;
       }
     }
+    const avgAskVolume = validAskLevels > 0 ? (totalAskVolume / validAskLevels) : 0;
+
+    // // ==========================================
+    // // 3. DEFINE ENGINE PARAMETERS
+    // // ==========================================
+
+    // const MIN_DISTANCE_PERCENT = 0.0002; // 0.5% away from price (Mandatory Noise Filter)
+    // const WALL_MULTIPLIER = 2.5;        // A true wall must be 3.5x larger than the average
+
+    // const minValidAskPrice = currentPrice * (1 + MIN_DISTANCE_PERCENT);
+    // const maxValidBidPrice = currentPrice * (1 - MIN_DISTANCE_PERCENT);
+
+    // // THESE ARE YOUR NEW RELATIVE THRESHOLDS
+    // const dynamicBidThreshold = avgBidVolume * WALL_MULTIPLIER;
+    // const dynamicAskThreshold = avgAskVolume * WALL_MULTIPLIER;
+
+    // // ==========================================
+    // // 4. FIND STRUCTURAL SUPPORT
+    // // ==========================================
+    // let structuralSupportPrice: string = "0";
+    // let supportVol: number = 0;
+
+    // for (const entry of book.bids) {
+    //   const priceStr = entry[0];
+    //   const qtyStr = entry[1];
+
+    //   if (priceStr === undefined || qtyStr === undefined) continue;
+
+    //   const price = parseFloat(priceStr);
+    //   const qty = parseFloat(qtyStr);
+
+    //   if (isNaN(price) || isNaN(qty)) continue;
+
+    //   // The Bouncer: Skip HFT bots sitting right on the spread
+    //   if (price > maxValidBidPrice) continue;
+
+    //   // Whale Filter: Only accept if it beats our DYNAMIC threshold
+    //   if (qty > supportVol && qty >= dynamicBidThreshold) {
+    //     supportVol = qty;
+    //     structuralSupportPrice = priceStr;
+    //   }
+    // }
+
+    // // ==========================================
+    // // 5. FIND STRUCTURAL RESISTANCE
+    // // ==========================================
+    // let structuralResistancePrice: string = "0";
+    // let resistanceVol: number = 0;
+
+    // for (const entry of book.asks) {
+    //   const priceStr = entry[0];
+    //   const qtyStr = entry[1];
+
+    //   if (priceStr === undefined || qtyStr === undefined) continue;
+
+    //   const price = parseFloat(priceStr);
+    //   const qty = parseFloat(qtyStr);
+
+    //   if (isNaN(price) || isNaN(qty)) continue;
+
+    //   // The Bouncer: Skip HFT bots sitting right on the spread
+    //   if (price < minValidAskPrice) continue;
+
+    //   // Whale Filter: Only accept if it beats our DYNAMIC threshold
+    //   if (qty > resistanceVol && qty >= dynamicAskThreshold) {
+    //     resistanceVol = qty;
+    //     structuralResistancePrice = priceStr;
+    //   }
+    // }
+    // ==========================================
+    // 3. DEFINE SCALPING ENGINE PARAMETERS
+    // ==========================================
+
+    // 🔥 NEW: Instead of percentages, we just skip the first 3 levels (the spread/spoof zone)
+    const IGNORE_TOP_N_LEVELS = 3;
+    const WALL_MULTIPLIER = 2.5;
+
+    const dynamicBidThreshold = avgBidVolume * WALL_MULTIPLIER;
+    const dynamicAskThreshold = avgAskVolume * WALL_MULTIPLIER;
+
+    // ==========================================
+    // 4. FIND STRUCTURAL SUPPORT
+    // ==========================================
+    let structuralSupportPrice: string = "0";
+    let supportVol: number = 0;
+    let currentBidLevel = 0;
+
+    for (const entry of book.bids) {
+      currentBidLevel++;
+
+      const priceStr = entry[0];
+      const qtyStr = entry[1];
+      if (priceStr === undefined || qtyStr === undefined) continue;
+
+      const price = parseFloat(priceStr);
+      const qty = parseFloat(qtyStr);
+      if (isNaN(price) || isNaN(qty)) continue;
+
+      // 🔥 THE BOUNCER: Skip the first 3 levels, no matter the price!
+      if (currentBidLevel <= IGNORE_TOP_N_LEVELS) continue;
+
+      if (qty > supportVol && qty >= dynamicBidThreshold) {
+        supportVol = qty;
+        structuralSupportPrice = priceStr;
+      }
+    }
+
+    // ==========================================
+    // 5. FIND STRUCTURAL RESISTANCE
+    // ==========================================
+    let structuralResistancePrice: string = "0";
+    let resistanceVol: number = 0;
+    let currentAskLevel = 0;
+
+    for (const entry of book.asks) {
+      currentAskLevel++;
+
+      const priceStr = entry[0];
+      const qtyStr = entry[1];
+      if (priceStr === undefined || qtyStr === undefined) continue;
+
+      const price = parseFloat(priceStr);
+      const qty = parseFloat(qtyStr);
+      if (isNaN(price) || isNaN(qty)) continue;
+
+      // 🔥 THE BOUNCER: Skip the first 3 levels!
+      if (currentAskLevel <= IGNORE_TOP_N_LEVELS) continue;
+
+      if (qty > resistanceVol && qty >= dynamicAskThreshold) {
+        resistanceVol = qty;
+        structuralResistancePrice = priceStr;
+      }
+    }
+
+    // ==========================================
+    // 6. FINAL FORMATTING
+    // ==========================================
+    const finalSupport = supportVol > 0
+      ? `$${parseFloat(structuralSupportPrice).toLocaleString()} (${supportVol.toFixed(2)} coins)`
+      : "No strong support found";
+
+    const finalResistance = resistanceVol > 0
+      ? `$${parseFloat(structuralResistancePrice).toLocaleString()} (${resistanceVol.toFixed(2)} coins)`
+      : "No strong resistance found";
 
     return {
-      support: `$${parseFloat(supportPrice).toLocaleString()} (${maxBidVol} coins)`,
-      resistance: `$${parseFloat(resistancePrice).toLocaleString()} (${maxAskVol} coins)`
+      currentPrice: `$${currentPrice.toLocaleString()}`,
+      support: finalSupport,
+      resistance: finalResistance,
+      rawCurrentPrice: currentPrice,
+      rawSupport: parseFloat(structuralSupportPrice),
+      rawResistance: parseFloat(structuralResistancePrice),
+      // I included this so you can log and see exactly what the algorithm is calculating!
+      debugData: {
+        averageBid: avgBidVolume.toFixed(2),
+        requiredBidWall: dynamicBidThreshold.toFixed(2),
+        averageAsk: avgAskVolume.toFixed(2),
+        requiredAskWall: dynamicAskThreshold.toFixed(2)
+      }
     };
   }
   public async processTick(
@@ -330,7 +671,7 @@ export class AnalyzerEngine {
           "Calling Groq report generation",
         );
         // 1. Grab the thickest walls from the Order Book snapshot
-        const walls = this.findHeavySupportResistance(normalizedSymbol);
+        const walls = this.findStructuralSupportResistance(normalizedSymbol);
         // const report = await this.llmService.generateAlertReport(
         //   normalizedSymbol,
         //   absDropPercent,
@@ -443,7 +784,7 @@ export class AnalyzerEngine {
       supportResistance: Object.fromEntries(
         Array.from(this.orderBookSnapshot.keys()).map((symbol) => [
           symbol,
-          this.findHeavySupportResistance(symbol),
+          this.findStructuralSupportResistance(symbol),
         ])
       ),
       // 3. Server Health

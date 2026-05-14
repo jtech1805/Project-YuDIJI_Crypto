@@ -615,6 +615,11 @@ export class WebSocketManager {
   public getEngineSnapshot() {
     return this.analyzerEngine.getEngineStateSnapshot();
   }
+  public getSupportResistance(symbol: string) {
+    const orderBookData = this.analyzerEngine.findStructuralSupportResistance(symbol);
+    const currentCvd = this.analyzerEngine.currentCVD.get(symbol) || 0;
+    return { orderBookData, currentCvd }
+  }
 }
 // This creates the single "bucket" that the whole app will share
 export const sharedWebsocketManager = new WebSocketManager();

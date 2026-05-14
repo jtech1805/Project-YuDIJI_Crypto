@@ -8,6 +8,7 @@ import { errorHandler } from "./middlewares/errorHandler.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { monitorRouter } from "./routes/monitor.routes.js";
 import { alertRouter } from "./routes/alert.routes.js";
+import chatRouter from "./routes/chat.routes.js";
 
 const loggerOptions: LoggerOptions = {
   level: process.env.NODE_ENV === "production" ? "info" : "debug",
@@ -64,6 +65,7 @@ app.get("/health", (_req: Request, res: Response): void => {
 app.use("/api/auth", authRouter);
 app.use("/api/monitors", monitorRouter);
 app.use("/api/alerts", alertRouter);
+app.use('/api/chat', chatRouter)
 
 app.use((_req: Request, _res: Response, next: NextFunction): void => {
   next(new AppError("Route not found", 404));
