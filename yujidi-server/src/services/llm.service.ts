@@ -5,7 +5,6 @@ import { z } from "zod";
 import { AppError } from "../errors/AppError.js";
 
 const logger = pino({ name: "llm-service" });
-
 export const llmResponseSchema = z.object({
   catalyst: z.string(),
   threatLevel: z.string(),
@@ -16,7 +15,12 @@ export const llmResponseSchema = z.object({
 
 // 2. TypeScript automatically builds the AlertReport type from the schema above!
 export type AlertReport = z.infer<typeof llmResponseSchema>;
-
+// 2. NEW: The Copilot Schema
+export const copilotResponseSchema = z.object({
+  isApproved: z.boolean(),
+  reply: z.string(),
+});
+export type CopilotResponse = z.infer<typeof copilotResponseSchema>;
 export class LlmService {
   private readonly client: Groq;
 
@@ -178,4 +182,80 @@ export class LlmService {
 
     return parsedReport.data;
   }
+  // ==========================================
+  // METHOD 2: COPILOT CHAT (New)
+  // ==========================================
+  public async generateCopilotResponse(
+    systemInstruction: string,
+    chatHistory: { role: "user" | "assistant" | "system", content: string }[],
+    userPrompt: string
+  ): Promise<CopilotResponse> {
+
+    logger.info({ event: "GROQ_COPILOT_CALL" }, "Initiating Groq inference for Copilot Chat");
+
+    // 1. Compile the messages array
+    const messages = [
+      { role: "system" as const, content: systemInstruction },
+      ...chatHistory,
+      { role: "user" as const, content: userPrompt }
+    ];
+    logger.info({ event: "GROQ_Message", messages }, "Initiating Groq inference for Copilot Chat");
+    let completion;
+    try {
+      completion = await this.client.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        temperature: 0.1, // Extremely low temperature for strict, logical rule adherence
+        response_format: { type: "json_object" },
+        messages: messages,
+      });
+    } catch (error: unknown) {
+      logger.error({ event: "GROQ_COPILOT_ERROR", error }, "Groq API call failed");
+      throw new AppError("Groq Copilot request failed", 502);
+    }
+
+    const rawContent = completion.choices[0]?.message?.content;
+    if (!rawContent) {
+      throw new AppError("Groq Copilot returned empty response", 502);
+    }
+
+    // 2. THE REGEX FALLBACK (Crucial for stability)
+    let parsedJson: unknown;
+    try {
+      // Strategy 1: Attempt direct standard parse
+      parsedJson = JSON.parse(rawContent);
+    } catch (parseError) {
+      // Strategy 2: Regex extraction for dirty JSON
+      logger.warn({ event: "GROQ_DIRTY_JSON" }, "Groq returned dirty JSON. Running regex extractor...");
+      const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+
+      if (jsonMatch) {
+        try {
+          parsedJson = JSON.parse(jsonMatch[0]);
+        } catch {
+          throw new AppError("Failed to parse regex-extracted JSON", 502);
+        }
+      } else {
+        throw new AppError("Copilot failed to format response as JSON", 502);
+      }
+    }
+
+    // 3. ZOD VALIDATION
+    const parsedReport = copilotResponseSchema.safeParse(parsedJson);
+    console.log(parsedJson, 'groq LLM Response ')
+    if (!parsedReport.success) {
+      logger.error(
+        { event: "GROQ_SCHEMA_MISMATCH", issues: parsedReport.error.issues, rawParsed: parsedJson },
+        "Copilot response did not match expected schema"
+      );
+      throw new AppError("Copilot API response did not match required schema", 502);
+    }
+
+    logger.info({ event: "GROQ_COPILOT_SUCCESS" }, "Copilot inference completed safely");
+
+    // 4. Return strictly typed data to the controller
+    return parsedReport.data;
+  }
 }
+
+// This creates the single "bucket" that the whole app will share
+export const sharedLlmService = new LlmService();
