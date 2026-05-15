@@ -19,6 +19,7 @@ export type AlertReport = z.infer<typeof llmResponseSchema>;
 export const copilotResponseSchema = z.object({
   isApproved: z.boolean(),
   reply: z.string(),
+  intent: z.string(),
 });
 export type CopilotResponse = z.infer<typeof copilotResponseSchema>;
 export class LlmService {
