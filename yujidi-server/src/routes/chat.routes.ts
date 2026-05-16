@@ -1,9 +1,9 @@
 import express from 'express';
-import { handleCopilotChat } from '../controllers/chat.controller.js';
+import { getChatHistory, handleCopilotChat } from '../controllers/chat.controller.js';
 // import { handleTradeExecution } from './trade.controller';
 // import { requireAuth } from './middleware/auth'; 
 import { z } from 'zod';
-
+import { requireAuth } from "../middlewares/requireAuth.js";
 export const copilotRequestSchema = z.object({
     symbol: z.string().min(3),                 // e.g., "BTCUSDT"
     direction: z.enum(['LONG', 'SHORT']),
@@ -22,7 +22,8 @@ export const copilotRequestSchema = z.object({
 const chatRouter = express.Router();
 
 // Route 1: The Copilot Chat (Calculates and Approves)
-chatRouter.post('/', handleCopilotChat);
+chatRouter.post('/', requireAuth, handleCopilotChat);
+chatRouter.get('/history/:symbol', requireAuth, getChatHistory);
 
 // Route 2: The Execution (Fires to Binance and saves to DB)
 // chatRouter.post('/api/trade/execute', handleTradeExecution); // Add requireAuth middleware in production!
