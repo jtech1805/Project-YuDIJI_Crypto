@@ -169,13 +169,14 @@ import { copilotRequestSchema } from '../routes/chat.routes.js';
 import { sharedWebsocketManager } from '../services/websocket.service.js';
 import { sharedLlmService } from '../services/llm.service.js';
 import { z } from 'zod';
+import { ChatSessionModel } from "../models/chatSession.js";
 
 export const handleCopilotChat = async (req: Request, res: Response) => {
     try {
         // 1. Validate incoming React payload
         const validatedData = copilotRequestSchema.parse(req.body);
         const { symbol, direction, walletBalance, riskPercentage, leverage, userPrompt, chatHistory } = validatedData;
-
+        const userId = req.user?.id || "";
         // 2. Fetch O(1) Live Math
         const { orderBookData, currentCvd } = sharedWebsocketManager.getSupportResistance(symbol);
         const { rawCurrentPrice, rawSupport, rawResistance } = orderBookData;
@@ -191,7 +192,7 @@ export const handleCopilotChat = async (req: Request, res: Response) => {
         let requiredMargin = 0;
 
         if (rawSupport === 0 || rawResistance === 0) {
-            systemVetoReason = "The order book lacks sufficient structural walls (Support/Resistance) to calculate a safe trade.";
+            systemVetoReason = `Live order book data for ${symbol} is currently syncing with the exchange. Please wait a few seconds and try again.`;
         } else {
             if (direction === 'LONG') {
                 stopLoss = (rawSupport ?? 0) * 0.999;
@@ -278,7 +279,31 @@ export const handleCopilotChat = async (req: Request, res: Response) => {
   `;
 
         // Execute LLM Call
-        const aiResponse = await sharedLlmService.generateCopilotResponse(systemInstruction, chatHistory, userPrompt);
+        // const aiResponse = await sharedLlmService.generateCopilotResponse(systemInstruction, chatHistory, userPrompt);
+        // ==========================================
+        // 🚀 THE SLIDING WINDOW MEMORY PIPELINE
+        // ==========================================
+
+        // A. Find existing session or create a new one for this specific Asset
+        let chatSession = await ChatSessionModel.findOne({ user: userId, symbol: symbol });
+        if (!chatSession) {
+            chatSession = new ChatSessionModel({ user: userId, symbol: symbol, messages: [] });
+        }
+
+        // B. Extract the Sliding Window (Grab only the last 6 messages to save Groq tokens)
+        // Map them to the format your sharedLlmService expects
+        const recentHistory = chatSession.messages.slice(-6).map(msg => ({
+            role: msg.role,
+            content: msg.content
+        }));
+
+        // C. Execute LLM Call (Passing the DB history instead of frontend history)
+        const aiResponse = await sharedLlmService.generateCopilotResponse(systemInstruction, recentHistory, userPrompt);
+
+        // D. Save the new interaction to MongoDB permanently
+        chatSession.messages.push({ role: 'user', content: userPrompt, timestamp: new Date() });
+        chatSession.messages.push({ role: 'assistant', content: aiResponse.reply, timestamp: new Date() });
+        await chatSession.save();
 
         // === NEW: CONDITIONAL FRONTEND RESPONSE ===
         return res.status(200).json({
@@ -314,5 +339,46 @@ export const handleCopilotChat = async (req: Request, res: Response) => {
             success: false,
             error: "The YuJiDi quantitative engine is currently analyzing heavy data. Please try again in a few seconds."
         });
+    }
+};
+export const getChatHistory = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.id || "";
+        const { symbol } = req.params;
+
+        if (!userId) {
+            return res.status(401).json({ success: false, error: "Unauthorized" });
+        }
+
+        // Find the chat session for this user and this specific coin
+        const chatSession = symbol && typeof symbol === 'string'
+            ? await ChatSessionModel.findOne({ user: userId, symbol: symbol })
+            : null;
+
+        // If no history exists, return the default welcome message so the UI isn't empty
+        if (!chatSession || chatSession.messages.length === 0) {
+            return res.status(200).json({
+                success: true,
+                data: [
+                    { role: "user", content: "Hello YuJiDi, I am looking for a setup." },
+                    { role: "assistant", content: "I am ready to assist. Please provide the asset and your intent." }
+                ]
+            });
+        }
+
+        // Map the MongoDB documents into the clean format the React frontend expects
+        const formattedHistory = chatSession.messages.map(msg => ({
+            role: msg.role,
+            content: msg.content
+        }));
+
+        return res.status(200).json({
+            success: true,
+            data: formattedHistory
+        });
+
+    } catch (error) {
+        console.error("Error fetching chat history:", error);
+        return res.status(500).json({ success: false, error: "Failed to load chat history." });
     }
 };
