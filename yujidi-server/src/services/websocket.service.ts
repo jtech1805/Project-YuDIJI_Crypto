@@ -563,7 +563,7 @@ export class WebSocketManager {
     }
     // If it reaches here, it's an unknown message from Binance. Just ignore it.
   }
-  private sendBinanceControlMessage(action: "SUBSCRIBE" | "UNSUBSCRIBE", symbols: string[]): void {
+  public sendBinanceControlMessage(action: "SUBSCRIBE" | "UNSUBSCRIBE", symbols: string[]): void {
     if (!this.binanceSocket || this.binanceSocket.readyState !== WebSocket.OPEN) {
       return;
     }
@@ -619,6 +619,9 @@ export class WebSocketManager {
     const orderBookData = this.analyzerEngine.findStructuralSupportResistance(symbol);
     const currentCvd = this.analyzerEngine.currentCVD.get(symbol) || 0;
     return { orderBookData, currentCvd }
+  }
+  public isSymbolActive(symbol: string): boolean {
+    return this.activeBinanceSymbols.has(symbol);
   }
 }
 // This creates the single "bucket" that the whole app will share
