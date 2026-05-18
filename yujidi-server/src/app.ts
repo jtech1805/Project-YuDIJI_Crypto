@@ -2,7 +2,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
 import pino, { type LoggerOptions } from "pino";
-
+import crypto from 'crypto'; // Built into Node.js for generating fallback request IDs
 import { AppError } from "./errors/AppError.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import { authRouter } from "./routes/auth.routes.js";
@@ -42,18 +42,40 @@ app.use(cors({
 }));
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
+
 app.use((req: Request, _res: Response, next: NextFunction): void => {
+  // 1. THE ANTI-SPAM FILTER
+  // If this is the high-frequency LTP polling route, just skip logging entirely
+  // (Adjust the string to match your exact LTP route path)
+  if (req.path.includes('/ltp')) {
+    return next();
+  }
+
+  // 2. ENRICHED REQUEST DATA
+  // For all other routes, capture a deep diagnostic snapshot
   logger.info(
     {
       method: req.method,
       path: req.path,
-      requestId: req.headers["x-request-id"],
+      ip: req.ip || req.socket.remoteAddress,
+      query: Object.keys(req.query).length ? req.query : undefined,
+
+      // SECURITY WARNING: Never log the raw `req.body`. 
+      // It will leak passwords, JWTs, and bloat your log files. 
+      // Instead, log the keys so you know what the payload structure was.
+      bodyKeys: req.body && typeof req.body === 'object' ? Object.keys(req.body) : undefined,
+
+      userAgent: req.headers["user-agent"],
+      requestId: req.headers["x-request-id"] || crypto.randomUUID(),
+
+      // Identify if the user was authenticated (assuming you attach `user` to `req` in your auth middleware)
+      userId: (req as any).user?.id || 'unauthenticated'
     },
     "Incoming request",
   );
+
   next();
 });
-
 app.get("/health", (_req: Request, res: Response): void => {
   res.status(200).json({
     status: "ok",

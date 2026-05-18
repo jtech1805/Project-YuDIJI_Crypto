@@ -620,8 +620,28 @@ export class WebSocketManager {
     const currentCvd = this.analyzerEngine.currentCVD.get(symbol) || 0;
     return { orderBookData, currentCvd }
   }
-  public isSymbolActive(symbol: string): boolean {
-    return this.activeBinanceSymbols.has(symbol);
+  /**
+   * Called by the HTTP getLtp Controller (MeDo Frontend)
+   * Acts as an "Ignition Switch" for symbols requested via REST.
+   */
+  public addHttpSubscription(rawSymbol: string): void {
+    const symbol = this.normalizeSymbol(rawSymbol);
+
+    // Check if the engine is already tracking this coin (either via WS or previous HTTP call)
+    const currentCount = this.globalSymbolCounts.get(symbol) || 0;
+
+    if (currentCount === 0) {
+      logger.info(
+        { event: "HTTP_IGNITION", symbol },
+        "HTTP Polling detected. Forcing Binance subscription."
+      );
+
+      // Increment global count to 1 so the engine knows it is active
+      this.incrementGlobalCount(symbol);
+
+      // Tell Binance to start sending data!
+      this.updateBinanceSubscriptions();
+    }
   }
 }
 // This creates the single "bucket" that the whole app will share

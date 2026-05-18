@@ -32,49 +32,27 @@ export const getAlertById = async (req: Request, res: Response, next: NextFuncti
 export const getLtp = async (req: Request, res: Response) => {
   try {
     const symbol = req.params.symbol as string;
-
-    if (!symbol) {
-      return res.status(400).json({
-        status: "error",
-        message: "Symbol parameter is required (e.g., BTCUSDT)"
-      });
-    }
-
-    const cleanSymbol = symbol.trim().toUpperCase();
+    if (!symbol) return res.status(400).json({ status: "error", message: "Symbol required" });
 
     // ==========================================
-    // 🚀 THE IGNITION SWITCH (Lazy-Load WebSockets)
+    // 🚀 THE IGNITION SWITCH (Using your exact architecture)
     // ==========================================
-    // Check if the request is coming from an authenticated dashboard user
     const isAuthenticated = !!req.cookies?.accessToken || !!req.headers.authorization;
 
     if (isAuthenticated) {
-      // Ensure your manager has an `isSubscribed` method so we don't open 100 connections
-      if (!sharedWebsocketManager.isSymbolActive(cleanSymbol)) {
-        console.log(`[Engine Ignition] Auth user detected. Subscribing to Binance WS for ${cleanSymbol}`);
-        sharedWebsocketManager.sendBinanceControlMessage("SUBSCRIBE", [cleanSymbol]);
-      }
+      // This will instantly bump globalSymbolCounts and trigger updateBinanceSubscriptions()
+      sharedWebsocketManager.addHttpSubscription(symbol);
     }
     // ==========================================
 
-    // Fetch the standard HTTP data for the frontend polling
-    const tickerData = await getSymbolLtp(cleanSymbol);
-
-    // Return the exact JSON structure requested
+    // Fetch your HTTP data...
+    const tickerData = await getSymbolLtp(symbol);
     return res.status(200).json(tickerData);
 
   } catch (error: any) {
-    console.error(`Error fetching LTP for ${req.params.symbol}:`, error.message);
-
-    // Handle Binance 400 errors (e.g., invalid symbol)
-    if (error.response && error.response.status === 400) {
-      return res.status(400).json({ status: "error", message: "Invalid symbol provided to Binance" });
-    }
-
-    return res.status(500).json({ status: "error", message: "Failed to fetch ticker data" });
+    // ... your error handling
   }
 };
-// export const getLtp = async (req: Request, res: Response) => {
 //   try {
 //     const symbol = req.params.symbol as string;
 //     if (!symbol) {
