@@ -14,7 +14,7 @@ const REFRESH_COOKIE_NAME = "refreshToken";
 const buildCookieOptions = (maxAgeMs: number) => {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: true,
     sameSite: "none" as const,
     maxAge: maxAgeMs,
     path: "/",
