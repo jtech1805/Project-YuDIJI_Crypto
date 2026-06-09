@@ -596,8 +596,29 @@ export class AnalyzerEngine {
       }
 
       const percentChange = ((currentPrice - baseTick.price) / baseTick.price) * 100;
-      const absDropPercent = Number(Math.abs(percentChange).toFixed(2));
-      const thresholdBreached = percentChange <= -monitor.thresholdPercentage;
+      const changePercentage = Number(percentChange.toFixed(2));
+      const movementMagnitude = Number(Math.abs(percentChange).toFixed(2));
+      const triggerType = monitor.trigger === "spike" ? "spike" : monitor.trigger === "drop" ? "drop" : null;
+      const direction: "up" | "down" = percentChange >= 0 ? "up" : "down";
+      if (!triggerType) {
+        logger.warn(
+          {
+            event: "ANALYZER_MONITOR_INVALID_TRIGGER",
+            symbol: normalizedSymbol,
+            monitorId,
+            userId: monitor.user.toString(),
+            trigger: monitor.trigger,
+          },
+          "Skipped monitor with invalid trigger type",
+        );
+        continue;
+      }
+      const thresholdBreached =
+        triggerType === "drop"
+          ? percentChange <= -monitor.thresholdPercentage
+          : triggerType === "spike"
+            ? percentChange >= monitor.thresholdPercentage
+            : false;
       // logger.info(
       //   {
       //     event: "ANALYZER_THRESHOLD_EVALUATED",
@@ -629,7 +650,10 @@ export class AnalyzerEngine {
           monitorId,
           userId: monitor.user.toString(),
           triggerPrice: currentPrice,
-          dropPercentage: absDropPercent,
+          changePercentage,
+          movementMagnitude,
+          triggerType,
+          direction,
           cooldownUntil: currentTimestamp + COOLDOWN_MS,
         },
         "Threshold breached; starting trigger pipeline",
@@ -664,7 +688,10 @@ export class AnalyzerEngine {
             symbol: normalizedSymbol,
             monitorId,
             userId: monitor.user.toString(),
-            dropPercentage: absDropPercent,
+            changePercentage,
+            movementMagnitude,
+            triggerType,
+            direction,
             timeWindowMinutes: monitor.timeWindowMinutes,
             currentCVD: runningCVD // Log the CVD
           },
@@ -682,12 +709,14 @@ export class AnalyzerEngine {
         // 2. Call the updated LLM Service
         const report = await this.llmService.generateAlertReport(
           normalizedSymbol,
-          absDropPercent,
+          changePercentage,
           monitor.timeWindowMinutes,
           newsContext,
           runningCVD,
           walls.support,    // <-- Pass Support
-          walls.resistance  // <-- Pass Resistance
+          walls.resistance,  // <-- Pass Resistance
+          triggerType,
+          direction
         );
         logger.info(
           {
@@ -713,7 +742,10 @@ export class AnalyzerEngine {
           user: monitor.user,
           symbol: normalizedSymbol,
           triggerPrice: currentPrice,
-          dropPercentage: absDropPercent,
+          dropPercentage: movementMagnitude,
+          changePercentage,
+          triggerType,
+          direction,
 
           // The AI Playbook
           catalyst: report.catalyst,

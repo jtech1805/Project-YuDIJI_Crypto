@@ -12,6 +12,9 @@ export interface Alert {
   symbol: string;
   triggerPrice: number;
   dropPercentage: number;
+  changePercentage?: number;
+  triggerType?: 'drop' | 'spike';
+  direction?: 'up' | 'down';
   catalyst: string;
   threatLevel: string;
   support: string;

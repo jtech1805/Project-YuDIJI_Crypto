@@ -285,6 +285,9 @@ export interface Alert {
   symbol: string;
   triggerPrice: number;
   dropPercentage: number;
+  changePercentage?: number;
+  triggerType?: 'drop' | 'spike';
+  direction?: 'up' | 'down';
   catalyst: string;
   threatLevel: string;
   support: string;
@@ -378,6 +381,13 @@ export function AlertCard({ alert, onOpenAnalysis }: AlertCardProps) {
     if (level.includes('🟢')) return 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10';
     return 'text-zinc-400 border-zinc-400/30 bg-zinc-400/10';
   };
+  const signedChange = alert.changePercentage ?? -Math.abs(alert.dropPercentage);
+  const direction = alert.direction ?? (signedChange >= 0 ? 'up' : 'down');
+  const triggerType = alert.triggerType ?? (direction === 'up' ? 'spike' : 'drop');
+  const MovementIcon = direction === 'up' ? TrendingUp : TrendingDown;
+  const movementLabel = triggerType === 'spike' ? 'Spiked' : 'Dropped';
+  const movementClass = direction === 'up' ? 'text-emerald-400' : 'text-red-400';
+  const movementMagnitude = Math.abs(signedChange);
 
   return (
     <motion.div
@@ -402,9 +412,9 @@ export function AlertCard({ alert, onOpenAnalysis }: AlertCardProps) {
               </span>
             </div>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <TrendingDown className="w-3.5 h-3.5 text-red-400" />
-              <span className="text-sm font-semibold text-red-400">
-                Dropped {alert.dropPercentage.toFixed(2)}%
+              <MovementIcon className={`w-3.5 h-3.5 ${movementClass}`} />
+              <span className={`text-sm font-semibold ${movementClass}`}>
+                {movementLabel} {movementMagnitude.toFixed(2)}%
               </span>
             </div>
           </div>

@@ -335,7 +335,7 @@ The current model supports:
 
 Important current implementation gap:
 
-The analyzer currently implements downside threshold checks. Spike support exists in the schema/UI but is not fully implemented in analyzer trigger logic.
+The analyzer now implements trigger-aware threshold checks for both downside drops and upside spikes.
 
 ### Alert
 
@@ -352,7 +352,10 @@ Current fields:
 - `user`
 - `symbol`
 - `triggerPrice`
-- `dropPercentage`
+- `dropPercentage` as a legacy absolute movement field
+- `changePercentage`
+- `triggerType`
+- `direction`
 - `catalyst`
 - `threatLevel`
 - `support`
@@ -978,7 +981,7 @@ Important current business rules:
 Most important unresolved business rule:
 
 ```txt
-Should spike monitors trigger on upward movement?
+Should legacy `dropPercentage` be removed after all old alerts and frontend paths have migrated?
 ```
 
 The schema and UI say yes. The analyzer currently needs implementation alignment.
@@ -987,15 +990,15 @@ The schema and UI say yes. The analyzer currently needs implementation alignment
 
 High-priority edge cases:
 
-1. Spike monitors do not currently trigger properly.
-2. Monitor windows above 60 minutes are allowed but not supported by the one-hour analyzer buffer.
-3. Secure cookies may fail in local HTTP development.
-4. Alert detail lookup may have a user-id mismatch.
-5. HTTP LTP ignition may create symbol subscriptions that never decrement.
-6. Analyzer queries MongoDB for active monitors on every aggTrade tick.
-7. Failed LLM pipeline still puts monitor into cooldown.
-8. Multiple backend instances would not share in-memory analyzer/WebSocket state.
-9. CVD whale threshold is not normalized per asset.
+1. Monitor windows above 60 minutes are allowed but not supported by the one-hour analyzer buffer.
+2. Secure cookies may fail in local HTTP development.
+3. Alert detail lookup may have a user-id mismatch.
+4. HTTP LTP ignition may create symbol subscriptions that never decrement.
+5. Analyzer queries MongoDB for active monitors on every aggTrade tick.
+6. Failed LLM pipeline still puts monitor into cooldown.
+7. Multiple backend instances would not share in-memory analyzer/WebSocket state.
+8. CVD whale threshold is not normalized per asset.
+9. Spike/drop analyzer behavior needs automated regression tests.
 10. The frontend `/engine` page describes future architecture elements not currently implemented.
 
 ## 21. Current Progress
@@ -1023,7 +1026,8 @@ High-priority edge cases:
 - CVD calculation.
 - Order-book snapshot storage.
 - Support/resistance calculation.
-- Analyzer threshold detection for drops.
+- Analyzer threshold detection for drops and spikes.
+- Direction-neutral alert movement fields: `changePercentage`, `triggerType`, and `direction`.
 - Alert cooldowns.
 - CryptoCompare news lookup.
 - Groq alert report generation.
@@ -1042,9 +1046,9 @@ High-priority edge cases:
 
 ### Partially Implemented
 
-- Spike monitor support.
-  - UI/model support exists.
-  - Analyzer logic needs completion.
+- Alert movement field migration.
+  - New fields exist: `changePercentage`, `triggerType`, and `direction`.
+  - Legacy `dropPercentage` is still kept for backward compatibility.
 
 - Alert detail endpoint.
   - Route exists.
@@ -1127,12 +1131,12 @@ Risk math should be deterministic and auditable. The LLM should explain or veto,
 
 Best next fixes:
 
-1. Implement true spike detection in `AnalyzerEngine`.
+1. Add automated tests for drop and spike monitor threshold evaluation.
 2. Align max monitor window with analyzer buffer, either both 60 minutes or both 24 hours.
 3. Fix `getAlertById` user lookup.
 4. Add validation to monitor update payload.
 5. Add `.env.example` with variable names only.
-6. Add tests for monitor threshold evaluation.
+6. Complete the alert movement field migration and eventually remove legacy `dropPercentage`.
 7. Move cooldown setting after successful alert creation or track failed alert attempts.
 8. Normalize user id access as `req.user.id` everywhere.
 9. Add reconnect behavior on frontend WebSocket.
@@ -1183,7 +1187,7 @@ Auth
 
 The most important next phase is hardening:
 
-- align spike/drop behavior
+- add regression tests for spike/drop behavior
 - fix ownership lookup inconsistencies
 - improve validation
 - add tests

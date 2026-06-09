@@ -82,9 +82,23 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   if (latestAlerts.length > 0) {
     const clonedAlerts = latestAlerts.map(alert => {
       const { _id, ...alertData } = alert; // Remove the original _id
+      const changePercentage =
+        typeof alert.changePercentage === "number"
+          ? alert.changePercentage
+          : -Math.abs(alert.dropPercentage ?? 0);
+      const direction = alert.direction === "up" || alert.direction === "down"
+        ? alert.direction
+        : changePercentage >= 0 ? "up" : "down";
+      const triggerType = alert.triggerType === "spike" || alert.triggerType === "drop"
+        ? alert.triggerType
+        : direction === "up" ? "spike" : "drop";
       return {
         ...alertData,
         user: result.user.id, // Assign to the brand new user
+        dropPercentage: Math.abs(alert.dropPercentage ?? changePercentage),
+        changePercentage,
+        triggerType,
+        direction,
         createdAt: new Date() // Refresh the timestamp so it looks like it just happened
       };
     });

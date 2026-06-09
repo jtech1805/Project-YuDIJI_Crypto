@@ -27,6 +27,21 @@ const alertSchema = new Schema(
       required: true,
       min: 0,
     },
+    changePercentage: {
+      type: Number,
+      required: true,
+    },
+    triggerType: {
+      type: String,
+      required: true,
+      enum: ["drop", "spike"],
+      index: true,
+    },
+    direction: {
+      type: String,
+      required: true,
+      enum: ["up", "down"],
+    },
 
     // --- 2. The AI Playbook (Replaces aiRootCause & sentiment) ---
     catalyst: {

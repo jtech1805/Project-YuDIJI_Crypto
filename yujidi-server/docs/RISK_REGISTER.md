@@ -14,12 +14,12 @@ Risk scoring:
 
 Highest-priority current risks:
 
-1. Spike monitor support is incomplete.
-2. Analyzer allows monitor windows longer than its price buffer.
-3. Analyzer state is in memory and not multi-instance safe.
-4. Alert detail ownership lookup may be inconsistent.
-5. MongoDB is queried on every aggTrade tick.
-6. Failed LLM pipeline can still trigger cooldown.
+1. Analyzer allows monitor windows longer than its price buffer.
+2. Analyzer state is in memory and not multi-instance safe.
+3. Alert detail ownership lookup may be inconsistent.
+4. MongoDB is queried on every aggTrade tick.
+5. Failed LLM pipeline can still trigger cooldown.
+6. Spike support needs automated regression tests.
 7. Secrets and environment handling need production discipline.
 8. WebSocket/local cookie behavior can fail under certain environments.
 
@@ -27,14 +27,14 @@ Highest-priority current risks:
 
 | ID | Risk | Severity | Likelihood | Status |
 | --- | --- | --- | --- | --- |
-| R-001 | Spike monitors exist in UI/schema but analyzer does not implement upward trigger logic | High | High | Open |
+| R-001 | Spike monitor support needs automated regression tests after implementation | Medium | Medium | Mitigating |
 | R-002 | Monitor windows up to 24h are allowed while analyzer keeps 60m of price history | High | High | Open |
 | R-003 | Analyzer state is in memory and lost on restart | High | High | Open |
 | R-004 | Multi-instance deployment will produce inconsistent analyzer/WebSocket state | Critical | Medium | Open |
 | R-005 | Analyzer queries active monitors from MongoDB on every aggTrade tick | High | High | Open |
 | R-006 | Cooldown starts before alert pipeline succeeds | Medium | High | Open |
 | R-007 | Alert detail lookup may not correctly scope by authenticated user id | High | Medium | Open |
-| R-008 | Alert model is drop-centric and not ready for spike alerts | Medium | High | Open |
+| R-008 | Alert model keeps legacy `dropPercentage` during compatibility migration | Medium | High | Mitigating |
 | R-009 | CVD whale threshold is not normalized per symbol | Medium | High | Open |
 | R-010 | Groq malformed JSON prevents alert creation | Medium | Medium | Open |
 | R-011 | Real external APIs make local/dev behavior dependent on network and provider limits | Medium | Medium | Open |
@@ -50,31 +50,26 @@ Highest-priority current risks:
 
 ## 3. Detailed Risks
 
-### R-001: Spike Monitors Are Not Implemented In Analyzer
+### R-001: Spike Monitor Regression Coverage
 
-Severity: High
+Severity: Medium
 
-Likelihood: High
+Likelihood: Medium
 
-Status: Open
+Status: Mitigating
 
 Description:
 
-The monitor schema and frontend modal support `spike`, but the analyzer currently checks only:
-
-```ts
-percentChange <= -monitor.thresholdPercentage
-```
+The analyzer now implements trigger-aware drop/spike logic, but automated regression tests still need to be added.
 
 Impact:
 
-Users may create spike monitors that never fire.
+Future analyzer changes could accidentally break spike behavior.
 
 Mitigation:
 
-- Implement trigger-aware threshold logic.
 - Add unit tests for spike trigger and non-trigger paths.
-- Update alert model naming to be direction-neutral.
+- Keep `ANALYZER_ENGINE.md` test cases current.
 
 ### R-002: Monitor Window Exceeds Analyzer Buffer
 
@@ -211,28 +206,27 @@ Mitigation:
 - Normalize all protected controllers to use `req.user.id`.
 - Add integration tests for User A/User B alert access.
 
-### R-008: Alert Model Is Drop-Centric
+### R-008: Legacy Alert Movement Field
 
 Severity: Medium
 
 Likelihood: High
 
-Status: Open
+Status: Mitigating
 
 Description:
 
-The alert field `dropPercentage` assumes all alerts are drops.
+The alert model still stores `dropPercentage` for backward compatibility. New alerts also store `changePercentage`, `triggerType`, and `direction`.
 
 Impact:
 
-Spike alerts would be awkward or misleading.
+Developers may accidentally use `dropPercentage` for new movement semantics.
 
 Mitigation:
 
-- Rename or add fields:
-  - `changePercentage`
-  - `triggerType`
-  - `direction`
+- Frontend should prefer new fields and fallback to `dropPercentage`.
+- Remove `dropPercentage` in a later explicit migration.
+- Keep docs clear that `dropPercentage` is legacy absolute magnitude.
 
 ### R-009: CVD Threshold Is Not Asset-Normalized
 
