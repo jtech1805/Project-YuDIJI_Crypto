@@ -5,6 +5,7 @@ import {
     ShieldAlert,
     Zap,
     TrendingDown,
+    TrendingUp,
     LineChart
 } from 'lucide-react';
 import { formatGlobalTime } from '../../lib/utils';
@@ -15,6 +16,9 @@ interface Alert {
     symbol: string;
     triggerPrice: number;
     dropPercentage: number;
+    changePercentage?: number;
+    triggerType?: 'drop' | 'spike';
+    direction?: 'up' | 'down';
     catalyst: string;
     threatLevel: string;
     support: string;
@@ -41,6 +45,13 @@ export function FullAnalysisModal({ isOpen, onClose, alert }: FullAnalysisModalP
         if (level.includes('🟢')) return 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10';
         return 'text-zinc-400 border-zinc-400/30 bg-zinc-400/10';
     };
+    const signedChange = alert.changePercentage ?? -Math.abs(alert.dropPercentage);
+    const direction = alert.direction ?? (signedChange >= 0 ? 'up' : 'down');
+    const triggerType = alert.triggerType ?? (direction === 'up' ? 'spike' : 'drop');
+    const MovementIcon = direction === 'up' ? TrendingUp : TrendingDown;
+    const movementLabel = triggerType === 'spike' ? 'Spike' : 'Drop';
+    const movementClass = direction === 'up' ? 'text-emerald-400' : 'text-red-400';
+    const movementMagnitude = Math.abs(signedChange);
 
     return (
         <AnimatePresence>
@@ -80,9 +91,9 @@ export function FullAnalysisModal({ isOpen, onClose, alert }: FullAnalysisModalP
 
                                         </span>
                                         <span className="w-1 h-1 rounded-full bg-zinc-700" />
-                                        <span className="text-red-400 font-medium flex items-center gap-1">
-                                            <TrendingDown className="w-3 h-3" />
-                                            {alert.dropPercentage.toFixed(2)}% Drop
+                                        <span className={`${movementClass} font-medium flex items-center gap-1`}>
+                                            <MovementIcon className="w-3 h-3" />
+                                            {movementMagnitude.toFixed(2)}% {movementLabel}
                                         </span>
                                     </div>
                                 </div>

@@ -140,9 +140,9 @@ Example:
 If BTCUSDT drops 2.5% in 5 minutes, create an alert.
 ```
 
-Important current limitation:
+Current behavior:
 
-The schema and UI support both `drop` and `spike`, but analyzer logic currently implements downside/drop detection only.
+The schema, UI, and analyzer support both `drop` and `spike` monitors.
 
 ### 2.4 Alert
 
@@ -178,7 +178,7 @@ Alert = generated market intelligence created after a monitor breach.
 
 Important current limitation:
 
-The alert model is drop-centric because it uses `dropPercentage`. If spike detection becomes production behavior, the model should move toward neutral movement fields like:
+The alert model keeps `dropPercentage` for backward compatibility, but new alerts also store direction-neutral movement fields:
 
 ```txt
 changePercentage
@@ -526,8 +526,8 @@ Untracked
 
 High-priority gaps:
 
-1. Spike monitor behavior must be implemented in the analyzer.
-2. Alert model should become direction-neutral before spike alerts are considered complete.
+1. Add automated regression tests for spike and drop analyzer behavior.
+2. Complete the alert-field migration by eventually removing legacy `dropPercentage`.
 3. Monitor max window should match analyzer buffer length.
 4. User ID access should be normalized as `req.user.id`.
 5. Failed alert attempts are not represented in the domain.

@@ -368,49 +368,29 @@ result: do not trigger
 
 ### 4.4 Current Implementation Status
 
-Current analyzer code calculates:
+Current analyzer code is trigger-aware:
 
 ```ts
-const thresholdBreached = percentChange <= -monitor.thresholdPercentage;
-```
-
-This means current implementation supports downside/drop detection only.
-
-Current behavior:
-
-- `drop` monitors can trigger.
-- `spike` monitors are stored and shown in the UI, but analyzer logic does not currently evaluate upward breaches.
-
-Recommended implementation:
-
-```ts
-const trigger = monitor.trigger;
-
 const thresholdBreached =
-  trigger === "drop"
+  triggerType === "drop"
     ? percentChange <= -monitor.thresholdPercentage
-    : trigger === "spike"
+    : triggerType === "spike"
       ? percentChange >= monitor.thresholdPercentage
       : false;
 ```
 
-Recommended alert field improvement:
+Current behavior:
 
-The alert model currently stores `dropPercentage`. If spike alerts are implemented, this field should either be renamed or supplemented.
+- `drop` monitors can trigger.
+- `spike` monitors can trigger.
+- invalid legacy trigger values are skipped.
 
-Possible options:
+Compatibility migration:
 
-```txt
-movementPercentage
-movementDirection
-```
-
-or:
-
-```txt
-changePercentage
-triggerType
-```
+- New alerts store `changePercentage`, `triggerType`, and `direction`.
+- New alerts also continue storing legacy `dropPercentage` as an absolute magnitude.
+- Frontend displays new movement fields when present and falls back to `dropPercentage` for old alerts.
+- `dropPercentage` should be removed only in a later deliberate migration.
 
 ## 5. Cooldown Behavior
 
@@ -714,7 +694,7 @@ Expected:
 
 Current status:
 
-- This is intended behavior but not fully implemented in current analyzer logic.
+- Implemented in analyzer logic.
 
 ### 7.11 Spike Monitor Does Not Trigger
 
@@ -732,7 +712,7 @@ Expected:
 
 Current status:
 
-- This should be covered once spike logic is implemented.
+- Implemented in analyzer logic.
 
 ### 7.12 Monitor Skips Without Base Tick
 
@@ -838,15 +818,14 @@ Expected:
 
 ## 8. Known Limitations
 
-### 8.1 Spike Logic Is Not Fully Implemented
+### 8.1 Spike Logic Is Newly Implemented
 
-The schema and UI support spike monitors, but the analyzer currently checks only:
+The analyzer now supports trigger-aware drop and spike detection.
 
-```ts
-percentChange <= -monitor.thresholdPercentage
-```
+Remaining work:
 
-Spike support should be implemented before treating spike monitors as production-ready.
+- Add automated regression tests for spike trigger and non-trigger paths.
+- Monitor production behavior after deployment.
 
 ### 8.2 Alert Model Is Drop-Centric
 
@@ -856,11 +835,12 @@ The alert model uses:
 dropPercentage
 ```
 
-For spike alerts, this naming becomes inaccurate.
+For spike alerts, this naming is legacy-only. New alerts also store direction-neutral fields:
 
-Recommended future fields:
+Current migration fields:
 
 ```txt
+dropPercentage  // legacy absolute magnitude
 changePercentage
 triggerType
 direction

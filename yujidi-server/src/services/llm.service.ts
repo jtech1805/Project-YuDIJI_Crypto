@@ -36,18 +36,28 @@ export class LlmService {
 
   public async generateAlertReport(
     symbol: string,
-    dropPercent: number,
+    changePercent: number,
     timeWindow: number,
     newsContext: string,
     runningCVD: number,
     supportWall: string,    // <-- NEW PARAMETER
-    resistanceWall: string
+    resistanceWall: string,
+    triggerType: "drop" | "spike",
+    direction: "up" | "down"
   ): Promise<AlertReport> {
+    const movementVerb = triggerType === "spike" ? "spiked" : "dropped";
+    const movementContext =
+      direction === "up"
+        ? "upward spike / breakout pressure"
+        : "downward drop / selloff pressure";
+
     logger.info(
       {
         event: "GROQ_API_CALL",
         symbol,
-        dropPercent,
+        changePercent,
+        triggerType,
+        direction,
         timeWindow,
         newsContextLength: newsContext.length,
         timestamp: new Date().toISOString(),
@@ -102,20 +112,24 @@ export class LlmService {
             content: `You are an elite Crypto Risk Analyst and Quantitative Trader. 
             Return response in STRICT JSON format exactly matching this schema:
             {
-            "catalyst": "1 sentence explaining the primary driver of the drop",
-            "threatLevel": "🔴 High Volatility | 🟡 Moderate Selloff | 🟢 Low-Liquidity Sweep | 🟢 Absorption / Buy Wall",
+            "catalyst": "1 sentence explaining the primary driver of the movement",
+            "threatLevel": "🔴 High Volatility | 🟡 Moderate Move | 🟢 Low-Liquidity Sweep | 🟢 Absorption / Liquidity Wall",
             "support": "The exact support data provided to you",
             "resistance": "The exact resistance data provided to you",
             "summary": "A 2-sentence actionable summary for a day trader"
             }
             ANALYSIS RULES: 
-            1. Use CVD to determine momentum. Highly negative CVD means aggressive selling. Positive/flat CVD during a drop means absorption.
+            1. Use CVD to determine momentum. Highly negative CVD means aggressive selling pressure. Highly positive CVD means aggressive buying pressure.
+            2. Compare CVD against the event direction: ${movementContext}.
             2. Incorporate the news context if relevant.
             3. Factor in the distance to the heavy support/resistance walls.`
           },
           {
             role: "user",
-            content: `MARKET EVENT: ${symbol} dropped ${dropPercent}% in the last ${timeWindow} minutes.
+            content: `MARKET EVENT: ${symbol} ${movementVerb} ${Math.abs(changePercent)}% in the last ${timeWindow} minutes.
+            RAW SIGNED CHANGE: ${changePercent}%.
+            TRIGGER TYPE: ${triggerType}.
+            DIRECTION: ${direction}.
             MOMENTUM DATA: The 60-second CVD is ${runningCVD}.
             NEAREST HEAVY SUPPORT: ${supportWall}
             NEAREST HEAVY RESISTANCE: ${resistanceWall}
@@ -129,7 +143,7 @@ export class LlmService {
       });
     } catch (error: unknown) {
       logger.error(
-        { event: "GROQ_API_ERROR", error, symbol, dropPercent, timeWindow },
+        { event: "GROQ_API_ERROR", error, symbol, changePercent, triggerType, direction, timeWindow },
         "Groq API call failed",
       );
       throw new AppError("Groq API request failed", 502);
@@ -138,7 +152,7 @@ export class LlmService {
     const content = completion.choices[0]?.message?.content;
     if (!content) {
       logger.error(
-        { event: "GROQ_EMPTY_RESPONSE", symbol, dropPercent, timeWindow },
+        { event: "GROQ_EMPTY_RESPONSE", symbol, changePercent, triggerType, direction, timeWindow },
         "Groq API returned empty response content",
       );
       throw new AppError("Groq API returned empty response content", 502);

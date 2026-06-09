@@ -84,8 +84,8 @@ Must test:
 - CVD culls old trades
 - drop monitor triggers
 - drop monitor does not trigger
-- spike monitor triggers after implementation
-- spike monitor does not trigger after implementation
+- spike monitor triggers
+- spike monitor does not trigger
 - insufficient history skips monitor
 - cooldown prevents duplicate trigger
 - cooldown expires and allows retrigger
