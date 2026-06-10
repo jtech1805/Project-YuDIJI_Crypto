@@ -43,7 +43,7 @@ These are true in the current codebase:
 - Alerts still keep legacy `dropPercentage` for backward compatibility.
 - Groq is used for alert reports and copilot chat.
 - CryptoCompare is used for news context.
-- There is no visible automated test suite yet.
+- A first analyzer rules unit-test foundation exists.
 - Documentation exists, but docs must be kept aligned with implementation.
 
 ### Future Direction / Not Yet Implemented
@@ -60,7 +60,7 @@ These are desired or discussed, but should not be described as implemented unles
 - Multi-instance-safe analyzer coordination.
 - Explicit alert pipeline status such as `detected`, `analyzing`, `failed`.
 - Full removal of legacy `dropPercentage`.
-- Automated test suite.
+- Full automated test suite beyond analyzer rules.
 
 Rule:
 
@@ -207,6 +207,8 @@ GROQ_API_KEY
 Optional or environment-specific:
 
 ```txt
+LLM_PROVIDER
+GROQ_MODEL
 CRYPTOCOMPARE_API_KEY
 FRONTEND_URL
 MEDO_URL
@@ -224,6 +226,8 @@ Meaning:
 - `JWT_ACCESS_EXPIRY`: access token lifetime.
 - `JWT_REFRESH_EXPIRY`: refresh token lifetime.
 - `GROQ_API_KEY`: Groq API key for LLM calls.
+- `LLM_PROVIDER`: selected LLM adapter, defaults to `groq`.
+- `GROQ_MODEL`: optional Groq model override.
 - `CRYPTOCOMPARE_API_KEY`: optional key for news lookup.
 - `FRONTEND_URL`: allowed frontend CORS origin.
 - `MEDO_URL`: additional allowed CORS origin.
@@ -1237,6 +1241,34 @@ Current model:
 llama-3.3-70b-versatile
 ```
 
+## Provider Abstraction Baseline
+
+YuJiDi now isolates LLM providers behind an application-owned `LLMProvider` port.
+
+Current provider:
+
+- Groq
+
+Future providers:
+
+- OpenAI
+- Gemini
+
+Rules:
+
+- Core alert/copilot logic should depend on `LLMProvider`, not Groq SDK.
+- Provider-specific response formats must be parsed and validated inside adapters.
+- LLM output remains schema-validated before use.
+
+Current implementation files:
+
+```txt
+src/ports/llm-provider.port.ts
+src/integrations/llm/llm-provider.factory.ts
+src/integrations/llm/groq/groq-llm.provider.ts
+src/services/llm.service.ts
+```
+
 ## 13. Analyzer Engine Architecture
 
 Analyzer file:
@@ -1306,7 +1338,7 @@ threshold breach
   -> fetch news
   -> calculate support/resistance
   -> build movement-aware prompt
-  -> call Groq
+  -> call selected LLM provider
   -> parse JSON
   -> validate with Zod
   -> save alert
@@ -1336,7 +1368,7 @@ user prompt
   -> get live CVD and order book
   -> backend calculates deterministic trade math
   -> load recent chat history
-  -> call Groq
+  -> call selected LLM provider
   -> validate JSON
   -> save messages
   -> return response
@@ -1531,11 +1563,12 @@ Detailed strategy:
 Current status:
 
 - Backend has `typecheck`.
-- No visible automated test suite yet.
+- Backend has analyzer rules and `processTick` tests.
+- Full route/database/WebSocket test coverage is still pending.
 
 Recommended priority:
 
-1. Analyzer unit tests.
+1. Expand analyzer edge-case tests.
 2. Monitor service tests.
 3. Auth service/route tests.
 4. Alert route ownership tests.

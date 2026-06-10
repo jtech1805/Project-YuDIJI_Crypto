@@ -28,20 +28,34 @@ Current `package.json` scripts include:
 ```txt
 dev
 start
+test
+test:analyzer
 typecheck
 ```
 
-There is no visible automated test script yet.
+There is now a first analyzer unit-test foundation using Node's built-in test runner with `tsx`.
+
+Current automated tests:
+
+- `src/services/analyzer.rules.test.ts`
+- `src/services/analyzer.service.test.ts`
+
+Current commands:
+
+```bash
+npm test
+npm run test:analyzer
+```
 
 Current recommendation:
 
-- Add a test framework.
-- Add domain/unit tests around analyzer logic first.
+- Continue domain/unit tests around analyzer logic first.
 - Add integration tests for routes after core domain behavior is covered.
 
 Suggested tools:
 
-- Vitest or Jest for unit/integration tests.
+- Node's built-in test runner for low-dependency unit tests.
+- Vitest or Jest if richer mocking/snapshot tooling becomes necessary.
 - Supertest for Express route testing.
 - mongodb-memory-server for MongoDB integration tests.
 - Mock WebSocket/Groq/Binance dependencies for deterministic tests.
@@ -73,6 +87,32 @@ Primary file:
 src/services/analyzer.service.ts
 ```
 
+Current foundation files:
+
+```txt
+src/services/analyzer.rules.ts
+src/services/analyzer.rules.test.ts
+src/services/analyzer.service.test.ts
+```
+
+Currently covered:
+
+- drop monitor breaches only on negative threshold
+- drop monitor does not breach on upward spike
+- spike monitor breaches only on positive threshold
+- spike monitor does not breach on downward drop
+- invalid trigger never breaches
+- display movement values round to two decimals
+- zero-monitor cache snapshot is marked as negative cache
+- active cache snapshot is marked as non-negative cache
+- `processTick` creates drop alerts when threshold is breached
+- `processTick` creates spike alerts when threshold is breached
+- `processTick` does not create spike alerts on downward drops
+- `processTick` skips alerts when price history is insufficient
+- cooldown prevents duplicate `processTick` alerts
+- LLM/report failure prevents alert persistence and emission
+- negative active-monitor cache avoids repeated monitor fetch within TTL
+
 Must test:
 
 - valid tick updates price buffer
@@ -82,12 +122,6 @@ Must test:
 - CVD negative delta
 - CVD ignores small trades
 - CVD culls old trades
-- drop monitor triggers
-- drop monitor does not trigger
-- spike monitor triggers
-- spike monitor does not trigger
-- insufficient history skips monitor
-- cooldown prevents duplicate trigger
 - cooldown expires and allows retrigger
 - order-book snapshot updates
 - unknown support/resistance when no book exists

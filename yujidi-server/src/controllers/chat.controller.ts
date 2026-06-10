@@ -298,7 +298,7 @@ export const handleCopilotChat = async (req: Request, res: Response) => {
         }));
 
         // C. Execute LLM Call (Passing the DB history instead of frontend history)
-        const aiResponse = await sharedLlmService.generateCopilotResponse(systemInstruction, recentHistory, userPrompt);
+        const aiResponse = await sharedLlmService.generateCopilotResponse(systemInstruction, recentHistory, userPrompt, symbol);
 
         // D. Save the new interaction to MongoDB permanently
         chatSession.messages.push({ role: 'user', content: userPrompt, timestamp: new Date() });

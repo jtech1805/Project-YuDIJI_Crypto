@@ -680,6 +680,18 @@ LLM service file:
 src/services/llm.service.ts
 ```
 
+LLM provider port:
+
+```txt
+src/ports/llm-provider.port.ts
+```
+
+Current LLM adapter:
+
+```txt
+src/integrations/llm/groq/groq-llm.provider.ts
+```
+
 News provider:
 
 ```txt
@@ -697,6 +709,13 @@ Current model:
 ```txt
 llama-3.3-70b-versatile
 ```
+
+Provider abstraction baseline:
+
+- Core alert/copilot logic depends on the app-owned `LLMProvider` port.
+- Groq SDK usage is isolated inside the Groq adapter.
+- Provider-specific response formats are parsed and validated inside adapters.
+- Future OpenAI/Gemini adapters should implement the same port without changing analyzer/chat domain logic.
 
 Alert report schema:
 
@@ -1073,7 +1092,7 @@ High-priority edge cases:
 
 ### Not Yet Implemented
 
-- Automated backend test suite.
+- Full automated backend test suite beyond analyzer rules and `processTick` tests.
 - Redis/shared state for scaling.
 - Queueing for LLM calls.
 - Persistent failed alert records.
@@ -1116,7 +1135,7 @@ Tradeoff:
 
 State is lost on restart and not shared across instances.
 
-### Decision: Use Groq Structured JSON
+### Decision: Use LLM Provider Structured JSON
 
 Reason:
 
@@ -1124,7 +1143,7 @@ The frontend and database expect structured alert/report fields.
 
 Tradeoff:
 
-Malformed JSON causes the pipeline to fail.
+Malformed provider JSON causes the pipeline to fail. Groq is currently the only implemented adapter.
 
 ### Decision: Backend Calculates Trade Math
 
@@ -1136,7 +1155,7 @@ Risk math should be deterministic and auditable. The LLM should explain or veto,
 
 Best next fixes:
 
-1. Add automated tests for drop and spike monitor threshold evaluation.
+1. Expand analyzer edge-case tests for invalid ticks, CVD, order-book snapshots, and cooldown expiry.
 2. Align max monitor window with analyzer buffer, either both 60 minutes or both 24 hours.
 3. Fix `getAlertById` user lookup.
 4. Add validation to monitor update payload.

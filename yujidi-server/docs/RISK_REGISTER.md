@@ -487,6 +487,29 @@ Mitigation:
 - Consider notional value thresholds.
 - Add tests for thin/spoof-like books.
 
+### R-021: LLM Provider Lock-In
+
+Severity: Medium
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+YuJiDi currently uses Groq for alert report generation and copilot chat. Direct provider coupling would make future OpenAI, Gemini, or other LLM provider changes risky.
+
+Impact:
+
+Provider-specific SDKs, response formats, and model behavior could leak into analyzer/chat logic and make testing or provider switching harder.
+
+Mitigation:
+
+- LLM calls now go through an application-owned `LLMProvider` port.
+- Groq-specific SDK usage, request payloads, response parsing, and schema validation live inside the Groq adapter.
+- Only Groq is implemented today.
+- Add OpenAI/Gemini adapters later without changing analyzer/chat domain logic.
+
 ## 4. Review Cadence
 
 This risk register should be reviewed:

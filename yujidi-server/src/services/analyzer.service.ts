@@ -2,6 +2,11 @@ import pino from "pino";
 
 import { AlertModel, type Alert } from "../models/Alert.js";
 import { TripwireConfigModel } from "../models/TripwireConfig.js";
+import {
+  createMonitorCacheSnapshot,
+  evaluateMonitorThreshold,
+  MONITOR_CACHE_TTL_MS,
+} from "./analyzer.rules.js";
 import { sharedLlmService } from "./llm.service.js";
 import { fetchRecentHeadlines } from "./news.service.js";
 
@@ -26,18 +31,42 @@ const MAX_BUFFER_WINDOW_MS = 60 * 60 * 1000;
 const COOLDOWN_MS = 15 * 60 * 1000;
 const CVD_BUFFER_WINDOW_MS = 60 * 1000;
 const WHALE_THRESHOLD_BTC = 0.1; // Filter out retail noise
-const MONITOR_CACHE_TTL_MS = 5 * 1000;
 type ActiveMonitorDocument = Awaited<ReturnType<typeof TripwireConfigModel.find>>[number];
 type ActiveMonitorCacheEntry = {
   monitors: ActiveMonitorDocument[];
   expiresAt: number;
   loadedAt: number;
 };
+type AnalyzerAlertDocument = {
+  _id: { toString(): string };
+  toObject(): Alert;
+};
+type AnalyzerLlmService = Pick<typeof sharedLlmService, "generateAlertReport">;
+type AnalyzerDependencies = {
+  llmService: AnalyzerLlmService;
+  fetchRecentHeadlines: (symbol: string) => Promise<string>;
+  findActiveMonitors: (symbol: string) => Promise<ActiveMonitorDocument[]>;
+  createAlert: (payload: Record<string, unknown>) => Promise<AnalyzerAlertDocument>;
+};
+
+const defaultAnalyzerDependencies: AnalyzerDependencies = {
+  llmService: sharedLlmService,
+  fetchRecentHeadlines,
+  findActiveMonitors: async (symbol: string): Promise<ActiveMonitorDocument[]> => {
+    return TripwireConfigModel.find({
+      symbol,
+      isActive: true,
+    }).exec();
+  },
+  createAlert: async (payload: Record<string, unknown>): Promise<AnalyzerAlertDocument> => {
+    return AlertModel.create(payload) as Promise<AnalyzerAlertDocument>;
+  },
+};
 
 export class AnalyzerEngine {
-  // private readonly llmService: LlmService;
-  private readonly llmService = sharedLlmService;
+  private readonly llmService: AnalyzerLlmService;
   private readonly emitAlert: AlertEmitter;
+  private readonly dependencies: AnalyzerDependencies;
 
   public readonly priceBuffer: Map<string, PriceTick[]>;
   public readonly cooldowns: Map<string, number>;
@@ -48,9 +77,10 @@ export class AnalyzerEngine {
   public readonly orderBookSnapshot: Map<string, { bids: string[][], asks: string[][] }>;
   private readonly activeMonitorCache: Map<string, ActiveMonitorCacheEntry>;
 
-  public constructor(emitAlert: AlertEmitter) {
-    // this.llmService = new sharedLlmService();
+  public constructor(emitAlert: AlertEmitter, dependencies: Partial<AnalyzerDependencies> = {}) {
     this.emitAlert = emitAlert;
+    this.dependencies = { ...defaultAnalyzerDependencies, ...dependencies };
+    this.llmService = this.dependencies.llmService;
     this.priceBuffer = new Map<string, PriceTick[]>();
     this.cooldowns = new Map<string, number>();
     // NEW: Initialize CVD maps
@@ -110,20 +140,17 @@ export class AnalyzerEngine {
   private async loadActiveMonitorCache(symbol: string, reason: string): Promise<ActiveMonitorDocument[]> {
     const now = Date.now();
 
-    logger.info(
-      {
-        event: "ANALYZER_MONITOR_CACHE_REFRESH",
-        symbol,
-        reason,
-        previousActiveMonitorCount: this.activeMonitorCache.get(symbol)?.monitors.length ?? 0,
-      },
-      "Refreshing active monitor cache from MongoDB",
-    );
+    // logger.info(
+    //   {
+    //     event: "ANALYZER_MONITOR_CACHE_REFRESH",
+    //     symbol,
+    //     reason,
+    //     previousActiveMonitorCount: this.activeMonitorCache.get(symbol)?.monitors.length ?? 0,
+    //   },
+    //   "Refreshing active monitor cache from MongoDB",
+    // );
 
-    const monitors = await TripwireConfigModel.find({
-      symbol,
-      isActive: true,
-    }).exec();
+    const monitors = await this.dependencies.findActiveMonitors(symbol);
 
     this.activeMonitorCache.set(symbol, {
       monitors,
@@ -131,16 +158,16 @@ export class AnalyzerEngine {
       expiresAt: now + MONITOR_CACHE_TTL_MS,
     });
 
-    logger.info(
-      {
-        event: "ANALYZER_MONITOR_CACHE_REFRESHED",
-        symbol,
-        activeMonitorCount: monitors.length,
-        isNegativeCache: monitors.length === 0,
-        ttlMs: MONITOR_CACHE_TTL_MS,
-      },
-      "Refreshed active monitor cache from MongoDB",
-    );
+    // logger.info(
+    //   {
+    //     event: "ANALYZER_MONITOR_CACHE_REFRESHED",
+    //     symbol,
+    //     activeMonitorCount: monitors.length,
+    //     isNegativeCache: monitors.length === 0,
+    //     ttlMs: MONITOR_CACHE_TTL_MS,
+    //   },
+    //   "Refreshed active monitor cache from MongoDB",
+    // );
 
     return monitors;
   }
@@ -704,10 +731,14 @@ export class AnalyzerEngine {
       }
 
       const percentChange = ((currentPrice - baseTick.price) / baseTick.price) * 100;
-      const changePercentage = Number(percentChange.toFixed(2));
-      const movementMagnitude = Number(Math.abs(percentChange).toFixed(2));
-      const triggerType = monitor.trigger === "spike" ? "spike" : monitor.trigger === "drop" ? "drop" : null;
-      const direction: "up" | "down" = percentChange >= 0 ? "up" : "down";
+      const {
+        changePercentage,
+        movementMagnitude,
+        triggerType,
+        direction,
+        thresholdBreached,
+      } = evaluateMonitorThreshold(percentChange, monitor.thresholdPercentage, monitor.trigger);
+
       if (!triggerType) {
         logger.warn(
           {
@@ -721,12 +752,6 @@ export class AnalyzerEngine {
         );
         continue;
       }
-      const thresholdBreached =
-        triggerType === "drop"
-          ? percentChange <= -monitor.thresholdPercentage
-          : triggerType === "spike"
-            ? percentChange >= monitor.thresholdPercentage
-            : false;
       // logger.info(
       //   {
       //     event: "ANALYZER_THRESHOLD_EVALUATED",
@@ -777,7 +802,7 @@ export class AnalyzerEngine {
           },
           "Calling news context service",
         );
-        const newsContext = await fetchRecentHeadlines(normalizedSymbol);
+        const newsContext = await this.dependencies.fetchRecentHeadlines(normalizedSymbol);
         logger.info(
           {
             event: "ANALYZER_NEWS_FETCH_SUCCESS",
@@ -792,7 +817,7 @@ export class AnalyzerEngine {
 
         logger.info(
           {
-            event: "ANALYZER_GROQ_START",
+            event: "ANALYZER_LLM_REPORT_START",
             symbol: normalizedSymbol,
             monitorId,
             userId: monitor.user.toString(),
@@ -803,7 +828,7 @@ export class AnalyzerEngine {
             timeWindowMinutes: monitor.timeWindowMinutes,
             currentCVD: runningCVD // Log the CVD
           },
-          "Calling Groq report generation",
+          "Calling LLM report generation",
         );
         // 1. Grab the thickest walls from the Order Book snapshot
         const walls = this.findStructuralSupportResistance(normalizedSymbol);
@@ -824,17 +849,18 @@ export class AnalyzerEngine {
           walls.support,    // <-- Pass Support
           walls.resistance,  // <-- Pass Resistance
           triggerType,
-          direction
+          direction,
+          currentPrice,
         );
         logger.info(
           {
-            event: "ANALYZER_GROQ_SUCCESS",
+            event: "ANALYZER_LLM_REPORT_SUCCESS",
             symbol: normalizedSymbol,
             monitorId,
             userId: monitor.user.toString(),
             // aiRootCauseLength: report.aiRootCause.length,
           },
-          "Groq report generated successfully",
+          "LLM report generated successfully",
         );
 
         // const alertDocument = await AlertModel.create({
@@ -846,7 +872,7 @@ export class AnalyzerEngine {
         //   sentiment: report.sentiment,
         //   createdAt: new Date(currentTimestamp),
         // });
-        const alertDocument = await AlertModel.create({
+        const alertDocument = await this.dependencies.createAlert({
           user: monitor.user,
           symbol: normalizedSymbol,
           triggerPrice: currentPrice,
@@ -923,13 +949,7 @@ export class AnalyzerEngine {
       activeMonitorCache: Object.fromEntries(
         Array.from(this.activeMonitorCache.entries()).map(([symbol, cacheEntry]) => [
           symbol,
-          {
-            activeMonitorCount: cacheEntry.monitors.length,
-            isNegativeCache: cacheEntry.monitors.length === 0,
-            loadedAt: new Date(cacheEntry.loadedAt).toISOString(),
-            expiresAt: new Date(cacheEntry.expiresAt).toISOString(),
-            ttlRemainingMs: Math.max(0, cacheEntry.expiresAt - Date.now()),
-          },
+          createMonitorCacheSnapshot(cacheEntry),
         ])
       ),
       // 🧠 NEW: Dynamically calculate walls for every single coin we are tracking!
