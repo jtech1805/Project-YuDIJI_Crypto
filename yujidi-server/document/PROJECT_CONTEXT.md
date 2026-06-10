@@ -1014,6 +1014,8 @@ High-priority edge cases:
 - User model.
 - Symbol model.
 - Binance symbol sync.
+- MongoDB startup retry/backoff.
+- Non-fatal Binance symbol sync retry loop.
 - Monitor model and CRUD routes.
 - Alert model.
 - Alert list route.
