@@ -37,7 +37,7 @@ Highest-priority current risks:
 | R-008 | Alert model keeps legacy `dropPercentage` during compatibility migration | Medium | High | Mitigating |
 | R-009 | CVD whale threshold is not normalized per symbol | Medium | High | Open |
 | R-010 | Groq malformed JSON prevents alert creation | Medium | Medium | Open |
-| R-011 | Real external APIs make local/dev behavior dependent on network and provider limits | Medium | Medium | Open |
+| R-011 | Real external APIs make local/dev behavior dependent on network and provider limits | Medium | Medium | Mitigating |
 | R-012 | Secure cookie config may break local HTTP auth/WebSocket auth | Medium | Medium | Open |
 | R-013 | Refresh token is stored directly instead of hashed | High | Medium | Open |
 | R-014 | No automated backend tests currently visible | High | High | Open |
@@ -277,7 +277,7 @@ Severity: Medium
 
 Likelihood: Medium
 
-Status: Open
+Status: Mitigating
 
 Description:
 
@@ -289,6 +289,8 @@ Network/API outages can degrade symbol sync, LTP, news, LLM reports, or alert pe
 
 Mitigation:
 
+- MongoDB startup connection now uses bounded retry/backoff.
+- Binance symbol sync now runs as a non-fatal background retry loop.
 - Mock external APIs in tests.
 - Add retries where appropriate.
 - Add health checks and provider-specific fallback behavior.
