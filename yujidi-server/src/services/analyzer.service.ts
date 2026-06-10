@@ -26,6 +26,14 @@ const MAX_BUFFER_WINDOW_MS = 60 * 60 * 1000;
 const COOLDOWN_MS = 15 * 60 * 1000;
 const CVD_BUFFER_WINDOW_MS = 60 * 1000;
 const WHALE_THRESHOLD_BTC = 0.1; // Filter out retail noise
+const MONITOR_CACHE_TTL_MS = 5 * 1000;
+type ActiveMonitorDocument = Awaited<ReturnType<typeof TripwireConfigModel.find>>[number];
+type ActiveMonitorCacheEntry = {
+  monitors: ActiveMonitorDocument[];
+  expiresAt: number;
+  loadedAt: number;
+};
+
 export class AnalyzerEngine {
   // private readonly llmService: LlmService;
   private readonly llmService = sharedLlmService;
@@ -38,6 +46,7 @@ export class AnalyzerEngine {
   public readonly currentCVD: Map<string, number>; // O(1) lookup for running total
   // 1. ADD THE ORDER BOOK PROPERTY HERE
   public readonly orderBookSnapshot: Map<string, { bids: string[][], asks: string[][] }>;
+  private readonly activeMonitorCache: Map<string, ActiveMonitorCacheEntry>;
 
   public constructor(emitAlert: AlertEmitter) {
     // this.llmService = new sharedLlmService();
@@ -49,10 +58,112 @@ export class AnalyzerEngine {
     this.currentCVD = new Map<string, number>();
     // 2. INITIALIZE IT IN THE CONSTRUCTOR HERE
     this.orderBookSnapshot = new Map<string, { bids: string[][], asks: string[][] }>();
+    this.activeMonitorCache = new Map<string, ActiveMonitorCacheEntry>();
   }
   public updateOrderBook(symbol: string, bids: string[][], asks: string[][]): void {
     // This overwrites the old snapshot with the newest one every 100ms
     this.orderBookSnapshot.set(symbol, { bids, asks });
+  }
+
+  public invalidateMonitorCache(rawSymbol?: string): void {
+    if (!rawSymbol) {
+      const invalidatedSymbols = Array.from(this.activeMonitorCache.keys());
+      this.activeMonitorCache.clear();
+      logger.info(
+        {
+          event: "ANALYZER_MONITOR_CACHE_INVALIDATED",
+          scope: "all",
+          invalidatedSymbols,
+        },
+        "Invalidated analyzer monitor cache",
+      );
+      return;
+    }
+
+    const symbol = rawSymbol.toUpperCase().trim();
+    const existed = this.activeMonitorCache.delete(symbol);
+    logger.info(
+      {
+        event: "ANALYZER_MONITOR_CACHE_INVALIDATED",
+        scope: "symbol",
+        symbol,
+        existed,
+      },
+      "Invalidated analyzer monitor cache for symbol",
+    );
+  }
+
+  public async refreshMonitorCache(rawSymbol: string, reason = "mutation"): Promise<ActiveMonitorDocument[]> {
+    const symbol = rawSymbol.toUpperCase().trim();
+    logger.info(
+      {
+        event: "ANALYZER_MONITOR_CACHE_REFRESH_REQUESTED",
+        symbol,
+        reason,
+      },
+      "Refreshing analyzer monitor cache on demand",
+    );
+
+    return this.loadActiveMonitorCache(symbol, reason);
+  }
+
+  private async loadActiveMonitorCache(symbol: string, reason: string): Promise<ActiveMonitorDocument[]> {
+    const now = Date.now();
+
+    logger.info(
+      {
+        event: "ANALYZER_MONITOR_CACHE_REFRESH",
+        symbol,
+        reason,
+        previousActiveMonitorCount: this.activeMonitorCache.get(symbol)?.monitors.length ?? 0,
+      },
+      "Refreshing active monitor cache from MongoDB",
+    );
+
+    const monitors = await TripwireConfigModel.find({
+      symbol,
+      isActive: true,
+    }).exec();
+
+    this.activeMonitorCache.set(symbol, {
+      monitors,
+      loadedAt: now,
+      expiresAt: now + MONITOR_CACHE_TTL_MS,
+    });
+
+    logger.info(
+      {
+        event: "ANALYZER_MONITOR_CACHE_REFRESHED",
+        symbol,
+        activeMonitorCount: monitors.length,
+        isNegativeCache: monitors.length === 0,
+        ttlMs: MONITOR_CACHE_TTL_MS,
+      },
+      "Refreshed active monitor cache from MongoDB",
+    );
+
+    return monitors;
+  }
+
+  private async getActiveMonitorsForSymbol(symbol: string): Promise<ActiveMonitorDocument[]> {
+    const now = Date.now();
+    const cached = this.activeMonitorCache.get(symbol);
+
+    if (cached && cached.expiresAt > now) {
+      logger.debug(
+        {
+          event: "ANALYZER_MONITOR_CACHE_HIT",
+          symbol,
+          activeMonitorCount: cached.monitors.length,
+          isNegativeCache: cached.monitors.length === 0,
+          ttlRemainingMs: cached.expiresAt - now,
+        },
+        "Using cached active monitors",
+      );
+      return cached.monitors;
+    }
+
+    return this.loadActiveMonitorCache(symbol, cached ? "expired" : "miss");
   }
 
   // public findHeavySupportResistance(symbol: string) {
@@ -544,10 +655,7 @@ export class AnalyzerEngine {
     //   "Updated high-frequency CVD momentum"
     // );
     // ==========================================
-    const activeMonitors = await TripwireConfigModel.find({
-      symbol: normalizedSymbol,
-      isActive: true,
-    }).exec();
+    const activeMonitors = await this.getActiveMonitorsForSymbol(normalizedSymbol);
     // logger.info(
     //   {
     //     event: "ANALYZER_MONITORS_FETCHED",
@@ -812,6 +920,18 @@ export class AnalyzerEngine {
       cvdBuffer: Object.fromEntries(this.cvdBuffer),
       priceBuffer: Object.fromEntries(this.priceBuffer),
       orderbook: Object.fromEntries(this.orderBookSnapshot),
+      activeMonitorCache: Object.fromEntries(
+        Array.from(this.activeMonitorCache.entries()).map(([symbol, cacheEntry]) => [
+          symbol,
+          {
+            activeMonitorCount: cacheEntry.monitors.length,
+            isNegativeCache: cacheEntry.monitors.length === 0,
+            loadedAt: new Date(cacheEntry.loadedAt).toISOString(),
+            expiresAt: new Date(cacheEntry.expiresAt).toISOString(),
+            ttlRemainingMs: Math.max(0, cacheEntry.expiresAt - Date.now()),
+          },
+        ])
+      ),
       // 🧠 NEW: Dynamically calculate walls for every single coin we are tracking!
       supportResistance: Object.fromEntries(
         Array.from(this.orderBookSnapshot.keys()).map((symbol) => [

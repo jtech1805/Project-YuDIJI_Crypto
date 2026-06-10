@@ -152,7 +152,7 @@ export class MonitorService {
 
     return updatedMonitor;
   }
-  public async deleteMonitor(userId: string, monitorId: string): Promise<void> {
+  public async deleteMonitor(userId: string, monitorId: string): Promise<TripwireConfig> {
     if (!isValidObjectId(userId)) {
       throw new AppError("Invalid user id", 400);
     }
@@ -160,13 +160,15 @@ export class MonitorService {
       throw new AppError("Invalid monitor id", 400);
     }
 
-    const deletionResult = await TripwireConfigModel.deleteOne({
+    const deletedMonitor = await TripwireConfigModel.findOneAndDelete({
       _id: new Types.ObjectId(monitorId),
       user: new Types.ObjectId(userId),
     }).exec();
 
-    if (deletionResult.deletedCount === 0) {
+    if (!deletedMonitor) {
       throw new AppError("Monitor not found", 404);
     }
+
+    return deletedMonitor.toObject() as TripwireConfig;
   }
 }

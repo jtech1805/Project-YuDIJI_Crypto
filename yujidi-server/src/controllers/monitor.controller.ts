@@ -40,6 +40,7 @@ export const createMonitor = async (req: Request, res: Response): Promise<void> 
     timeWindowMinutes: req.body.timeWindowMinutes as number,
     trigger: req.body.trigger as string
   });
+  await sharedWebsocketManager.refreshMonitorCache(monitor.symbol, "monitor_created");
 
   res.status(201).json({
     status: "success",
@@ -61,6 +62,7 @@ export const updateMonitor = async (
     }
 
     const updatedMonitor = await monitorService.updateMonitor(userId, monitorId, updateData);
+    await sharedWebsocketManager.refreshMonitorCache(updatedMonitor.symbol, "monitor_updated");
 
     res.status(200).json({
       status: "success",
@@ -86,7 +88,8 @@ export const deleteMonitor = async (req: Request, res: Response): Promise<void> 
     throw new AppError("Invalid monitor id", 400);
   }
 
-  await monitorService.deleteMonitor(userId, monitorId);
+  const deletedMonitor = await monitorService.deleteMonitor(userId, monitorId);
+  await sharedWebsocketManager.refreshMonitorCache(deletedMonitor.symbol, "monitor_deleted");
 
   res.status(200).json({
     status: "success",

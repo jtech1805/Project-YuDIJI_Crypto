@@ -620,6 +620,12 @@ export class WebSocketManager {
     const currentCvd = this.analyzerEngine.currentCVD.get(symbol) || 0;
     return { orderBookData, currentCvd }
   }
+  public invalidateMonitorCache(symbol?: string): void {
+    this.analyzerEngine.invalidateMonitorCache(symbol);
+  }
+  public async refreshMonitorCache(symbol: string, reason?: string): Promise<void> {
+    await this.analyzerEngine.refreshMonitorCache(symbol, reason);
+  }
   /**
    * Called by the HTTP getLtp Controller (MeDo Frontend)
    * Acts as an "Ignition Switch" for symbols requested via REST.

@@ -135,13 +135,12 @@ Fields used by the analyzer:
 - `trigger`
 - `isActive`
 
-Current query:
+Current behavior:
 
-```ts
-TripwireConfigModel.find({
-  symbol: normalizedSymbol,
-  isActive: true,
-})
+```txt
+read active monitors from in-memory cache
+  -> refresh from MongoDB on cache miss or expiry
+  -> refresh cache on monitor create/update/delete
 ```
 
 Used for:
@@ -277,6 +276,63 @@ Used by:
 - alert report generation
 - support/resistance calculation
 - copilot trade math
+
+### 3.5 activeMonitorCache
+
+Type:
+
+```ts
+Map<string, { monitors: ActiveMonitorDocument[]; expiresAt: number; loadedAt: number }>
+```
+
+Purpose:
+
+Caches active monitors by symbol so the analyzer does not query MongoDB on every high-frequency `aggTrade` tick.
+
+Current TTL:
+
+```txt
+5 seconds
+```
+
+Refresh behavior:
+
+```txt
+cache miss or expiry
+  -> query MongoDB for active monitors
+  -> cache result for 5 seconds
+```
+
+Invalidation behavior:
+
+```txt
+monitor create/update/delete
+  -> refresh cache for that monitor symbol from MongoDB
+```
+
+Delete behavior:
+
+```txt
+delete last active monitor for a symbol
+  -> refresh cache
+  -> store activeMonitorCount = 0 as a negative cache entry
+```
+
+The zero-monitor cache entry prevents repeated MongoDB reads if ticks are still arriving for a symbol that no longer has active monitors.
+
+Verification logs:
+
+```txt
+ANALYZER_MONITOR_CACHE_REFRESH_REQUESTED
+ANALYZER_MONITOR_CACHE_REFRESH
+ANALYZER_MONITOR_CACHE_REFRESHED
+ANALYZER_MONITOR_CACHE_INVALIDATED
+ANALYZER_MONITOR_CACHE_HIT  // debug level
+```
+
+Debug endpoint:
+
+`GET /api/monitors/debug/engine-state` includes `activeMonitorCache` metadata with monitor count, negative-cache status, loaded time, expiry time, and TTL remaining.
 
 ## 4. Trigger Logic For Drop And Spike
 
@@ -866,16 +922,17 @@ Affected state:
 - cooldowns
 - order book
 
-### 8.5 MongoDB Query On Every Tick
+### 8.5 Active Monitor Cache Is In Memory
 
-The analyzer fetches active monitors from MongoDB on every relevant aggTrade tick.
+The analyzer now uses a short TTL in-memory cache for active monitors by symbol.
 
-This can become expensive under high-frequency market data.
+This reduces MongoDB read load on high-frequency market data.
 
-Possible improvement:
+Remaining limitations:
 
-- cache active monitors by symbol
-- invalidate cache on monitor create/update/delete
+- Cache is local to one backend process.
+- Multi-instance deployments still need shared cache refresh/invalidation.
+- Very recent monitor mutations rely on explicit cache refresh plus short TTL fallback.
 
 ### 8.6 Cooldown Starts Before Alert Success
 

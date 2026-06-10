@@ -32,6 +32,8 @@ These are true in the current codebase:
 - Binance streams are managed through one shared backend WebSocket manager.
 - MongoDB startup connection uses bounded retry/backoff.
 - Binance symbol sync runs as a non-fatal background task with retry.
+- Analyzer uses a short TTL active-monitor cache and refreshes it on monitor create/update/delete.
+- Analyzer can store zero-monitor negative cache entries to prevent repeated MongoDB reads.
 - Analyzer state is stored in memory.
 - Analyzer supports both `drop` and `spike` trigger logic.
 - Alerts now include direction-neutral movement fields:
@@ -509,7 +511,8 @@ Binance aggTrade stream
   -> AnalyzerEngine.processTick
   -> update priceBuffer
   -> update CVD
-  -> fetch active monitors for symbol
+  -> read active monitors from analyzer cache
+  -> refresh cache from MongoDB on cache miss/expiry
   -> evaluate drop/spike threshold
   -> set cooldown
   -> fetch CryptoCompare headlines
@@ -1289,7 +1292,7 @@ Known analyzer limitations:
 
 - In-memory state only.
 - No multi-instance coordination.
-- MongoDB query happens on every relevant aggTrade tick.
+- Active-monitor cache is process-local.
 - Monitor window allows up to 24h, but price buffer keeps around 60m.
 - Cooldown starts before alert pipeline fully succeeds.
 - CVD threshold is not asset-normalized.
@@ -1563,7 +1566,7 @@ Current major risks:
 - Monitor window can exceed analyzer price buffer.
 - Analyzer state is in memory.
 - Multi-instance deployment is not safe.
-- MongoDB query happens on every aggTrade tick.
+- Active-monitor cache is process-local and not multi-instance safe.
 - Cooldown starts before alert pipeline success.
 - Alert detail user lookup may need correction.
 - Refresh token is stored directly.
@@ -1582,6 +1585,8 @@ Implemented:
 - Binance symbol sync.
 - MongoDB startup retry/backoff.
 - Non-fatal Binance symbol sync retry loop.
+- Analyzer active-monitor TTL cache.
+- Analyzer monitor cache refresh on monitor create/update/delete.
 - Monitor CRUD.
 - WebSocket manager.
 - Binance master WebSocket.
@@ -1620,7 +1625,7 @@ High priority:
 4. Add monitor update validation.
 5. Add `.env.example`.
 6. Add broader runtime health handling for Groq, CryptoCompare, Binance REST, and DNS failures.
-7. Reduce MongoDB query-per-tick load.
+7. Add shared monitor-cache refresh/invalidation before multi-instance deployment.
 8. Add failed alert tracking or adjust cooldown placement.
 9. Normalize `req.user.id` usage everywhere.
 10. Complete alert movement migration later.

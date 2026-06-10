@@ -31,7 +31,7 @@ Highest-priority current risks:
 | R-002 | Monitor windows up to 24h are allowed while analyzer keeps 60m of price history | High | High | Open |
 | R-003 | Analyzer state is in memory and lost on restart | High | High | Open |
 | R-004 | Multi-instance deployment will produce inconsistent analyzer/WebSocket state | Critical | Medium | Open |
-| R-005 | Analyzer queries active monitors from MongoDB on every aggTrade tick | High | High | Open |
+| R-005 | Analyzer active-monitor cache is in memory and process-local | Medium | Medium | Mitigating |
 | R-006 | Cooldown starts before alert pipeline succeeds | Medium | High | Open |
 | R-007 | Alert detail lookup may not correctly scope by authenticated user id | High | Medium | Open |
 | R-008 | Alert model keeps legacy `dropPercentage` during compatibility migration | Medium | High | Mitigating |
@@ -141,27 +141,27 @@ Mitigation:
 - Introduce shared Redis/pub-sub or separate market ingestion service.
 - Add sticky sessions only as a partial mitigation.
 
-### R-005: MongoDB Query On Every Tick
+### R-005: Process-Local Active Monitor Cache
 
-Severity: High
+Severity: Medium
 
-Likelihood: High
+Likelihood: Medium
 
-Status: Open
+Status: Mitigating
 
 Description:
 
-For each aggTrade tick, the analyzer queries MongoDB for active monitors on the symbol.
+The analyzer now uses a short TTL active monitor cache and invalidates cache entries on monitor create/update/delete. The cache is still process-local.
 
 Impact:
 
-High-frequency symbols can create heavy database load.
+Single-instance MongoDB read load is reduced. Multi-instance deployments can still have inconsistent local caches unless shared invalidation exists.
 
 Mitigation:
 
-- Cache active monitors by symbol.
-- Invalidate cache on monitor create/update/delete.
-- Batch or debounce evaluation if necessary.
+- Short TTL cache is implemented.
+- Explicit invalidation on monitor create/update/delete is implemented.
+- Add shared cache or pub/sub invalidation before multi-instance deployment.
 
 ### R-006: Cooldown Starts Before Alert Success
 

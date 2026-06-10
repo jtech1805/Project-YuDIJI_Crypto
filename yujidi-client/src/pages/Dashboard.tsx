@@ -544,10 +544,16 @@ export function Dashboard() {
     fetchData();
   }, []);
 
-  const deleteMonitor = async (id: string) => {
+  const deleteMonitor = async (id: string, symbol: string) => {
     try {
       await apiClient.delete(`/monitors/${id}`);
-      setMonitors((prev) => prev.filter((m) => m._id !== id));
+      const remainingMonitors = monitors.filter((m) => m._id !== id);
+      const stillWatchingSymbol = remainingMonitors.some((m) => m.symbol === symbol);
+
+      setMonitors(remainingMonitors);
+      if (!stillWatchingSymbol) {
+        updateSubscriptions([], [symbol]);
+      }
     } catch (error) {
       console.error('Failed to delete monitor');
     }

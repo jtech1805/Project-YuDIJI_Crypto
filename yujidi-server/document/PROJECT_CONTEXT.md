@@ -994,7 +994,7 @@ High-priority edge cases:
 2. Secure cookies may fail in local HTTP development.
 3. Alert detail lookup may have a user-id mismatch.
 4. HTTP LTP ignition may create symbol subscriptions that never decrement.
-5. Analyzer queries MongoDB for active monitors on every aggTrade tick.
+5. Analyzer active-monitor cache is process-local and not multi-instance safe.
 6. Failed LLM pipeline still puts monitor into cooldown.
 7. Multiple backend instances would not share in-memory analyzer/WebSocket state.
 8. CVD whale threshold is not normalized per asset.
@@ -1016,6 +1016,9 @@ High-priority edge cases:
 - Binance symbol sync.
 - MongoDB startup retry/backoff.
 - Non-fatal Binance symbol sync retry loop.
+- Analyzer active-monitor TTL cache.
+- Analyzer monitor cache refresh on monitor create/update/delete.
+- Analyzer zero-monitor negative cache entries.
 - Monitor model and CRUD routes.
 - Alert model.
 - Alert list route.
