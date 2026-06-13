@@ -98,6 +98,45 @@ Business meaning:
 Symbol = supported market instrument.
 ```
 
+### 2.2.1 Instrument
+
+Implementation:
+
+```txt
+src/models/Instrument.ts
+```
+
+Purpose:
+
+Instrument is the provider-neutral representation of a watchable market object.
+
+It is introduced to support Binance symbols, Angel SmartAPI instruments, and future Kite instruments without forcing provider-specific symbol structures into the analyzer.
+
+Current fields:
+
+- `provider`
+- `marketType`
+- `exchange`
+- `symbol`
+- `displayName`
+- `instrumentToken`
+- `baseAsset`
+- `quoteAsset`
+- `expiry`
+- `lotSize`
+- `tickSize`
+- `status`
+- `raw`
+- `createdAt`
+- `updatedAt`
+
+Business rules:
+
+- Instrument is additive and does not replace the current `Symbol` model.
+- Existing Binance crypto monitor flows still use `Symbol`.
+- Future Angel/Kite integrations should map provider-specific instrument masters into `Instrument`.
+- Future analyzer bridges should consume `NormalizedMarketTick` rather than raw provider payloads.
+
 ### 2.3 TripwireConfig / Monitor
 
 Implementation:

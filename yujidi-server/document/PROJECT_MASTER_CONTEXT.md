@@ -13,6 +13,7 @@ Related detailed docs:
 - `PROJECT_CONTEXT.md`: living project index and progress context.
 - `../docs/DOMAIN_MODEL.md`: detailed domain model.
 - `../docs/ANALYZER_ENGINE.md`: analyzer engine details.
+- `../docs/ANGEL_SMARTAPI_PHASE0.md`: Angel SmartAPI read-only integration scaffold.
 - `../docs/TESTING_STRATEGY.md`: testing strategy.
 - `../docs/RISK_REGISTER.md`: risk register.
 - `BACKEND_ARCHITECTURE.md`: backend architecture reference.
@@ -215,6 +216,14 @@ MEDO_URL
 COOKIE_ACCESS_EXPIRY_MS
 COOKIE_REFRESH_EXPIRY_MS
 NODE_ENV
+ANGEL_SMARTAPI_ENABLED
+ANGEL_API_KEY
+ANGEL_CLIENT_CODE
+ANGEL_PIN
+ANGEL_TOTP_SECRET
+ANGEL_DEBUG_ENABLED
+ANGEL_DEBUG_EXCHANGE
+ANGEL_DEBUG_SYMBOL_TOKEN
 ```
 
 Meaning:
@@ -234,13 +243,21 @@ Meaning:
 - `COOKIE_ACCESS_EXPIRY_MS`: cookie max age override.
 - `COOKIE_REFRESH_EXPIRY_MS`: cookie max age override.
 - `NODE_ENV`: runtime environment.
+- `ANGEL_SMARTAPI_ENABLED`: future read-only Angel integration flag, defaults should remain disabled.
+- `ANGEL_API_KEY`: future Angel SmartAPI key placeholder.
+- `ANGEL_CLIENT_CODE`: future Angel client code placeholder.
+- `ANGEL_PIN`: future Angel PIN placeholder.
+- `ANGEL_TOTP_SECRET`: future Angel TOTP secret placeholder.
+- `ANGEL_DEBUG_ENABLED`: future Angel debug flag.
+- `ANGEL_DEBUG_EXCHANGE`: future debug exchange, for example `MCX`.
+- `ANGEL_DEBUG_SYMBOL_TOKEN`: future debug symbol token placeholder.
 
 Security rules:
 
 - Do not commit `.env`.
 - Do not print `.env`.
 - Do not paste secrets into docs.
-- Do not log JWTs, cookies, passwords, or full connection strings.
+- Do not log JWTs, cookies, passwords, full connection strings, Angel API keys, Angel PINs, Angel TOTP secrets, Angel JWTs, or Angel feed tokens.
 - Use `.env.example` in the future with variable names only.
 
 ### Frontend Environment Variables
@@ -1267,6 +1284,44 @@ src/ports/llm-provider.port.ts
 src/integrations/llm/llm-provider.factory.ts
 src/integrations/llm/groq/groq-llm.provider.ts
 src/services/llm.service.ts
+```
+
+## Angel SmartAPI Integration Direction
+
+Angel SmartAPI integration is planned as read-only market data first.
+
+Phase 0 status:
+
+- Provider-neutral market-data types added.
+- Instrument model scaffold added.
+- MarketDataProvider and InstrumentProvider ports added.
+- Angel integration folder scaffold added.
+- No live Angel connection yet.
+- No order placement.
+- No portfolio sync.
+- No auto trading.
+
+Future phases:
+
+- Angel auth/session service.
+- Angel instrument master sync.
+- Angel WebSocket tick normalizer.
+- Angel read-only market-data provider.
+- Analyzer bridge through NormalizedMarketTick.
+
+Safety:
+
+- Do not log Angel credentials, JWTs, feed tokens, TOTP secrets, PIN, or API keys.
+- Do not implement trading/order APIs without explicit approval.
+
+Current Phase 0 files:
+
+```txt
+src/types/market-data.types.ts
+src/models/Instrument.ts
+src/ports/market-data-provider.port.ts
+src/ports/instrument-provider.port.ts
+src/integrations/market-data/angel/
 ```
 
 ## 13. Analyzer Engine Architecture

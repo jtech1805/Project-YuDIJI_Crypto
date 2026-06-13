@@ -14,6 +14,7 @@ Detailed docs live separately:
 
 - `../docs/DOMAIN_MODEL.md`: detailed domain entities, relationships, workflows, state machines, and business rules.
 - `../docs/ANALYZER_ENGINE.md`: detailed analyzer inputs, state, trigger logic, cooldowns, failures, tests, and limitations.
+- `../docs/ANGEL_SMARTAPI_PHASE0.md`: Angel SmartAPI Phase 0 scaffold and safety boundaries.
 - `../docs/TESTING_STRATEGY.md`: recommended backend test strategy and priority order.
 - `../docs/RISK_REGISTER.md`: known risks, impact, mitigation, and review cadence.
 
@@ -1032,6 +1033,9 @@ High-priority edge cases:
 - Cookie-based auth.
 - User model.
 - Symbol model.
+- Instrument model scaffold.
+- Provider-neutral market-data types.
+- MarketDataProvider and InstrumentProvider ports.
 - Binance symbol sync.
 - MongoDB startup retry/backoff.
 - Non-fatal Binance symbol sync retry loop.
@@ -1067,12 +1071,18 @@ High-priority edge cases:
 - Frontend alert feed.
 - Frontend full analysis modal.
 - Backend architecture documentation.
+- Angel SmartAPI Phase 0 scaffold for future read-only market data.
 
 ### Partially Implemented
 
 - Alert movement field migration.
   - New fields exist: `changePercentage`, `triggerType`, and `direction`.
   - Legacy `dropPercentage` is still kept for backward compatibility.
+
+- Angel SmartAPI integration.
+  - Phase 0 scaffold exists.
+  - No live Angel connection exists.
+  - No order placement, portfolio sync, or auto trading exists.
 
 - Alert detail endpoint.
   - Route exists.

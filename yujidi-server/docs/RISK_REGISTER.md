@@ -510,6 +510,117 @@ Mitigation:
 - Only Groq is implemented today.
 - Add OpenAI/Gemini adapters later without changing analyzer/chat domain logic.
 
+### R-022: Angel Provider Documentation Or Version Mismatch
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Angel SmartAPI authentication, instrument master, and WebSocket payload formats may differ from assumptions or change across versions.
+
+Impact:
+
+Incorrect assumptions can break session handling, instrument sync, or tick normalization.
+
+Mitigation:
+
+- Phase 0 adds scaffold only.
+- Do not implement live Angel calls until official SmartAPI docs and payload examples are reviewed.
+- Keep Angel code behind provider ports and adapters.
+
+### R-023: Provider Payload Leaking Into Analyzer
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+Raw Binance, Angel, or Kite payloads could leak into analyzer/domain logic and make multi-provider support fragile.
+
+Impact:
+
+Analyzer behavior would become coupled to provider-specific field names, units, symbols, or tokens.
+
+Mitigation:
+
+- Introduce `NormalizedMarketTick`.
+- Keep future provider payload parsing inside normalizers/adapters.
+- Existing Binance behavior remains unchanged until a safe analyzer bridge is designed.
+
+### R-024: Instrument Token Mapping Errors
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Angel/Kite-style providers depend on exchange-specific instrument tokens. Incorrect token mapping could subscribe to the wrong market object.
+
+Impact:
+
+Users may receive wrong prices or alerts for the wrong instrument.
+
+Mitigation:
+
+- Add `Instrument` model with provider/exchange/token identity.
+- Add uniqueness index on provider + exchange + instrument token.
+- Add validation and sync tests before enabling live provider subscriptions.
+
+### R-025: Premature Order Placement
+
+Severity: Critical
+
+Likelihood: Low
+
+Status: Open
+
+Description:
+
+Trading/order APIs could be added before read-only market data is stable and audited.
+
+Impact:
+
+Accidental or unauthorized order placement could cause financial harm.
+
+Mitigation:
+
+- Phase 0 explicitly forbids order placement, portfolio sync, and auto trading.
+- Require explicit approval before any trading/order API work.
+- Keep Angel Phase 1 limited to auth/session and instrument master sync.
+
+### R-026: Angel Secret Leakage
+
+Severity: Critical
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Angel credentials, PIN, TOTP secret, JWTs, refresh tokens, or feed tokens could be logged or documented accidentally.
+
+Impact:
+
+Credential exposure could compromise broker access.
+
+Mitigation:
+
+- Do not read or print `.env` for Angel work.
+- Document variable names only.
+- Do not log Angel secrets, tokens, PINs, or TOTP secrets.
+- Review logs before enabling any live Angel integration.
+
 ## 4. Review Cadence
 
 This risk register should be reviewed:
