@@ -1032,11 +1032,16 @@ High-priority edge cases:
 - JWT utility.
 - Cookie-based auth.
 - User model.
-- Symbol model.
+- Universal Symbol model.
 - Instrument model scaffold.
 - Provider-neutral market-data types.
 - MarketDataProvider and InstrumentProvider ports.
 - Binance symbol sync.
+- Binance universal symbol sync fields.
+- Angel Scrip Master MCX mapper.
+- Angel Scrip Master client.
+- Disabled-by-default Angel symbol sync service.
+- Manual Angel symbol sync job script with dry-run, exchange selection, and batched writes.
 - MongoDB startup retry/backoff.
 - Non-fatal Binance symbol sync retry loop.
 - Analyzer active-monitor TTL cache.
@@ -1072,6 +1077,17 @@ High-priority edge cases:
 - Frontend full analysis modal.
 - Backend architecture documentation.
 - Angel SmartAPI Phase 0 scaffold for future read-only market data.
+- Angel Universal Symbol Registry Phase 1 scaffold.
+- Angel Scrip Master sync Phase 2 service, disabled by default.
+- Angel Scrip Master sync Phase 3 manual job trigger.
+- Angel Phase 4 to 10 safe foundation:
+  - universal symbol search API
+  - frontend universal symbol picker support
+  - BrokerConnection scaffold without secrets
+  - optional universal monitor metadata
+  - guarded Angel auth/live-data scaffolds
+  - Angel tick normalizer
+  - analyzer normalized tick bridge
 
 ### Partially Implemented
 
@@ -1081,7 +1097,14 @@ High-priority edge cases:
 
 - Angel SmartAPI integration.
   - Phase 0 scaffold exists.
+  - Phase 1 universal symbol registry scaffold exists.
+  - Phase 2 disabled-by-default Scrip Master sync service exists.
+  - Phase 3 manual Scrip Master sync job exists.
+  - Phase 4 to 10 foundation exists.
   - No live Angel connection exists.
+  - No live Angel login/session exists.
+  - No broker credentials are stored.
+  - No public/admin Angel sync HTTP endpoint exists.
   - No order placement, portfolio sync, or auto trading exists.
 
 - Alert detail endpoint.

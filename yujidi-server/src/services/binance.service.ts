@@ -1,6 +1,7 @@
 import axios, { type AxiosResponse } from "axios";
+import type { AnyBulkWriteOperation } from "mongoose";
 
-import { SymbolModel } from "../models/Symbol.js";
+import { SymbolModel, type SymbolDocument } from "../models/Symbol.js";
 
 interface BinanceExchangeInfoSymbol {
   symbol: string;
@@ -37,6 +38,16 @@ interface BinanceExchangeInfoResponse {
   symbols: BinanceExchangeInfoSymbol[];
 }
 
+const cryptoNameMap: Record<string, string> = {
+  BTC: "Bitcoin",
+  ETH: "Ethereum",
+  SOL: "Solana",
+  BNB: "BNB",
+  XRP: "XRP",
+  ADA: "Cardano",
+  DOGE: "Dogecoin",
+};
+
 export const syncBinanceSymbols = async (): Promise<number> => {
   const response: AxiosResponse<BinanceExchangeInfoResponse> = await axios.get(
     "https://api.binance.com/api/v3/exchangeInfo",
@@ -53,16 +64,41 @@ export const syncBinanceSymbols = async (): Promise<number> => {
     return 0;
   }
 
-  const writeOperations = filteredSymbols.map((item) => {
+  const writeOperations: AnyBulkWriteOperation<SymbolDocument>[] = filteredSymbols.map((item) => {
+    const name = cryptoNameMap[item.baseAsset] ?? item.baseAsset;
+    const displayName = `${item.baseAsset} / ${item.quoteAsset}`;
+
     return {
       updateOne: {
-        filter: { symbol: item.symbol },
+        filter: {
+          $or: [
+            {
+              provider: "BINANCE",
+              exchange: "BINANCE",
+              instrumentToken: item.symbol,
+            },
+            {
+              symbol: item.symbol,
+            },
+          ],
+        },
         update: {
           $set: {
+            provider: "BINANCE",
+            marketType: "CRYPTO",
+            exchange: "BINANCE",
             symbol: item.symbol,
+            name,
+            displayName,
+            providerSymbol: item.symbol,
+            instrumentToken: item.symbol,
             baseAsset: item.baseAsset,
             quoteAsset: item.quoteAsset,
-            status: item.status,
+            instrumentType: "SPOT",
+            requiresBrokerLogin: false,
+            supportedBroker: "NONE",
+            status: "ACTIVE",
+            raw: item,
           },
         },
         upsert: true,

@@ -7,6 +7,7 @@ import {
   getSymbols,
   getUserMonitors,
   debugEngineState,
+  searchUniversalSymbols,
   updateMonitor
 } from "../controllers/monitor.controller.js";
 import { AppError } from "../errors/AppError.js";
@@ -19,7 +20,10 @@ const createMonitorSchema = z.object({
   symbol: z.string().min(1),
   thresholdPercentage: z.number().positive().max(100),
   timeWindowMinutes: z.number().int().positive().max(24 * 60),
-  trigger: z.string().min(1).max(10)
+  trigger: z.string().min(1).max(10),
+  provider: z.string().optional(),
+  exchange: z.string().optional(),
+  instrumentToken: z.string().optional(),
 });
 
 const validateBody =
@@ -36,6 +40,7 @@ const validateBody =
     };
 
 monitorRouter.get("/symbols", asyncHandler(getSymbols));
+monitorRouter.get("/symbols/universal", asyncHandler(searchUniversalSymbols));
 monitorRouter.get("/", requireAuth, asyncHandler(getUserMonitors));
 monitorRouter.post("/", requireAuth, validateBody(createMonitorSchema), asyncHandler(createMonitor));
 monitorRouter.patch("/:id", requireAuth, asyncHandler(updateMonitor));

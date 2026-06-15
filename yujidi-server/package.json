@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon --watch src --ext ts --exec \"tsx src/server.ts\"",
     "start": "tsx src/server.ts",
-    "test": "node --import tsx --test src/services/*.test.ts",
+    "sync:angel-symbols": "tsx src/scripts/sync-angel-symbols.ts",
+    "test": "node --import tsx --test src/services/*.test.ts src/integrations/market-data/angel/*.test.ts",
     "test:analyzer": "node --import tsx --test src/services/analyzer.*.test.ts",
     "typecheck": "tsc --noEmit"
   },

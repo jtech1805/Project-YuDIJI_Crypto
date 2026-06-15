@@ -103,9 +103,8 @@ export function AddMonitorModal({ open, onClose, onSuccess }: AddMonitorModalPro
                 <button
                   key={type}
                   onClick={() => setSelectedTrigger(type)}
-                  className={`flex-1 px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
-                    selectedTrigger === type ? "bg-primary text-primary-foreground" : "bg-secondary/30 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-                  }`}
+                  className={`flex-1 px-3 py-2.5 text-xs font-medium transition-all duration-200 ${selectedTrigger === type ? "bg-primary text-primary-foreground" : "bg-secondary/30 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                    }`}
                 >
                   {type}
                 </button>

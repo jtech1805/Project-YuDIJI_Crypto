@@ -39,6 +39,9 @@ Current automated tests:
 
 - `src/services/analyzer.rules.test.ts`
 - `src/services/analyzer.service.test.ts`
+- `src/integrations/market-data/angel/angel-symbol.mapper.test.ts`
+- `src/integrations/market-data/angel/angel-symbol-sync.service.test.ts`
+- `src/integrations/market-data/angel/angel-tick.normalizer.test.ts`
 
 Current commands:
 
@@ -50,6 +53,9 @@ npm run test:analyzer
 Current recommendation:
 
 - Continue domain/unit tests around analyzer logic first.
+- Keep provider mappers covered with pure unit tests before live sync.
+- Keep Angel symbol sync safety covered: disabled mode, dry-run mode, and batched write mode.
+- Keep normalized tick bridge covered so provider-specific ticks reuse production analyzer behavior.
 - Add integration tests for routes after core domain behavior is covered.
 
 Suggested tools:

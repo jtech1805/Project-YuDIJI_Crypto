@@ -15,6 +15,38 @@ const tripwireConfigSchema = new Schema(
       uppercase: true,
       index: true,
     },
+    provider: {
+      type: String,
+      enum: ["BINANCE", "ANGEL_ONE", "KITE"],
+      default: "BINANCE",
+      index: true,
+    },
+    marketType: {
+      type: String,
+      enum: ["CRYPTO", "EQUITY", "FNO", "COMMODITY", "CURRENCY", "INDEX"],
+      default: "CRYPTO",
+      index: true,
+    },
+    exchange: {
+      type: String,
+      enum: ["BINANCE", "NSE", "BSE", "NFO", "BFO", "MCX", "CDS", "NCDEX"],
+      default: "BINANCE",
+      index: true,
+    },
+    instrumentToken: {
+      type: String,
+      trim: true,
+      index: true,
+    },
+    displayName: {
+      type: String,
+      trim: true,
+    },
+    requiresBrokerLogin: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     thresholdPercentage: {
       type: Number,
       required: true,
@@ -49,17 +81,29 @@ export interface TripwireConfigWithSymbolMetadata {
   _id: Types.ObjectId;
   user: Types.ObjectId;
   symbol: string;
+  provider?: string;
+  marketType?: string;
+  exchange?: string;
+  instrumentToken?: string;
+  displayName?: string;
+  requiresBrokerLogin?: boolean;
   thresholdPercentage: number;
   timeWindowMinutes: number;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
   trigger: string;
-  symbolMeta: {
-    baseAsset: string;
-    quoteAsset: string;
-    status: string;
-  } | null;
+          symbolMeta: {
+            baseAsset: string;
+            quoteAsset: string;
+            status: string;
+            provider?: string;
+            marketType?: string;
+            exchange?: string;
+            displayName?: string;
+            instrumentToken?: string;
+            requiresBrokerLogin?: boolean;
+          } | null;
 }
 
 export const TripwireConfigModel = model<TripwireConfig, TripwireConfigModel>(

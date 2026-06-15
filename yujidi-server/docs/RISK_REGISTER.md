@@ -47,6 +47,14 @@ Highest-priority current risks:
 | R-018 | No alert pagination beyond latest 50 records | Low | Medium | Open |
 | R-019 | Duplicate monitors for same user/symbol/trigger are allowed | Medium | Medium | Open |
 | R-020 | Order-book support/resistance is heuristic and can be affected by spoofing/thin books | Medium | High | Open |
+| R-022 | Angel provider documentation or version mismatch | High | Medium | Open |
+| R-026 | Angel secret leakage | Critical | Medium | Open |
+| R-027 | Incorrect Angel symbol normalization | High | Medium | Mitigating |
+| R-028 | Duplicate or unstable universal symbol identity | High | Medium | Open |
+| R-029 | Binance monitor compatibility during symbol evolution | High | Medium | Mitigating |
+| R-030 | Provider-specific fields leaking into analyzer through symbol registry | Medium | Medium | Mitigating |
+| R-031 | Broker-required symbols appearing before live broker support | Medium | Medium | Mitigating |
+| R-032 | Broker credential storage risk | Critical | Medium | Open |
 
 ## 3. Detailed Risks
 
@@ -620,6 +628,141 @@ Mitigation:
 - Document variable names only.
 - Do not log Angel secrets, tokens, PINs, or TOTP secrets.
 - Review logs before enabling any live Angel integration.
+
+### R-027: Incorrect Angel Symbol Normalization
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+Angel Scrip Master rows must be converted into YuJiDi universal symbols. Incorrect expiry, strike, option type, exchange, or symbol formatting can create invalid instruments.
+
+Impact:
+
+Users may monitor the wrong Angel instrument or fail to find the intended MCX/FNO contract.
+
+Mitigation:
+
+- Add pure Angel mapper before live sync.
+- Cover MCX option sample mapping with tests.
+- Keep raw provider row for audit/debugging.
+
+### R-028: Duplicate Or Unstable Universal Symbol Identity
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+The legacy `Symbol` model used globally unique `symbol`, while universal symbols should be unique by provider, exchange, and instrument token.
+
+Impact:
+
+Duplicate symbols across providers or exchanges can block inserts or confuse monitor selection.
+
+Mitigation:
+
+- Add provider + exchange + instrumentToken unique schema index.
+- Avoid destructive index changes in application code.
+- Plan a database index migration to remove any old global unique `symbol` index if present.
+
+### R-029: Binance Monitor Compatibility During Symbol Evolution
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+Existing crypto monitor creation/listing expected `status: "TRADING"` and Binance-only symbol documents.
+
+Impact:
+
+Changing Binance sync to universal `ACTIVE` records could break `/api/monitors/symbols` or monitor creation.
+
+Mitigation:
+
+- Monitor service accepts both `TRADING` and `ACTIVE` during transition.
+- Binance sync preserves old string symbols like `BTCUSDT`.
+- Existing analyzer and monitor schemas remain symbol-string based.
+
+### R-030: Provider-Specific Fields Leaking Into Analyzer Through Symbol Registry
+
+Severity: Medium
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+Angel/Kite-specific token, expiry, strike, or exchange conventions could leak from `Symbol` records into analyzer logic.
+
+Impact:
+
+Analyzer behavior could become tied to provider-specific symbol formats.
+
+Mitigation:
+
+- Keep provider parsing inside mappers/adapters.
+- Live data bridge uses `NormalizedMarketTick`.
+- Analyzer normalized tick bridge reuses `processTick` instead of duplicating threshold logic.
+- Add provider-specific parsing only inside mappers/adapters.
+
+### R-031: Broker-Required Symbols Appearing Before Live Broker Support
+
+Severity: Medium
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+Universal symbol search can show Angel instruments before user-specific Angel login and live data are implemented.
+
+Impact:
+
+Users could assume an Angel symbol monitor is live when no broker session or Angel WebSocket is connected.
+
+Mitigation:
+
+- Symbol records include `requiresBrokerLogin`.
+- Frontend marks broker-required instruments.
+- Monitor creation rejects broker-required symbols until broker login/live data support exists.
+- Docs clearly state no live Angel connection exists yet.
+
+### R-032: Broker Credential Storage Risk
+
+Severity: Critical
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Future Angel login will require sensitive credentials, tokens, or secrets.
+
+Impact:
+
+Leaked broker credentials or tokens could expose user accounts and create financial risk.
+
+Mitigation:
+
+- Current BrokerConnection scaffold stores no secrets.
+- Do not store API keys, PINs, TOTP secrets, feed tokens, JWTs, or refresh tokens without an approved encryption plan.
+- Do not log credential-like fields.
+- Keep order placement out of scope.
 
 ## 4. Review Cadence
 

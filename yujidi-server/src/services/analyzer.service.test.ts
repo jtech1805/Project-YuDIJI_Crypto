@@ -204,3 +204,46 @@ test("processTick negative cache avoids repeated monitor fetch within TTL", asyn
   assert.equal(activeMonitorCache[SYMBOL]?.activeMonitorCount, 0);
   assert.equal(activeMonitorCache[SYMBOL]?.isNegativeCache, true);
 });
+
+test("processNormalizedTick reuses production processTick behavior", async () => {
+  const universalSymbol = "MCX:CRUDEOIL:26JUN2026:7200:CE";
+  const harness = createHarness([
+    {
+      _id: { toString: () => "monitor-1" },
+      user: { toString: () => "user-1" },
+      symbol: universalSymbol,
+      thresholdPercentage: 2.5,
+      timeWindowMinutes: 1,
+      trigger: "spike",
+      isActive: true,
+    },
+  ]);
+
+  await harness.engine.processNormalizedTick({
+    provider: "ANGEL_ONE",
+    marketType: "COMMODITY",
+    exchange: "MCX",
+    symbol: universalSymbol,
+    displaySymbol: "MCX CRUDEOIL 26JUN2026 7200 CE",
+    instrumentToken: "253456",
+    price: 7200,
+    volume: 100,
+    timestamp: START_AT,
+  });
+
+  await harness.engine.processNormalizedTick({
+    provider: "ANGEL_ONE",
+    marketType: "COMMODITY",
+    exchange: "MCX",
+    symbol: universalSymbol,
+    displaySymbol: "MCX CRUDEOIL 26JUN2026 7200 CE",
+    instrumentToken: "253456",
+    price: 7380,
+    volume: 100,
+    timestamp: START_AT + 60_000,
+  });
+
+  assert.equal(harness.calls.createAlert, 1);
+  assert.equal(harness.createdAlerts[0]?.symbol, universalSymbol);
+  assert.equal(harness.createdAlerts[0]?.triggerType, "spike");
+});

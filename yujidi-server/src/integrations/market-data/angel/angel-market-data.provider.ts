@@ -9,24 +9,40 @@ export class AngelMarketDataProvider implements MarketDataProvider {
   public readonly provider = "ANGEL_ONE" as const;
 
   private tickHandler: ((tick: NormalizedMarketTick) => void) | null = null;
+  private connected = false;
+  private subscriptions = new Map<string, InstrumentSubscription>();
 
   public constructor(private readonly config: AngelSmartApiConfig) {}
 
   public async connect(): Promise<void> {
-    void this.config;
-    throw new Error("AngelMarketDataProvider.connect is not implemented yet. Phase 0 scaffold only.");
+    if (!this.config.enabled) {
+      throw new Error("Angel SmartAPI market data is disabled. Set ANGEL_SMARTAPI_ENABLED=true before connecting.");
+    }
+
+    throw new Error(
+      "Angel live WebSocket connection is not implemented yet. Official feed-token flow must be approved before enabling live data.",
+    );
   }
 
   public async disconnect(): Promise<void> {
-    throw new Error("AngelMarketDataProvider.disconnect is not implemented yet. Phase 0 scaffold only.");
+    this.connected = false;
+    this.subscriptions.clear();
   }
 
-  public async subscribe(_instruments: InstrumentSubscription[]): Promise<void> {
-    throw new Error("AngelMarketDataProvider.subscribe is not implemented yet. Phase 0 scaffold only.");
+  public async subscribe(instruments: InstrumentSubscription[]): Promise<void> {
+    if (!this.connected) {
+      throw new Error("AngelMarketDataProvider is not connected");
+    }
+
+    for (const instrument of instruments) {
+      this.subscriptions.set(this.getSubscriptionKey(instrument), instrument);
+    }
   }
 
-  public async unsubscribe(_instruments: InstrumentSubscription[]): Promise<void> {
-    throw new Error("AngelMarketDataProvider.unsubscribe is not implemented yet. Phase 0 scaffold only.");
+  public async unsubscribe(instruments: InstrumentSubscription[]): Promise<void> {
+    for (const instrument of instruments) {
+      this.subscriptions.delete(this.getSubscriptionKey(instrument));
+    }
   }
 
   public onTick(handler: (tick: NormalizedMarketTick) => void): void {
@@ -35,5 +51,13 @@ export class AngelMarketDataProvider implements MarketDataProvider {
 
   public getRegisteredTickHandler(): ((tick: NormalizedMarketTick) => void) | null {
     return this.tickHandler;
+  }
+
+  public getSubscriptionCount(): number {
+    return this.subscriptions.size;
+  }
+
+  private getSubscriptionKey(instrument: InstrumentSubscription): string {
+    return `${instrument.provider}:${instrument.exchange}:${instrument.instrumentToken}`;
   }
 }

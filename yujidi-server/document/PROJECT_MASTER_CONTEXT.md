@@ -14,6 +14,7 @@ Related detailed docs:
 - `../docs/DOMAIN_MODEL.md`: detailed domain model.
 - `../docs/ANALYZER_ENGINE.md`: analyzer engine details.
 - `../docs/ANGEL_SMARTAPI_PHASE0.md`: Angel SmartAPI read-only integration scaffold.
+- `../docs/ANGEL_PHASE_4_TO_10_DESIGN.md`: Angel Phase 4 to 10 foundation design.
 - `../docs/TESTING_STRATEGY.md`: testing strategy.
 - `../docs/RISK_REGISTER.md`: risk register.
 - `BACKEND_ARCHITECTURE.md`: backend architecture reference.
@@ -217,6 +218,7 @@ COOKIE_ACCESS_EXPIRY_MS
 COOKIE_REFRESH_EXPIRY_MS
 NODE_ENV
 ANGEL_SMARTAPI_ENABLED
+ANGEL_SCRIP_MASTER_SYNC_ENABLED
 ANGEL_API_KEY
 ANGEL_CLIENT_CODE
 ANGEL_PIN
@@ -244,6 +246,7 @@ Meaning:
 - `COOKIE_REFRESH_EXPIRY_MS`: cookie max age override.
 - `NODE_ENV`: runtime environment.
 - `ANGEL_SMARTAPI_ENABLED`: future read-only Angel integration flag, defaults should remain disabled.
+- `ANGEL_SCRIP_MASTER_SYNC_ENABLED`: must be `true` before running Angel symbol sync in apply mode; defaults should remain disabled.
 - `ANGEL_API_KEY`: future Angel SmartAPI key placeholder.
 - `ANGEL_CLIENT_CODE`: future Angel client code placeholder.
 - `ANGEL_PIN`: future Angel PIN placeholder.
@@ -1286,28 +1289,95 @@ src/integrations/llm/groq/groq-llm.provider.ts
 src/services/llm.service.ts
 ```
 
+## Universal Symbol Registry Baseline
+
+YuJiDi's `Symbol` collection is being evolved from a Binance-only crypto symbol list into a universal market symbol registry.
+
+A Symbol now represents any watchable market instrument, including:
+
+- Binance crypto spot symbols
+- Angel MCX commodity futures/options
+- future NSE/BSE cash symbols
+- future FNO contracts
+- future Kite instruments
+
+Universal symbol identity should include:
+
+- provider
+- marketType
+- exchange
+- symbol
+- name
+- displayName
+- providerSymbol
+- instrumentToken
+- instrumentType
+- expiry/strike/option metadata where applicable
+- lotSize/tickSize
+- requiresBrokerLogin
+- supportedBroker
+
+Important boundary:
+
+- Platform/global sync may populate symbols.
+- User-specific broker login is required later for live Angel monitoring.
+- Angel order placement is out of scope.
+- Existing Binance monitor flow still uses symbol strings such as `BTCUSDT`.
+- During transition, Binance symbols may use legacy `TRADING` or universal `ACTIVE` status.
+
 ## Angel SmartAPI Integration Direction
 
 Angel SmartAPI integration is planned as read-only market data first.
 
-Phase 0 status:
+Phase 1 registry status:
 
 - Provider-neutral market-data types added.
 - Instrument model scaffold added.
 - MarketDataProvider and InstrumentProvider ports added.
 - Angel integration folder scaffold added.
+- Universal `Symbol` registry fields added.
+- Binance symbol sync writes universal symbol fields.
+- Angel Scrip Master MCX mapper added.
+- Angel Scrip Master client and disabled-by-default sync service added.
+- Manual Angel symbol sync job added as `npm run sync:angel-symbols`.
+- Angel symbol sync supports dry-run, exchange selection, batched writes, and result logging.
+- Universal symbol search API added at `GET /api/monitors/symbols/universal`.
+- Dashboard monitor picker can display universal symbols.
+- `BrokerConnection` scaffold added without credential storage.
+- Monitors can store optional universal metadata.
+- Angel tick normalizer added.
+- Analyzer can process `NormalizedMarketTick` through `processNormalizedTick`.
 - No live Angel connection yet.
+- No live Angel login/session yet.
+- No broker credentials are stored.
+- No public/admin Angel sync HTTP endpoint yet.
 - No order placement.
 - No portfolio sync.
 - No auto trading.
 
+Angel manual sync commands:
+
+```bash
+npm run sync:angel-symbols
+npm run sync:angel-symbols -- --dry-run --exchanges=MCX,NSE
+ANGEL_SCRIP_MASTER_SYNC_ENABLED=true npm run sync:angel-symbols -- --apply --exchanges=MCX
+```
+
+Angel sync safety boundary:
+
+- The job is not called from server startup.
+- Dry-run is the default.
+- Apply mode requires `ANGEL_SCRIP_MASTER_SYNC_ENABLED=true`.
+- There is no Angel broker login, WebSocket connection, or order placement.
+- Broker-required instruments are visible but blocked from monitor creation until broker login/live data exists.
+
 Future phases:
 
-- Angel auth/session service.
-- Angel instrument master sync.
-- Angel WebSocket tick normalizer.
-- Angel read-only market-data provider.
-- Analyzer bridge through NormalizedMarketTick.
+- Approved credential encryption design.
+- Real Angel auth/session service.
+- Real Angel WebSocket connection.
+- Broker-aware monitor activation.
+- Provider-specific analyzer calibration.
 
 Safety:
 

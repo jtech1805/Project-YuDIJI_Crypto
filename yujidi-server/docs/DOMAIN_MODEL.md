@@ -75,27 +75,50 @@ src/models/Symbol.ts
 
 Purpose:
 
-A symbol represents a Binance trading pair that YuJiDi can monitor.
+A symbol represents a watchable market instrument in YuJiDi's universal symbol registry.
+
+The registry started as a Binance-only crypto symbol list and is being evolved to support Binance crypto, Angel MCX commodities, future NSE/BSE cash equities, FNO contracts, Kite instruments, and other market symbols.
 
 Current fields:
 
+- `provider`
+- `marketType`
+- `exchange`
 - `symbol`
+- `name`
+- `displayName`
+- `providerSymbol`
+- `instrumentToken`
 - `baseAsset`
 - `quoteAsset`
+- `instrumentType`
+- `expiry`
+- `strikePrice`
+- `optionType`
+- `lotSize`
+- `tickSize`
+- `requiresBrokerLogin`
+- `supportedBroker`
 - `status`
+- `raw`
 - `createdAt`
 - `updatedAt`
 
 Business rules:
 
-- Only Binance symbols are supported.
-- Only `USDT` quote pairs are currently synced.
-- Only `TRADING` symbols are currently considered supported.
+- Existing Binance monitor flow still uses symbol strings such as `BTCUSDT`.
+- Binance crypto symbols are globally visible and do not require broker login.
+- Binance sync writes universal fields with provider `BINANCE`, exchange `BINANCE`, market type `CRYPTO`, and instrument type `SPOT`.
+- Angel/Kite symbols should use provider/exchange/instrument token identity.
+- Angel live market data will require user-specific broker login in a later phase.
+- Universal symbol search is available for UI discovery.
+- Broker-required instruments are visible but blocked from monitor creation until broker login/live market data is implemented.
+- During transition, crypto monitor lookup accepts both legacy `TRADING` and universal `ACTIVE` status.
 
 Business meaning:
 
 ```txt
-Symbol = supported market instrument.
+Symbol = provider-aware, globally searchable market instrument.
 ```
 
 ### 2.2.1 Instrument
@@ -127,6 +150,32 @@ Current fields:
 - `tickSize`
 - `status`
 - `raw`
+
+### 2.2.2 BrokerConnection
+
+Implementation:
+
+```txt
+src/models/BrokerConnection.ts
+```
+
+Purpose:
+
+BrokerConnection is a user-owned scaffold for future broker connectivity state.
+
+Current fields:
+
+- `user`
+- `broker`
+- `status`
+- `scopes`
+- `lastConnectedAt`
+- `lastError`
+- `metadata`
+
+Important boundary:
+
+BrokerConnection currently stores no API keys, PINs, TOTP secrets, feed tokens, JWTs, refresh tokens, or order permissions.
 - `createdAt`
 - `updatedAt`
 
@@ -527,13 +576,16 @@ Untracked
 
 ### 6.2 Symbol Rules
 
-- Only synced Binance `USDT` symbols with status `TRADING` can be monitored.
+- Synced Binance `USDT` symbols with legacy `TRADING` or universal `ACTIVE` status can be monitored.
+- Universal symbols can be searched by provider, market type, exchange, and text query.
+- Broker-required symbols cannot be monitored until broker login/live data support exists.
 - Symbol input should be normalized to uppercase.
 
 ### 6.3 Monitor Rules
 
 - Monitor must belong to one user.
 - Monitor must reference one supported symbol.
+- Monitor may store universal metadata such as provider, market type, exchange, instrument token, display name, and broker requirement.
 - Threshold must be positive.
 - Time window must be positive.
 - Trigger must be `drop` or `spike`.

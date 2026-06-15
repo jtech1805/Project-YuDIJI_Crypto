@@ -2,6 +2,7 @@ import pino from "pino";
 
 import { AlertModel, type Alert } from "../models/Alert.js";
 import { TripwireConfigModel } from "../models/TripwireConfig.js";
+import type { NormalizedMarketTick } from "../types/market-data.types.js";
 import {
   createMonitorCacheSnapshot,
   evaluateMonitorThreshold,
@@ -93,6 +94,28 @@ export class AnalyzerEngine {
   public updateOrderBook(symbol: string, bids: string[][], asks: string[][]): void {
     // This overwrites the old snapshot with the newest one every 100ms
     this.orderBookSnapshot.set(symbol, { bids, asks });
+  }
+
+  public async processNormalizedTick(tick: NormalizedMarketTick): Promise<void> {
+    logger.info(
+      {
+        event: "ANALYZER_NORMALIZED_TICK_RECEIVED",
+        provider: tick.provider,
+        marketType: tick.marketType,
+        exchange: tick.exchange,
+        symbol: tick.symbol,
+        instrumentToken: tick.instrumentToken,
+      },
+      "Analyzer received normalized market tick",
+    );
+
+    await this.processTick(
+      tick.symbol,
+      tick.price,
+      tick.timestamp,
+      false,
+      tick.volume ?? 0,
+    );
   }
 
   public invalidateMonitorCache(rawSymbol?: string): void {

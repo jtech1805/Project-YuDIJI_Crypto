@@ -4,9 +4,21 @@ export type AngelSmartApiConfig = {
   enabled: boolean;
   apiKey?: string;
   clientCode?: string;
+  pin?: string;
+  totpSecret?: string;
   debugEnabled: boolean;
   debugExchange?: Exchange;
   debugSymbolToken?: string;
+};
+
+export type AngelReadOnlySession = {
+  broker: "ANGEL_ONE";
+  clientCode: string;
+  connectedAt: Date;
+  expiresAt?: Date;
+  feedToken?: string;
+  jwtToken?: string;
+  refreshToken?: string;
 };
 
 export type AngelInstrument = {
@@ -25,7 +37,11 @@ export type AngelRawTick = {
   token?: string;
   exchange?: Exchange;
   symbol?: string;
+  displaySymbol?: string;
+  marketType?: MarketType;
   lastTradedPrice?: number;
+  ltp?: number;
+  price?: number;
   volume?: number;
   timestamp?: number;
   raw?: unknown;

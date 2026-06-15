@@ -11,8 +11,14 @@ export const MARKET_TYPES = [
 ] as const;
 export type MarketType = (typeof MARKET_TYPES)[number];
 
-export const EXCHANGES = ["BINANCE", "NSE", "BSE", "NFO", "MCX", "CDS"] as const;
+export const EXCHANGES = ["BINANCE", "NSE", "BSE", "NFO", "BFO", "MCX", "CDS", "NCDEX"] as const;
 export type Exchange = (typeof EXCHANGES)[number];
+
+export const INSTRUMENT_TYPES = ["SPOT", "CASH", "FUTURE", "OPTION", "INDEX", "UNKNOWN"] as const;
+export type InstrumentType = (typeof INSTRUMENT_TYPES)[number];
+
+export const SUPPORTED_BROKERS = ["ANGEL_ONE", "KITE", "NONE"] as const;
+export type SupportedBroker = (typeof SUPPORTED_BROKERS)[number];
 
 export type NormalizedMarketTick = {
   provider: MarketProvider;
