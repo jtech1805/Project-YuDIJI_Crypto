@@ -1110,6 +1110,23 @@ High-priority edge cases:
   - monitor stores symbol snapshot fields for provider/exchange/instrument metadata
   - Angel MCX monitor creation requires active user Angel BrokerConnection
   - market subscription key helper exists for future provider-aware WebSocket phase
+- Angel Integration Phase 6 Angel WebSocket LTP streaming:
+  - user-specific Angel WebSocket session manager exists
+  - active Angel BrokerConnection is required
+  - Angel MCX monitor can be subscribed through protected debug route
+  - LTP mode uses Angel `mode=1`
+  - MCX uses Angel `exchangeType=5`
+  - heartbeat ping is implemented
+  - binary LTP packets are parsed and normalized into `NormalizedMarketTick`
+  - normalized ticks are logged safely and are not persisted
+- Angel Integration Phase 6B Provider-Aware WebSocket subscription routing:
+  - frontend keeps using the existing backend WebSocket connection
+  - frontend sends YuJiDi symbol strings only
+  - backend resolves symbols from the universal `Symbol` collection
+  - Binance symbols route to the shared Binance master socket
+  - Angel MCX symbols route to user-specific Angel WebSocket sessions
+  - per-symbol subscription results are returned through `SUBSCRIPTION_UPDATE_RESULT`
+  - Angel ticks are forwarded to subscribed frontend sockets as `MARKET_TICK`
 
 ### Partially Implemented
 
@@ -1123,8 +1140,11 @@ High-priority edge cases:
   - Phase 3 BrokerConnection login verification exists.
   - Phase 4 read-only Angel Quote API exists.
   - Phase 5 universal Symbol monitor creation exists.
+  - Phase 6 user-specific Angel WebSocket LTP debug streaming exists.
+  - Phase 6B provider-aware frontend WebSocket routing exists.
   - Broker credentials are encrypted at rest.
-  - No Angel WebSocket connection exists.
+  - Angel WebSocket is connected to the frontend subscription path for live `MARKET_TICK` delivery.
+  - Angel WebSocket is not connected to analyzer alert generation yet.
   - No public/admin Angel sync HTTP endpoint exists.
   - No order placement, portfolio sync, analyzer provider-key processing, or auto trading exists.
 
@@ -1209,16 +1229,17 @@ Risk math should be deterministic and auditable. The LLM should explain or veto,
 
 Best next fixes:
 
-1. Expand analyzer edge-case tests for invalid ticks, CVD, order-book snapshots, and cooldown expiry.
-2. Align max monitor window with analyzer buffer, either both 60 minutes or both 24 hours.
-3. Fix `getAlertById` user lookup.
-4. Add validation to monitor update payload.
-5. Add `.env.example` with variable names only.
-6. Complete the alert movement field migration and eventually remove legacy `dropPercentage`.
-7. Move cooldown setting after successful alert creation or track failed alert attempts.
-8. Normalize user id access as `req.user.id` everywhere.
-9. Add reconnect behavior on frontend WebSocket.
-10. Document frontend architecture in `yujidi-client/document/`.
+1. Wire `NormalizedMarketTick` into provider-aware analyzer monitor lookup for Angel alert generation.
+2. Expand analyzer edge-case tests for invalid ticks, CVD, order-book snapshots, and cooldown expiry.
+3. Align max monitor window with analyzer buffer, either both 60 minutes or both 24 hours.
+4. Fix `getAlertById` user lookup.
+5. Add validation to monitor update payload.
+6. Add `.env.example` with variable names only.
+7. Complete the alert movement field migration and eventually remove legacy `dropPercentage`.
+8. Move cooldown setting after successful alert creation or track failed alert attempts.
+9. Normalize user id access as `req.user.id` everywhere.
+10. Add reconnect behavior on frontend WebSocket.
+11. Document frontend architecture in `yujidi-client/document/`.
 
 ## 24. Working Notes For Future Development
 

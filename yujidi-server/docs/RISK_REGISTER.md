@@ -66,6 +66,15 @@ Highest-priority current risks:
 | R-044 | Missing broker validation for provider-gated symbols | High | Medium | Mitigating |
 | R-045 | Provider/exchange/token mismatch in monitor snapshots | High | Medium | Open |
 | R-046 | Analyzer still uses legacy symbol key during universal monitor transition | High | Medium | Open |
+| R-047 | Angel WebSocket auth failure | High | Medium | Open |
+| R-048 | Angel WebSocket token leakage in logs | Critical | Low | Mitigating |
+| R-049 | Angel LTP binary parser offset bug | High | Medium | Mitigating |
+| R-050 | Runaway Angel WebSocket reconnect loop | High | Low | Mitigating |
+| R-051 | Angel WebSocket connection/subscription quota exceeded | High | Medium | Open |
+| R-052 | Stale Angel subscriptions not cleaned up | Medium | Medium | Open |
+| R-053 | Provider-aware subscription resolves wrong symbol/provider | High | Medium | Mitigating |
+| R-054 | Angel market ticks delivered to wrong user socket | Critical | Low | Mitigating |
+| R-055 | Partial WebSocket subscription failures confuse frontend state | Medium | Medium | Mitigating |
 | R-033 | Angel Scrip Master URL availability failure | Medium | Medium | Mitigating |
 | R-034 | Huge Angel symbol sync load | Medium | Medium | Mitigating |
 | R-035 | Reference sync confused with market-data permission | High | Medium | Mitigating |
@@ -1090,6 +1099,208 @@ Mitigation:
 - Added `getActiveMonitorsByMarketKey` helper for future provider-aware lookup.
 - Added `buildMarketSubscriptionKey` helper.
 - Keep analyzer refactor for a later phase.
+
+### R-047: Angel WebSocket Auth Failure
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Angel WebSocket authentication depends on the user's JWT token, feed token, client code, and API key.
+
+Impact:
+
+Expired or invalid tokens can prevent live LTP streaming for Angel monitors.
+
+Mitigation:
+
+- Session manager requires active BrokerConnection.
+- Broker session expiry is checked before use.
+- Debug route returns safe errors.
+- Future phases should refresh or reauth before streaming when needed.
+
+### R-048: Angel WebSocket Token Leakage In Logs
+
+Severity: Critical
+
+Likelihood: Low
+
+Status: Mitigating
+
+Description:
+
+Angel WebSocket headers contain API key, JWT token, feed token, and client code.
+
+Impact:
+
+Logging headers or raw connection options could expose broker credentials/session tokens.
+
+Mitigation:
+
+- Provider logs only user id, exchange, instrument token, action, and safe status.
+- Debug APIs return no tokens or encrypted fields.
+- Tests avoid real credentials.
+
+### R-049: Angel LTP Binary Parser Offset Bug
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+Angel LTP packets are binary and offset-based. Incorrect offsets can produce wrong token, timestamp, or price values.
+
+Impact:
+
+Future analyzer integration could evaluate incorrect market prices.
+
+Mitigation:
+
+- Parser validates minimum packet size.
+- Parser tests cover token, mode, exchange type, timestamp, and price scaling.
+- Phase 6 only logs normalized ticks; analyzer integration is deferred.
+
+### R-050: Runaway Angel WebSocket Reconnect Loop
+
+Severity: High
+
+Likelihood: Low
+
+Status: Mitigating
+
+Description:
+
+Automatic reconnect loops can overload provider sessions or server resources.
+
+Impact:
+
+Users may hit Angel connection limits or backend resource pressure.
+
+Mitigation:
+
+- Phase 6 does not implement infinite reconnect.
+- Closed sessions are reflected through status route.
+- Reconnect policy should be designed explicitly in a later phase.
+
+### R-051: Angel WebSocket Connection/Subscription Quota Exceeded
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Angel limits each client code to 3 concurrent WebSocket connections and 1000 token subscriptions per session.
+
+Impact:
+
+Too many sessions or subscriptions can cause provider rejection.
+
+Mitigation:
+
+- Session manager reuses one Angel WebSocket per YuJiDi user.
+- Future work should add per-client-code pooling, quotas, and subscription accounting.
+
+### R-052: Stale Angel Subscriptions Not Cleaned Up
+
+Severity: Medium
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Debug subscriptions may remain active if a user does not call unsubscribe or if the process loses state.
+
+Impact:
+
+Backend may keep unused WebSocket sessions open until process restart or provider close.
+
+Mitigation:
+
+- Unsubscribe closes the user session when no subscriptions remain.
+- Status route exposes active subscriptions.
+- Future frontend/session lifecycle should clean up subscriptions automatically.
+
+### R-053: Provider-Aware Subscription Resolves Wrong Symbol/Provider
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+The frontend sends only YuJiDi symbol strings. If backend resolution picks the wrong universal `Symbol` record or ignores provider metadata, it could route a subscription to the wrong provider or instrument token.
+
+Impact:
+
+Users could receive the wrong market data or fail to subscribe to the intended symbol.
+
+Mitigation:
+
+- Phase 6B resolves symbols through `MarketSubscriptionResolver`.
+- Resolver requires active statuses only.
+- Resolver builds provider-aware subscription keys from provider, exchange, user id where required, and instrument token.
+- Unit tests cover Binance and Angel subscription key generation.
+- Future tests should cover duplicate symbols across providers and stale symbol metadata.
+
+### R-054: Angel Market Ticks Delivered To Wrong User Socket
+
+Severity: Critical
+
+Likelihood: Low
+
+Status: Mitigating
+
+Description:
+
+Angel market streams are user-specific because they use the user's broker session. If subscription keys do not include user id or delivery checks ignore user-specific keys, one user's Angel ticks could be sent to another user's socket.
+
+Impact:
+
+This would violate user isolation and broker-session boundaries.
+
+Mitigation:
+
+- Angel subscription keys include user id: `ANGEL_ONE:<userId>:MCX:<instrumentToken>`.
+- `MARKET_TICK` delivery checks the exact subscription key stored on each frontend socket.
+- Frontend never receives Angel credentials, JWTs, feed tokens, or API keys.
+- Future WebSocket manager tests should simulate two users subscribed to the same Angel instrument.
+
+### R-055: Partial WebSocket Subscription Failures Confuse Frontend State
+
+Severity: Medium
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+A mixed subscription request can partially succeed, for example `BTCUSDT` succeeds while an Angel symbol fails because the user has no active BrokerConnection.
+
+Impact:
+
+Frontend state can become inaccurate if it treats the entire update as success or only reads legacy `SUBSCRIPTION_ACK`.
+
+Mitigation:
+
+- Phase 6B emits `SUBSCRIPTION_UPDATE_RESULT` with separate `subscribed`, `unsubscribed`, and `failed` arrays.
+- Legacy `SUBSCRIPTION_ACK` remains for compatibility.
+- Frontend should prefer `SUBSCRIPTION_UPDATE_RESULT` for new mixed-provider UX.
+- Future frontend work should display safe failure messages such as broker-login-required.
 
 ## 4. Review Cadence
 

@@ -48,6 +48,8 @@ Current automated tests:
 - `src/services/market-quote.service.test.ts`
 - `src/services/monitor.service.test.ts`
 - `src/utils/market-subscription-key.test.ts`
+- `src/integrations/market-data/angel/angel-ltp-packet.parser.test.ts`
+- `src/services/angel-user-market-data-session.service.test.ts`
 
 Current commands:
 
@@ -69,6 +71,8 @@ Current recommendation:
 - Do not call the real Angel Quote API in automated tests.
 - Keep universal monitor tests focused on `symbolId` creation, legacy Binance compatibility, broker-login validation, and snapshot persistence.
 - Keep market subscription key tests focused on provider-aware key shape and Angel user scoping.
+- Keep Angel LTP parser tests focused on binary offset parsing, token extraction, timestamp parsing, and price scaling.
+- Keep Angel user market-data session tests mocked; automated tests must not open real Angel WebSocket connections.
 - Add route integration tests for unauthenticated broker connection rejection when route-test tooling is introduced.
 - Add integration tests for routes after core domain behavior is covered.
 
@@ -267,6 +271,65 @@ Must test later:
 
 External Angel Quote API calls must be mocked. Tests should never call the real Angel Quote endpoint.
 
+### 4.7 Angel WebSocket LTP Tests
+
+Primary files:
+
+```txt
+src/integrations/market-data/angel/angel-ltp-packet.parser.ts
+src/integrations/market-data/angel/angel-market-data.provider.ts
+src/services/angel-user-market-data-session.service.ts
+```
+
+Currently covered:
+
+- LTP packet parses mode and exchange type.
+- LTP packet parses null-terminated token.
+- LTP packet parses sequence number and exchange timestamp.
+- LTP packet scales MCX price by 100.
+- Short packets are rejected safely.
+- Session manager subscribes active Angel monitor with mocked provider.
+- Session manager rejects missing BrokerConnection.
+- Session manager rejects non-Angel monitors.
+- Session manager unsubscribes and disconnects when no subscriptions remain.
+
+Must test later:
+
+- Protected debug route integration for subscribe/unsubscribe/status.
+- Angel provider payload shape with mocked WebSocket client.
+- Heartbeat behavior with fake timers.
+- WebSocket close/error status transitions.
+
+Automated tests must not call the real Angel WebSocket endpoint.
+
+### 4.8 Provider-Aware Subscription Routing Tests
+
+Primary files:
+
+```txt
+src/services/market-subscription-resolver.service.ts
+src/services/market-subscription-router.service.ts
+src/services/websocket.service.ts
+```
+
+Currently covered:
+
+- Resolver maps Binance symbol to `BINANCE:BINANCE:<symbol>`.
+- Resolver maps Angel MCX symbol to `ANGEL_ONE:<userId>:MCX:<instrumentToken>`.
+- Resolver rejects unknown symbols.
+- Resolver rejects Angel symbols when the user has no active BrokerConnection.
+- Router sends Binance subscriptions to the Binance handler.
+- Router sends Angel subscriptions to the Angel user market-data session service.
+- Router rejects unsupported providers.
+
+Must test later:
+
+- WebSocket manager mixed subscription payload with Binance and Angel symbols.
+- `SUBSCRIPTION_UPDATE_RESULT` partial success/failure contract.
+- Angel `MARKET_TICK` delivery only to sockets subscribed to the exact user-specific key.
+- Two users subscribed to the same Angel instrument do not receive each other's ticks.
+- Cleanup on browser socket close routes provider unsubscribe correctly.
+
 ## 5. Integration Tests
 
 ### 5.1 Auth Routes
@@ -365,10 +428,14 @@ Must test:
 - duplicate subscription does not double count for same socket
 - close cleanup decrements counts
 - ticker update is sent only to subscribed clients
+- mixed Binance/Angel subscription routes each provider correctly
+- provider-aware subscription keys prevent Angel cross-user delivery
+- `SUBSCRIPTION_UPDATE_RESULT` reports failed symbols without breaking successful symbols
+- Angel `MARKET_TICK` is sent only to subscribed frontend sockets
 - alert is emitted only to owning user's sockets
 - Binance reconnect clears active symbols and resubscribes desired symbols
 
-Binance WebSocket should be mocked.
+Binance and Angel WebSocket providers should be mocked.
 
 ## 7. Contract Tests
 

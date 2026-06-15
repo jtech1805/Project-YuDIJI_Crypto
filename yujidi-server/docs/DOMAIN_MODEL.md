@@ -262,6 +262,62 @@ Business rules:
 - Binance quote support is not implemented in this endpoint yet.
 - Quote API is not an order signal and is not connected to monitor/analyzer workflows yet.
 
+### 2.2.4 MarketSubscription / AngelUserMarketDataSession
+
+Implementation:
+
+```txt
+src/services/market-subscription-resolver.service.ts
+src/services/market-subscription-router.service.ts
+src/services/websocket.service.ts
+src/services/angel-user-market-data-session.service.ts
+src/integrations/market-data/angel/angel-market-data.provider.ts
+src/integrations/market-data/angel/angel-ltp-packet.parser.ts
+src/utils/market-subscription-key.ts
+```
+
+Purpose:
+
+MarketSubscription represents a provider-aware live data subscription. In Angel Phase 6B, the existing frontend WebSocket subscription message can subscribe to Binance crypto symbols and Angel MCX commodity symbols using the same YuJiDi symbol-string contract.
+
+Current behavior:
+
+- Frontend sends symbol strings such as `BTCUSDT` or `MCX:GOLD:05APR2027:FUTURE`.
+- Backend resolves each symbol through the global universal `Symbol` collection.
+- Resolver builds `ResolvedMarketSubscription` metadata and provider-aware subscription keys.
+- Router sends Binance subscriptions to the shared Binance master socket.
+- Router sends Angel MCX subscriptions to a user-specific Angel WebSocket session.
+- Angel sessions are user-specific.
+- Active Angel BrokerConnection is required.
+- Broker credentials and tokens are decrypted only inside backend service code when opening the stream.
+- Binance subscription key format is `BINANCE:BINANCE:<symbol>`.
+- Subscription key format is `ANGEL_ONE:<userId>:MCX:<instrumentToken>`.
+- MCX uses Angel `exchangeType = 5`.
+- LTP mode uses Angel `mode = 1`.
+- Heartbeat sends `ping` every 30 seconds.
+- Incoming binary LTP packets are parsed and normalized into `NormalizedMarketTick`.
+- Normal product flow returns `SUBSCRIPTION_UPDATE_RESULT` and forwards Angel ticks as `MARKET_TICK`.
+- Protected debug subscribe/unsubscribe/status routes still exist for backend verification.
+
+Normalized tick fields:
+
+- `provider`
+- `scope`
+- `userId`
+- `marketType`
+- `exchange`
+- `symbol`
+- `displayName`
+- `providerSymbol`
+- `instrumentToken`
+- `price`
+- `timestamp`
+- `raw`
+
+Important boundary:
+
+The frontend must not connect directly to Angel and must not send Angel credentials, JWTs, feed tokens, exchange types, or modes. Angel WebSocket LTP streaming is not yet connected to analyzer alert generation. Phase 7 should wire `NormalizedMarketTick` into provider-aware monitor lookup and existing drop/spike rules.
+
 ### 2.3 TripwireConfig / Monitor
 
 Implementation:

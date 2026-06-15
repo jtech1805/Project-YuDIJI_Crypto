@@ -18,7 +18,12 @@ interface Monitor {
   symbol: string;
   thresholdPercentage: number;
   trigger: TriggerType;
-  timeWindowMinutes: number
+  timeWindowMinutes: number;
+  displayName?: string;
+  instrumentType?: string;
+  marketType?: string;
+  provider?: string;
+
 }
 const triggerMeta: Record<TriggerType, { icon: typeof Zap; label: string; color: string; bg: string; ring: string }> = {
   spike: {
@@ -111,9 +116,9 @@ function MonitorItem({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">{symbol}</span>
+            <span className="text-sm font-medium text-foreground overflow-auto">{symbol}</span>
             <span className="text-xs font-mono text-muted-foreground">{price != null
-              ? `$${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+              ? `${monitor?.provider === 'ANGEL_ONE' ? "" : "$"}${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
               : '---'}</span>
           </div>
           <div className="flex items-center justify-between mt-1">

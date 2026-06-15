@@ -7,8 +7,13 @@ import WebSocket, { WebSocketServer } from "ws";
 
 import { AppError } from "../errors/AppError.js";
 import { AnalyzerEngine } from "./analyzer.service.js";
+import { AngelUserMarketDataSessionService } from "./angel-user-market-data-session.service.js";
+import { MarketSubscriptionResolver, type ResolvedMarketSubscription } from "./market-subscription-resolver.service.js";
+import { MarketSubscriptionRouter } from "./market-subscription-router.service.js";
 import { parseCookieHeader } from "../utils/cookieUtils.js";
 import { verifyAccessToken } from "../utils/jwt.js";
+import { buildMarketSubscriptionKey } from "../utils/market-subscription-key.js";
+import type { NormalizedMarketTick } from "../types/market-data.types.js";
 
 interface BinanceTickerMessage {
   s: string;
@@ -31,6 +36,45 @@ interface OutboundTickerPayload {
 interface OutboundAckPayload {
   type: "SUBSCRIPTION_ACK";
   subscriptions: string[];
+}
+
+interface OutboundSubscriptionUpdateResultPayload {
+  type: "SUBSCRIPTION_UPDATE_RESULT";
+  data: {
+    subscribed: Array<{
+      symbol: string;
+      displayName?: string;
+      provider: string;
+      subscriptionKey: string;
+    }>;
+    unsubscribed: Array<{
+      symbol: string;
+      displayName?: string;
+      provider: string;
+      subscriptionKey: string;
+    }>;
+    failed: Array<{
+      symbol: string;
+      reason: string;
+      message: string;
+    }>;
+  };
+}
+
+interface OutboundMarketTickPayload {
+  type: "MARKET_TICK";
+  provider: string;
+  marketType: string;
+  exchange: string;
+  symbol: string;
+  displayName?: string;
+  instrumentToken: string;
+  providerSymbol?: string;
+  price: number;
+  currentPrice: string;
+  previousClose: string;
+  priceChangePercent: string;
+  timestamp: number;
 }
 
 interface OutboundErrorPayload {
@@ -60,6 +104,8 @@ const logger = pino({ name: "websocket-manager" });
 export class WebSocketManager {
   private readonly wsServer: WebSocketServer;
   private readonly analyzerEngine: AnalyzerEngine;
+  private readonly subscriptionResolver: MarketSubscriptionResolver;
+  private readonly subscriptionRouter: MarketSubscriptionRouter;
   private binanceSocket: WebSocket | null;
   private reconnectTimer: NodeJS.Timeout | null;
   private readonly reconnectDelayMs: number;
@@ -72,6 +118,9 @@ export class WebSocketManager {
 
   public readonly clientSubscriptions: Map<WebSocket, Set<string>>;
   public readonly globalSymbolCounts: Map<string, number>;
+  public readonly globalSubscriptionCounts: Map<string, number>;
+  private readonly subscriptionMetadata: Map<string, ResolvedMarketSubscription>;
+  private readonly previousMarketTickPrices: Map<string, number>;
 
   public constructor() {
     this.wsServer = new WebSocketServer({ noServer: true });
@@ -87,6 +136,16 @@ export class WebSocketManager {
     this.userSockets = new Map<string, Set<WebSocket>>();
     this.clientSubscriptions = new Map<WebSocket, Set<string>>();
     this.globalSymbolCounts = new Map<string, number>();
+    this.globalSubscriptionCounts = new Map<string, number>();
+    this.subscriptionMetadata = new Map<string, ResolvedMarketSubscription>();
+    this.previousMarketTickPrices = new Map<string, number>();
+    const angelSessionService = new AngelUserMarketDataSessionService({
+      onTick: (tick): void => this.handleAngelMarketTick(tick),
+    });
+    this.subscriptionResolver = new MarketSubscriptionResolver();
+    this.subscriptionRouter = new MarketSubscriptionRouter({
+      angelSessionService,
+    });
     this.analyzerEngine = new AnalyzerEngine((userId, payload): void => {
       this.emitToUser(userId, payload);
     });
@@ -150,15 +209,15 @@ export class WebSocketManager {
     );
 
     ws.on("message", (rawMessage: WebSocket.RawData): void => {
-      this.handleClientMessage(ws, rawMessage);
+      void this.handleClientMessage(ws, rawMessage);
     });
 
     ws.on("close", (): void => {
-      this.cleanupClientSubscriptions(ws);
+      void this.cleanupClientSubscriptions(ws);
     });
 
     ws.on("error", (): void => {
-      this.cleanupClientSubscriptions(ws);
+      void this.cleanupClientSubscriptions(ws);
     });
   }
 
@@ -190,7 +249,7 @@ export class WebSocketManager {
     }
   }
 
-  public handleClientMessage(ws: WebSocket, message: WebSocket.RawData): void {
+  public async handleClientMessage(ws: WebSocket, message: WebSocket.RawData): Promise<void> {
     const parsed = this.parseClientMessage(message);
     if (!parsed) {
       this.sendToClient(ws, { type: "ERROR", message: "Invalid websocket payload" });
@@ -213,24 +272,100 @@ export class WebSocketManager {
       return;
     }
 
-    for (const rawSymbol of parsed.unsubscribe) {
-      const symbol = this.normalizeSymbol(rawSymbol);
-      if (!subscriptions.has(symbol)) {
-        continue;
-      }
-
-      subscriptions.delete(symbol);
-      this.decrementGlobalCount(symbol);
+    const userId = this.clientUsers.get(ws);
+    if (!userId) {
+      this.sendToClient(ws, { type: "ERROR", message: "Socket not authenticated" });
+      return;
     }
 
-    for (const rawSymbol of parsed.subscribe) {
+    const result: OutboundSubscriptionUpdateResultPayload["data"] = {
+      subscribed: [],
+      unsubscribed: [],
+      failed: [],
+    };
+
+    for (const rawSymbol of parsed.unsubscribe) {
       const symbol = this.normalizeSymbol(rawSymbol);
-      if (subscriptions.has(symbol)) {
+      const existingSubscription = this.findClientSubscriptionBySymbol(ws, symbol);
+      if (!existingSubscription) {
         continue;
       }
 
-      subscriptions.add(symbol);
-      this.incrementGlobalCount(symbol);
+      subscriptions.delete(existingSubscription.subscriptionKey);
+      const shouldRouteUnsubscribe = this.decrementGlobalCount(existingSubscription.subscriptionKey);
+      if (shouldRouteUnsubscribe) {
+        try {
+          await this.subscriptionRouter.unsubscribe(userId, existingSubscription);
+        } catch (error: unknown) {
+          result.failed.push({
+            symbol,
+            reason: this.errorReason(error),
+            message: "UNSUBSCRIPTION_FAILED",
+          });
+          continue;
+        }
+      }
+      result.unsubscribed.push(this.toSubscriptionResult(existingSubscription));
+    }
+
+    const resolvedSubscribeRequests: ResolvedMarketSubscription[] = [];
+    for (const rawSymbol of parsed.subscribe) {
+      const symbol = this.normalizeSymbol(rawSymbol);
+      let resolvedSubscription: ResolvedMarketSubscription;
+      try {
+        resolvedSubscription = await this.subscriptionResolver.resolveSubscription(userId, symbol);
+      } catch (error: unknown) {
+        result.failed.push({
+          symbol,
+          reason: this.errorReason(error),
+          message: this.safeSubscriptionFailureMessage(error),
+        });
+        continue;
+      }
+
+      if (subscriptions.has(resolvedSubscription.subscriptionKey)) {
+        continue;
+      }
+
+      resolvedSubscribeRequests.push(resolvedSubscription);
+    }
+
+    const sortedSubscribeRequests = resolvedSubscribeRequests.sort(
+      (left, right): number => {
+        if (left.provider === right.provider) {
+          return 0;
+        }
+        return left.provider === "BINANCE" ? -1 : 1;
+      },
+    );
+
+    for (const resolvedSubscription of sortedSubscribeRequests) {
+      if (subscriptions.has(resolvedSubscription.subscriptionKey)) {
+        continue;
+      }
+
+      const shouldRouteSubscribe = this.incrementGlobalCount(resolvedSubscription.subscriptionKey);
+      try {
+        if (shouldRouteSubscribe) {
+          await this.subscriptionRouter.subscribe(userId, resolvedSubscription);
+        }
+      } catch (error: unknown) {
+        this.decrementGlobalCount(resolvedSubscription.subscriptionKey);
+        result.failed.push({
+          symbol: resolvedSubscription.symbol,
+          reason: this.errorReason(error),
+          message: "SUBSCRIPTION_FAILED",
+        });
+        continue;
+      }
+
+      subscriptions.add(resolvedSubscription.subscriptionKey);
+      this.subscriptionMetadata.set(resolvedSubscription.subscriptionKey, resolvedSubscription);
+      result.subscribed.push(this.toSubscriptionResult(resolvedSubscription));
+
+      if (resolvedSubscription.provider === "BINANCE") {
+        this.updateBinanceSubscriptions();
+      }
     }
 
     this.updateBinanceSubscriptions();
@@ -239,13 +374,19 @@ export class WebSocketManager {
         event: "WS_SUBSCRIPTION_UPDATE_APPLIED",
         userId: this.clientUsers.get(ws) ?? null,
         userSubscriptions: Array.from(subscriptions),
-        globalSymbolCounts: Object.fromEntries(this.globalSymbolCounts),
+        globalSubscriptionCounts: Object.fromEntries(this.globalSubscriptionCounts),
       },
       "Applied subscription update",
     );
     this.sendToClient(ws, {
+      type: "SUBSCRIPTION_UPDATE_RESULT",
+      data: result,
+    });
+    this.sendToClient(ws, {
       type: "SUBSCRIPTION_ACK",
-      subscriptions: Array.from(subscriptions).sort((a, b): number => a.localeCompare(b)),
+      subscriptions: Array.from(subscriptions)
+        .map((subscriptionKey): string => this.subscriptionMetadata.get(subscriptionKey)?.symbol ?? subscriptionKey)
+        .sort((a, b): number => a.localeCompare(b)),
     });
   }
 
@@ -255,7 +396,7 @@ export class WebSocketManager {
         {
           event: "WS_BINANCE_SUBSCRIPTION_DEFERRED",
           reason: "MASTER_SOCKET_NOT_READY",
-          pendingGlobalCounts: Object.fromEntries(this.globalSymbolCounts),
+          pendingGlobalCounts: Object.fromEntries(this.globalSubscriptionCounts),
         },
         "Skipped Binance subscription sync; socket not open",
       );
@@ -263,9 +404,13 @@ export class WebSocketManager {
     }
 
     const desiredSymbols = new Set<string>(
-      Array.from(this.globalSymbolCounts.entries())
+      Array.from(this.globalSubscriptionCounts.entries())
         .filter((entry): boolean => entry[1] > 0)
-        .map((entry): string => entry[0]),
+        .map((entry): ResolvedMarketSubscription | undefined => this.subscriptionMetadata.get(entry[0]))
+        .filter((subscription): subscription is ResolvedMarketSubscription => {
+          return subscription?.provider === "BINANCE";
+        })
+        .map((subscription): string => subscription.instrumentToken),
     );
 
     const symbolsToSubscribe = Array.from(desiredSymbols).filter(
@@ -335,33 +480,47 @@ export class WebSocketManager {
     return symbol.trim().toUpperCase();
   }
 
-  private incrementGlobalCount(symbol: string): void {
-    const currentCount = this.globalSymbolCounts.get(symbol) ?? 0;
-    this.globalSymbolCounts.set(symbol, currentCount + 1);
+  private incrementGlobalCount(subscriptionKey: string): boolean {
+    const currentCount = this.globalSubscriptionCounts.get(subscriptionKey) ?? 0;
+    this.globalSubscriptionCounts.set(subscriptionKey, currentCount + 1);
+    return currentCount === 0;
   }
 
-  private decrementGlobalCount(symbol: string): void {
-    const currentCount = this.globalSymbolCounts.get(symbol) ?? 0;
+  private decrementGlobalCount(subscriptionKey: string): boolean {
+    const currentCount = this.globalSubscriptionCounts.get(subscriptionKey) ?? 0;
     const nextCount = currentCount - 1;
 
     if (nextCount <= 0) {
-      this.globalSymbolCounts.delete(symbol);
-      return;
+      this.globalSubscriptionCounts.delete(subscriptionKey);
+      this.subscriptionMetadata.delete(subscriptionKey);
+      return true;
     }
 
-    this.globalSymbolCounts.set(symbol, nextCount);
+    this.globalSubscriptionCounts.set(subscriptionKey, nextCount);
+    return false;
   }
 
-  private cleanupClientSubscriptions(ws: WebSocket): void {
+  private async cleanupClientSubscriptions(ws: WebSocket): Promise<void> {
     const subscriptions = this.clientSubscriptions.get(ws);
+    const userId = this.clientUsers.get(ws);
     if (subscriptions) {
-      for (const symbol of subscriptions) {
-        this.decrementGlobalCount(symbol);
+      for (const subscriptionKey of subscriptions) {
+        const metadata = this.subscriptionMetadata.get(subscriptionKey);
+        const shouldRouteUnsubscribe = this.decrementGlobalCount(subscriptionKey);
+        if (shouldRouteUnsubscribe && userId && metadata) {
+          try {
+            await this.subscriptionRouter.unsubscribe(userId, metadata);
+          } catch (error: unknown) {
+            logger.warn(
+              { error, userId, subscriptionKey },
+              "Failed to route subscription cleanup",
+            );
+          }
+        }
       }
     }
     this.clientSubscriptions.delete(ws);
 
-    const userId = this.clientUsers.get(ws);
     if (userId) {
       const sockets = this.userSockets.get(userId);
       if (sockets) {
@@ -378,7 +537,7 @@ export class WebSocketManager {
         event: "WS_CLIENT_DISCONNECTED",
         userId: userId ?? null,
         remainingUserSockets: userId ? this.userSockets.get(userId)?.size ?? 0 : 0,
-        remainingGlobalSymbolCounts: Object.fromEntries(this.globalSymbolCounts),
+        remainingGlobalSubscriptionCounts: Object.fromEntries(this.globalSubscriptionCounts),
       },
       "Websocket client disconnected and subscriptions cleaned",
     );
@@ -502,7 +661,12 @@ export class WebSocketManager {
         priceChangePercent: parsedPayload.P,
       };
       for (const [client, subscriptions] of this.clientSubscriptions.entries()) {
-        if (subscriptions.has(symbol)) {
+        const subscriptionKey = buildMarketSubscriptionKey({
+          provider: "BINANCE",
+          exchange: "BINANCE",
+          instrumentToken: symbol,
+        });
+        if (subscriptions.has(subscriptionKey)) {
           this.sendToClient(client, outboundPayload);
         }
       }
@@ -598,9 +762,116 @@ export class WebSocketManager {
     );
   }
 
+  private findClientSubscriptionBySymbol(
+    ws: WebSocket,
+    symbol: string,
+  ): ResolvedMarketSubscription | null {
+    const subscriptions = this.clientSubscriptions.get(ws);
+    if (!subscriptions) {
+      return null;
+    }
+
+    for (const subscriptionKey of subscriptions) {
+      const metadata = this.subscriptionMetadata.get(subscriptionKey);
+      if (metadata?.symbol === symbol || metadata?.displayName.toUpperCase() === symbol) {
+        return metadata;
+      }
+    }
+
+    return null;
+  }
+
+  private toSubscriptionResult(subscription: ResolvedMarketSubscription): {
+    symbol: string;
+    displayName?: string;
+    provider: string;
+    subscriptionKey: string;
+  } {
+    return {
+      symbol: subscription.symbol,
+      displayName: subscription.displayName,
+      provider: subscription.provider,
+      subscriptionKey: subscription.subscriptionKey,
+    };
+  }
+
+  private handleAngelMarketTick(tick: NormalizedMarketTick): void {
+    if (!tick.userId || tick.provider !== "ANGEL_ONE") {
+      return;
+    }
+
+    const subscriptionKey = buildMarketSubscriptionKey({
+      provider: "ANGEL_ONE",
+      userId: tick.userId,
+      exchange: tick.exchange,
+      instrumentToken: tick.instrumentToken,
+    });
+    const previousPrice = this.previousMarketTickPrices.get(subscriptionKey);
+    const previousClose = previousPrice ?? tick.price;
+    const priceChangePercent = previousPrice && previousPrice > 0
+      ? ((tick.price - previousPrice) / previousPrice) * 100
+      : 0;
+    this.previousMarketTickPrices.set(subscriptionKey, tick.price);
+
+    const payload: OutboundMarketTickPayload = {
+      type: "MARKET_TICK",
+      provider: tick.provider,
+      marketType: tick.marketType,
+      exchange: tick.exchange,
+      symbol: tick.symbol,
+      instrumentToken: tick.instrumentToken,
+      price: tick.price,
+      currentPrice: tick.price.toString(),
+      previousClose: previousClose.toString(),
+      priceChangePercent: priceChangePercent.toFixed(3),
+      timestamp: tick.timestamp,
+    };
+    if (tick.displayName) {
+      payload.displayName = tick.displayName;
+    }
+    if (tick.providerSymbol) {
+      payload.providerSymbol = tick.providerSymbol;
+    }
+
+    for (const [client, subscriptions] of this.clientSubscriptions.entries()) {
+      if (subscriptions.has(subscriptionKey)) {
+        this.sendToClient(client, payload);
+      }
+    }
+  }
+
+  private errorReason(error: unknown): string {
+    const message = error instanceof Error ? error.message : "SUBSCRIPTION_FAILED";
+    return message.split(":")[0]?.trim() || "SUBSCRIPTION_FAILED";
+  }
+
+  private safeSubscriptionFailureMessage(error: unknown): string {
+    const reason = this.errorReason(error);
+    if (reason === "BROKER_LOGIN_REQUIRED") {
+      return "Connect Angel One to subscribe to this symbol.";
+    }
+    if (reason === "SYMBOL_NOT_FOUND") {
+      return "Symbol was not found.";
+    }
+    if (reason === "PROVIDER_NOT_SUPPORTED") {
+      return "Provider is not supported for websocket subscription yet.";
+    }
+    if (reason === "BROKER_SESSION_EXPIRED") {
+      return "Broker session expired. Reconnect Angel One.";
+    }
+
+    return "Subscription failed.";
+  }
+
   private sendToClient(
     ws: WebSocket,
-    payload: OutboundTickerPayload | OutboundAckPayload | OutboundErrorPayload | OutboundAlertPayload,
+    payload:
+      | OutboundTickerPayload
+      | OutboundAckPayload
+      | OutboundErrorPayload
+      | OutboundAlertPayload
+      | OutboundSubscriptionUpdateResultPayload
+      | OutboundMarketTickPayload,
   ): void {
     if (ws.readyState !== WebSocket.OPEN) {
       return;
@@ -632,6 +903,11 @@ export class WebSocketManager {
    */
   public addHttpSubscription(rawSymbol: string): void {
     const symbol = this.normalizeSymbol(rawSymbol);
+    const subscriptionKey = buildMarketSubscriptionKey({
+      provider: "BINANCE",
+      exchange: "BINANCE",
+      instrumentToken: symbol,
+    });
 
     // Check if the engine is already tracking this coin (either via WS or previous HTTP call)
     const currentCount = this.globalSymbolCounts.get(symbol) || 0;
@@ -643,7 +919,21 @@ export class WebSocketManager {
       );
 
       // Increment global count to 1 so the engine knows it is active
-      this.incrementGlobalCount(symbol);
+      this.globalSymbolCounts.set(symbol, 1);
+      this.incrementGlobalCount(subscriptionKey);
+      this.subscriptionMetadata.set(subscriptionKey, {
+        symbolId: "",
+        symbol,
+        displayName: symbol,
+        provider: "BINANCE",
+        marketType: "CRYPTO",
+        exchange: "BINANCE",
+        instrumentToken: symbol,
+        providerSymbol: symbol,
+        requiresBrokerLogin: false,
+        supportedBroker: "NONE",
+        subscriptionKey,
+      });
 
       // Tell Binance to start sending data!
       this.updateBinanceSubscriptions();

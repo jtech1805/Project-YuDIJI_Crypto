@@ -20,13 +20,19 @@ export type InstrumentType = (typeof INSTRUMENT_TYPES)[number];
 export const SUPPORTED_BROKERS = ["ANGEL_ONE", "KITE", "NONE"] as const;
 export type SupportedBroker = (typeof SUPPORTED_BROKERS)[number];
 
+export type MarketDataScope = "GLOBAL" | "USER_SESSION";
+
 export type NormalizedMarketTick = {
   provider: MarketProvider;
+  scope?: MarketDataScope;
+  userId?: string;
   marketType: MarketType;
   exchange: Exchange;
 
   symbol: string;
+  displayName?: string;
   displaySymbol: string;
+  providerSymbol?: string;
   instrumentToken: string;
 
   price: number;

@@ -1177,12 +1177,34 @@ Client subscription message:
 ```json
 {
   "action": "UPDATE_SUBSCRIPTIONS",
-  "subscribe": ["BTCUSDT"],
+  "subscribe": ["BTCUSDT", "MCX:GOLD:05APR2027:FUTURE"],
   "unsubscribe": []
 }
 ```
 
+The frontend sends YuJiDi symbol strings only. It does not send provider credentials, Angel tokens, Angel exchange types, or instrument-token internals.
+
 Server events:
+
+### SUBSCRIPTION_UPDATE_RESULT
+
+```json
+{
+  "type": "SUBSCRIPTION_UPDATE_RESULT",
+  "data": {
+    "subscribed": [
+      {
+        "symbol": "BTCUSDT",
+        "displayName": "BTC / USDT",
+        "provider": "BINANCE",
+        "subscriptionKey": "BINANCE:BINANCE:BTCUSDT"
+      }
+    ],
+    "unsubscribed": [],
+    "failed": []
+  }
+}
+```
 
 ### SUBSCRIPTION_ACK
 
@@ -1193,6 +1215,8 @@ Server events:
 }
 ```
 
+`SUBSCRIPTION_ACK` is kept for frontend backward compatibility. New logic should prefer `SUBSCRIPTION_UPDATE_RESULT` because it can report per-symbol failures.
+
 ### TICKER_UPDATE
 
 ```json
@@ -1202,6 +1226,26 @@ Server events:
   "currentPrice": "65000.00",
   "previousClose": "64000.00",
   "priceChangePercent": "1.56"
+}
+```
+
+### MARKET_TICK
+
+```json
+{
+  "type": "MARKET_TICK",
+  "provider": "ANGEL_ONE",
+  "marketType": "COMMODITY",
+  "exchange": "MCX",
+  "symbol": "MCX:GOLD:05APR2027:FUTURE",
+  "displayName": "MCX GOLD 05APR2027 FUTURE",
+  "instrumentToken": "570027",
+  "providerSymbol": "GOLD05APR27FUT",
+  "price": 98765.5,
+  "currentPrice": "98765.5",
+  "previousClose": "98760",
+  "priceChangePercent": "0.006",
+  "timestamp": 1781495884000
 }
 ```
 
@@ -1465,7 +1509,7 @@ DELETE /api/broker-connections/angel
 
 Future phases:
 
-- Real Angel WebSocket connection.
+- Analyzer-integrated Angel WebSocket processing.
 - Broker-aware monitor activation.
 - Provider-specific analyzer calibration.
 
@@ -1493,7 +1537,7 @@ Angel quote access uses the user's own Angel session. Global `Symbol` records ar
 
 Out of scope:
 
-- Angel WebSocket streaming.
+- Angel WebSocket streaming is covered separately by Phase 6 LTP debug streaming.
 - Order placement.
 - Monitor/analyzer integration.
 - Portfolio/RMS sync.
@@ -1536,6 +1580,85 @@ Out of scope:
 - Analyzer provider-key processing.
 - Order placement.
 - Option chain.
+
+## Angel WebSocket LTP Streaming Baseline
+
+YuJiDi supports user-specific Angel WebSocket LTP streaming for Angel MCX monitors.
+
+Current scope:
+
+- User-specific Angel BrokerConnection is required.
+- Angel WebSocket 2.0 connection uses the user's encrypted session after internal decryption.
+- LTP mode only.
+- MCX uses Angel `exchangeType = 5`.
+- Heartbeat sends `ping` every 30 seconds.
+- Binary LTP packet parsing is implemented.
+- LTP ticks are normalized into `NormalizedMarketTick`.
+- Protected debug routes can subscribe, unsubscribe, and inspect session status.
+
+Debug routes:
+
+```txt
+POST /api/market-streams/angel/monitors/:monitorId/subscribe
+POST /api/market-streams/angel/monitors/:monitorId/unsubscribe
+GET  /api/market-streams/angel/status
+```
+
+Subscription key:
+
+```txt
+ANGEL_ONE:<userId>:MCX:<instrumentToken>
+```
+
+Out of scope:
+
+- WebSocket FULL/SnapQuote mode.
+- Option chain.
+- Order placement.
+- Portfolio sync.
+- Analyzer alert generation from Angel ticks.
+
+## Provider-Aware WebSocket Subscription Routing
+
+YuJiDi now routes normal frontend WebSocket subscriptions through a provider-aware backend path.
+
+Current behavior:
+
+- Frontend keeps using the existing backend WebSocket connection.
+- Frontend sends YuJiDi symbol strings in `UPDATE_SUBSCRIPTIONS`.
+- Backend resolves each symbol through the universal `Symbol` collection.
+- Binance symbols route to the existing shared Binance master stream.
+- Angel MCX symbols route to a user-specific Angel WebSocket session.
+- Angel subscriptions require an active user Angel BrokerConnection.
+- Backend tracks subscriptions by provider-aware subscription keys.
+- Backend sends `SUBSCRIPTION_UPDATE_RESULT` with per-symbol subscribed, unsubscribed, and failed entries.
+- Backend still sends legacy `SUBSCRIPTION_ACK` for compatibility.
+- Binance ticks still use `TICKER_UPDATE`.
+- Angel ticks use normalized `MARKET_TICK`.
+
+Implementation files:
+
+```txt
+src/services/market-subscription-resolver.service.ts
+src/services/market-subscription-router.service.ts
+src/services/websocket.service.ts
+src/services/angel-user-market-data-session.service.ts
+```
+
+Subscription keys:
+
+```txt
+BINANCE:BINANCE:<symbol>
+ANGEL_ONE:<userId>:MCX:<instrumentToken>
+```
+
+Important boundary:
+
+- Debug market-stream routes remain for backend verification.
+- Normal product flow should use the existing frontend WebSocket subscription message.
+- Frontend must not connect directly to Angel.
+- Frontend must not send Angel JWT, feed token, API key, client code, exchange type, or mode.
+- Analyzer alert generation from Angel ticks is still out of scope.
 
 Current Phase 0 files:
 
@@ -1920,6 +2043,8 @@ Implemented:
 - Angel BrokerConnection login verification with encrypted credentials/session tokens.
 - Angel read-only quote snapshots through `GET /api/market-quotes/:symbolId`.
 - Universal Symbol monitor creation through `symbolId` with monitor snapshot metadata.
+- User-specific Angel WebSocket LTP debug streaming for Angel MCX monitors.
+- Provider-aware frontend WebSocket subscription routing for Binance and Angel MCX.
 
 Partially implemented:
 
