@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "7a8f2117-5ed0-4af9-8c57-5f3c9335f3d1",
-    "name": "YuJiDi - Angel BrokerConnection Phase 3 + Quote Phase 4",
-    "description": "Postman collection for testing YuJiDi auth, Angel BrokerConnection Phase 3 APIs, and Angel Quote Phase 4 APIs. Import this file into Postman, update the collection variables, run Login, connect Angel, discover an Angel MCX symbol, then run the protected quote requests.",
+    "name": "YuJiDi - Angel Phase 3-5 API Tests",
+    "description": "Postman collection for testing YuJiDi auth, Angel BrokerConnection Phase 3 APIs, Angel Quote Phase 4 APIs, and Universal Symbol Monitor Phase 5 APIs. Import this file into Postman, update collection variables, run Login, connect Angel, discover Binance/Angel symbols, then run quote and monitor requests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -74,6 +74,21 @@
     {
       "key": "quoteMode",
       "value": "LTP",
+      "type": "string"
+    },
+    {
+      "key": "legacyBinanceMonitorId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "binanceSymbolIdMonitorId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "angelMonitorId",
+      "value": "",
       "type": "string"
     }
   ],
@@ -974,6 +989,521 @@
                 "exec": [
                   "pm.test('Binance symbol is not supported by Phase 4 quote API', function () {",
                   "  pm.expect([400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Monitors - Universal Symbol Phase 5",
+      "item": [
+        {
+          "name": "Find Binance Symbol And Save Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/monitors/symbols/universal?provider=BINANCE&exchange=BINANCE&marketType=CRYPTO&includeBrokerRequired=true&limit=10&q=BTCUSDT",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors",
+                "symbols",
+                "universal"
+              ],
+              "query": [
+                {
+                  "key": "provider",
+                  "value": "BINANCE"
+                },
+                {
+                  "key": "exchange",
+                  "value": "BINANCE"
+                },
+                {
+                  "key": "marketType",
+                  "value": "CRYPTO"
+                },
+                {
+                  "key": "includeBrokerRequired",
+                  "value": "true"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "q",
+                  "value": "BTCUSDT"
+                }
+              ]
+            },
+            "description": "Finds BTCUSDT in the universal Symbol registry and saves the first result _id into binanceSymbolId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Binance symbol search succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "const symbols = body.data || [];",
+                  "pm.test('At least one Binance symbol exists', function () {",
+                  "  pm.expect(symbols.length).to.be.greaterThan(0);",
+                  "});",
+                  "if (symbols.length > 0) {",
+                  "  const first = symbols[0];",
+                  "  const id = first._id || first.id;",
+                  "  if (id) pm.collectionVariables.set('binanceSymbolId', id);",
+                  "  console.log('Saved binanceSymbolId:', id, first.symbol || first.displayName);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Find Angel MCX Symbol And Save Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/monitors/symbols/universal?provider=ANGEL_ONE&exchange=MCX&marketType=COMMODITY&includeBrokerRequired=true&limit=10&q=CRUDEOIL",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors",
+                "symbols",
+                "universal"
+              ],
+              "query": [
+                {
+                  "key": "provider",
+                  "value": "ANGEL_ONE"
+                },
+                {
+                  "key": "exchange",
+                  "value": "MCX"
+                },
+                {
+                  "key": "marketType",
+                  "value": "COMMODITY"
+                },
+                {
+                  "key": "includeBrokerRequired",
+                  "value": "true"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "q",
+                  "value": "CRUDEOIL"
+                }
+              ]
+            },
+            "description": "Finds an Angel MCX Symbol and saves the first result _id into angelSymbolId. Requires Phase 2 Angel symbol sync data."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Angel symbol search succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "const symbols = body.data || [];",
+                  "pm.test('At least one Angel MCX symbol exists', function () {",
+                  "  pm.expect(symbols.length).to.be.greaterThan(0);",
+                  "});",
+                  "if (symbols.length > 0) {",
+                  "  const first = symbols[0];",
+                  "  const id = first._id || first.id;",
+                  "  if (id) pm.collectionVariables.set('angelSymbolId', id);",
+                  "  console.log('Saved angelSymbolId:', id, first.symbol || first.displayName);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Monitor - Legacy Binance Symbol",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbol\": \"BTCUSDT\",\n  \"thresholdPercentage\": 1,\n  \"timeWindowMinutes\": 5,\n  \"trigger\": \"drop\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/monitors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors"
+              ]
+            },
+            "description": "Verifies old Binance monitor creation still works without symbolId and without broker login."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Legacy Binance monitor created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (body.data && (body.data._id || body.data.id)) {",
+                  "  pm.collectionVariables.set('legacyBinanceMonitorId', body.data._id || body.data.id);",
+                  "}",
+                  "pm.test('Legacy Binance monitor has compatible snapshot fields', function () {",
+                  "  pm.expect(body.status).to.eql('success');",
+                  "  pm.expect(body.data.symbol).to.eql('BTCUSDT');",
+                  "  pm.expect(body.data.provider).to.eql('BINANCE');",
+                  "  pm.expect(body.data.exchange).to.eql('BINANCE');",
+                  "  pm.expect(body.data.requiresBrokerLogin).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Monitor - Binance symbolId",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbolId\": \"{{binanceSymbolId}}\",\n  \"thresholdPercentage\": 1,\n  \"timeWindowMinutes\": 5,\n  \"trigger\": \"spike\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/monitors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors"
+              ]
+            },
+            "description": "Creates a Binance monitor using the new universal symbolId contract. Should not require broker login."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Binance symbolId monitor created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (body.data && (body.data._id || body.data.id)) {",
+                  "  pm.collectionVariables.set('binanceSymbolIdMonitorId', body.data._id || body.data.id);",
+                  "}",
+                  "pm.test('Binance symbolId monitor stores snapshot fields', function () {",
+                  "  pm.expect(body.data.symbolId).to.eql(pm.collectionVariables.get('binanceSymbolId'));",
+                  "  pm.expect(body.data.provider).to.eql('BINANCE');",
+                  "  pm.expect(body.data.marketType).to.eql('CRYPTO');",
+                  "  pm.expect(body.data.exchange).to.eql('BINANCE');",
+                  "  pm.expect(body.data.instrumentToken).to.be.a('string').and.not.empty;",
+                  "  pm.expect(body.data.requiresBrokerLogin).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Monitor - Angel symbolId Requires Active Broker",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbolId\": \"{{angelSymbolId}}\",\n  \"thresholdPercentage\": 1,\n  \"timeWindowMinutes\": 5,\n  \"trigger\": \"spike\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/monitors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors"
+              ]
+            },
+            "description": "Creates an Angel MCX monitor using symbolId. Requires an ACTIVE Angel BrokerConnection for the logged-in user. Run Connect Angel Account first."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Angel monitor response is expected', function () {",
+                  "  pm.expect([201, 400]).to.include(pm.response.code);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code === 201) {",
+                  "  if (body.data && (body.data._id || body.data.id)) {",
+                  "    pm.collectionVariables.set('angelMonitorId', body.data._id || body.data.id);",
+                  "  }",
+                  "  pm.test('Angel monitor stores universal snapshot fields', function () {",
+                  "    pm.expect(body.data.symbolId).to.eql(pm.collectionVariables.get('angelSymbolId'));",
+                  "    pm.expect(body.data.provider).to.eql('ANGEL_ONE');",
+                  "    pm.expect(body.data.marketType).to.eql('COMMODITY');",
+                  "    pm.expect(body.data.exchange).to.eql('MCX');",
+                  "    pm.expect(body.data.instrumentToken).to.be.a('string').and.not.empty;",
+                  "    pm.expect(body.data.requiresBrokerLogin).to.eql(true);",
+                  "    pm.expect(body.data.supportedBroker).to.eql('ANGEL_ONE');",
+                  "    pm.expect(JSON.stringify(body)).to.not.include('encrypted');",
+                  "    pm.expect(JSON.stringify(body)).to.not.include('jwtToken');",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Angel monitor is blocked without broker login', function () {",
+                  "    pm.expect(JSON.stringify(body)).to.include('BROKER_LOGIN_REQUIRED');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Monitors - Verify Snapshot Metadata",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/monitors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors"
+              ]
+            },
+            "description": "Lists user monitors and verifies Phase 5 snapshot fields are visible and no broker secrets are returned."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Monitor list loaded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Monitor list is safe and includes metadata fields when available', function () {",
+                  "  pm.expect(body.status).to.eql('success');",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('encrypted');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('jwtToken');",
+                  "  if (body.data.length > 0) {",
+                  "    const monitor = body.data[0];",
+                  "    pm.expect(monitor).to.have.property('symbol');",
+                  "    pm.expect(monitor).to.have.property('thresholdPercentage');",
+                  "    pm.expect(monitor).to.have.property('trigger');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Negative Test - Invalid symbolId",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbolId\": \"not-a-mongo-id\",\n  \"thresholdPercentage\": 1,\n  \"timeWindowMinutes\": 5,\n  \"trigger\": \"spike\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/monitors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors"
+              ]
+            },
+            "description": "Expected to fail because symbolId must be a valid Mongo ObjectId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invalid symbolId is rejected', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete Legacy Binance Monitor",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/monitors/{{legacyBinanceMonitorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors",
+                "{{legacyBinanceMonitorId}}"
+              ]
+            },
+            "description": "Optional cleanup for the monitor created by the legacy Binance request."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cleanup legacy Binance monitor completed', function () {",
+                  "  pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete Binance symbolId Monitor",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/monitors/{{binanceSymbolIdMonitorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors",
+                "{{binanceSymbolIdMonitorId}}"
+              ]
+            },
+            "description": "Optional cleanup for the Binance symbolId monitor."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cleanup Binance symbolId monitor completed', function () {",
+                  "  pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete Angel Monitor",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/monitors/{{angelMonitorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors",
+                "{{angelMonitorId}}"
+              ]
+            },
+            "description": "Optional cleanup for the Angel monitor, if it was created successfully."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cleanup Angel monitor completed', function () {",
+                  "  pm.expect([200, 400, 404]).to.include(pm.response.code);",
                   "});"
                 ]
               }

@@ -277,7 +277,17 @@ A monitor is a user-defined market detection rule.
 Current fields:
 
 - `user`
+- `symbolId`
 - `symbol`
+- `provider`
+- `marketType`
+- `exchange`
+- `displayName`
+- `providerSymbol`
+- `instrumentToken`
+- `instrumentType`
+- `requiresBrokerLogin`
+- `supportedBroker`
 - `thresholdPercentage`
 - `timeWindowMinutes`
 - `isActive`
@@ -307,6 +317,32 @@ If BTCUSDT drops 2.5% in 5 minutes, create an alert.
 Current behavior:
 
 The schema, UI, and analyzer support both `drop` and `spike` monitors.
+
+Universal symbol behavior:
+
+- Old Binance monitor creation by `symbol` remains supported.
+- New monitor creation can use `symbolId`.
+- When `symbolId` is used, the monitor stores a snapshot of the selected global `Symbol`.
+- Binance symbols do not require broker login.
+- Angel MCX symbols require an active user-owned Angel BrokerConnection.
+- Broker credentials are not decrypted during monitor creation.
+- Analyzer still primarily uses the legacy `symbol` string until provider-aware monitor processing is implemented in a later phase.
+
+Relationship:
+
+```txt
+User
+  -> owns Monitor
+
+Monitor
+  -> stores Symbol snapshot
+
+Symbol
+  -> global reference data
+
+BrokerConnection
+  -> required for provider-gated symbols such as Angel MCX
+```
 
 ### 2.4 Alert
 

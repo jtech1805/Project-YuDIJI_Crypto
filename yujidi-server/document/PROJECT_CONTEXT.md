@@ -1104,6 +1104,12 @@ High-priority edge cases:
   - supports single-symbol `LTP`, `OHLC`, and `FULL` modes
   - returns normalized `NormalizedMarketSnapshot`
   - does not persist quote snapshots
+- Angel Integration Phase 5 Universal Symbol Monitor support:
+  - monitor creation accepts universal `symbolId`
+  - legacy Binance monitor creation by `symbol` remains supported
+  - monitor stores symbol snapshot fields for provider/exchange/instrument metadata
+  - Angel MCX monitor creation requires active user Angel BrokerConnection
+  - market subscription key helper exists for future provider-aware WebSocket phase
 
 ### Partially Implemented
 
@@ -1116,10 +1122,11 @@ High-priority edge cases:
   - Phase 2 MCX Scrip Master sync exists.
   - Phase 3 BrokerConnection login verification exists.
   - Phase 4 read-only Angel Quote API exists.
+  - Phase 5 universal Symbol monitor creation exists.
   - Broker credentials are encrypted at rest.
   - No Angel WebSocket connection exists.
   - No public/admin Angel sync HTTP endpoint exists.
-  - No order placement, portfolio sync, monitor/analyzer integration, or auto trading exists.
+  - No order placement, portfolio sync, analyzer provider-key processing, or auto trading exists.
 
 - Alert detail endpoint.
   - Route exists.

@@ -1503,6 +1503,40 @@ Safety boundary:
 
 The quote service decrypts the user's Angel API key and JWT token only inside backend service code. API responses must never return API keys, JWTs, refresh tokens, feed tokens, PINs, TOTP values, or encrypted fields.
 
+## Universal Symbol Monitor Baseline
+
+Monitors can be created from universal `Symbol` records via `symbolId`.
+
+Current behavior:
+
+- Binance legacy monitor creation by `symbol` remains supported.
+- New monitor creation by `symbolId` stores symbol snapshot fields.
+- Legacy Binance monitor creation is enriched from `Symbol` when possible.
+- Legacy Binance monitor creation falls back to safe Binance defaults if a symbol record is missing.
+- Angel MCX symbols require active user Angel BrokerConnection.
+- Broker credentials are not decrypted during monitor creation.
+- Monitor stores provider, exchange, instrument token, display name, and broker requirement metadata for future provider-aware WebSocket subscription.
+
+Snapshot fields stored on monitors:
+
+- `symbolId`
+- `provider`
+- `marketType`
+- `exchange`
+- `displayName`
+- `providerSymbol`
+- `instrumentToken`
+- `instrumentType`
+- `requiresBrokerLogin`
+- `supportedBroker`
+
+Out of scope:
+
+- Angel WebSocket.
+- Analyzer provider-key processing.
+- Order placement.
+- Option chain.
+
 Current Phase 0 files:
 
 ```txt
@@ -1885,6 +1919,7 @@ Implemented:
 - Angel MCX Scrip Master sync.
 - Angel BrokerConnection login verification with encrypted credentials/session tokens.
 - Angel read-only quote snapshots through `GET /api/market-quotes/:symbolId`.
+- Universal Symbol monitor creation through `symbolId` with monitor snapshot metadata.
 
 Partially implemented:
 

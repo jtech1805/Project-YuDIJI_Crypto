@@ -61,6 +61,11 @@ Highest-priority current risks:
 | R-039 | Angel quote response field drift | Medium | Medium | Open |
 | R-040 | REST quote polling used for high-frequency monitoring | High | Medium | Open |
 | R-041 | Quote API secret/header leakage risk | Critical | Low | Mitigating |
+| R-042 | Universal monitor changes break legacy Binance monitor creation | High | Medium | Mitigating |
+| R-043 | Monitor symbol snapshot becomes stale | Medium | Medium | Open |
+| R-044 | Missing broker validation for provider-gated symbols | High | Medium | Mitigating |
+| R-045 | Provider/exchange/token mismatch in monitor snapshots | High | Medium | Open |
+| R-046 | Analyzer still uses legacy symbol key during universal monitor transition | High | Medium | Open |
 | R-033 | Angel Scrip Master URL availability failure | Medium | Medium | Mitigating |
 | R-034 | Huge Angel symbol sync load | Medium | Medium | Mitigating |
 | R-035 | Reference sync confused with market-data permission | High | Medium | Mitigating |
@@ -974,6 +979,117 @@ Mitigation:
 - Quote service does not log API key, JWT, refresh token, feed token, PIN, or TOTP.
 - API responses return only normalized market snapshots.
 - Automated tests assert normalized snapshots do not include mocked secrets.
+
+### R-042: Universal Monitor Changes Break Legacy Binance Monitor Creation
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+Monitor creation now supports universal `symbolId`, but existing frontend and crypto flows still send plain Binance `symbol` values.
+
+Impact:
+
+If compatibility breaks, users cannot create normal Binance monitors.
+
+Mitigation:
+
+- Keep `symbol` creation path supported.
+- Enrich legacy Binance monitors from `Symbol` when possible.
+- Fallback to safe Binance defaults when a symbol document is missing.
+- Add unit tests for legacy Binance monitor creation.
+
+### R-043: Monitor Symbol Snapshot Becomes Stale
+
+Severity: Medium
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Monitors store a snapshot of symbol metadata. If the global `Symbol` record changes later, old monitors may retain outdated display name, expiry, instrument type, or token metadata.
+
+Impact:
+
+Future WebSocket/analyzer phases could subscribe using stale metadata.
+
+Mitigation:
+
+- Treat snapshots as intentional historical stability for now.
+- Add future reconciliation tooling for expired contracts and symbol metadata refresh.
+- Prefer provider/exchange/instrument token identity for live subscriptions.
+
+### R-044: Missing Broker Validation For Provider-Gated Symbols
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+Angel MCX symbols require active user-specific BrokerConnection. If monitor creation skips this validation, users could create monitors that cannot receive live data.
+
+Impact:
+
+Users may believe Angel monitoring is active when no broker session exists.
+
+Mitigation:
+
+- Monitor creation checks active broker connection for broker-required symbols.
+- The check does not decrypt credentials or call Angel APIs.
+- Unit tests cover Angel rejection when broker connection is missing.
+
+### R-045: Provider/Exchange/Token Mismatch In Monitor Snapshots
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Universal monitors depend on provider, exchange, and instrument token matching the intended market instrument.
+
+Impact:
+
+Future WebSocket subscription could attach to the wrong instrument if snapshot data is incorrect.
+
+Mitigation:
+
+- Store snapshot fields from the authoritative `Symbol` record when `symbolId` is used.
+- Use provider/exchange/instrument token indexes.
+- Add validation and reconciliation before enabling Angel WebSocket monitoring.
+
+### R-046: Analyzer Still Uses Legacy Symbol Key During Universal Monitor Transition
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+The analyzer still primarily looks up active monitors by symbol string. Universal monitors now store provider-aware market identity, but analyzer provider-key processing is not implemented yet.
+
+Impact:
+
+Angel monitor creation can be stored, but live Angel WebSocket/analyzer integration still needs a provider-aware lookup path before alerts are reliable.
+
+Mitigation:
+
+- Added `getActiveMonitorsByMarketKey` helper for future provider-aware lookup.
+- Added `buildMarketSubscriptionKey` helper.
+- Keep analyzer refactor for a later phase.
 
 ## 4. Review Cadence
 

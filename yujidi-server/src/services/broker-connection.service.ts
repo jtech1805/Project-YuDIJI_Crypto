@@ -44,6 +44,8 @@ export type ActiveAngelSession = {
   feedToken?: string;
 };
 
+export type SupportedBrokerConnection = "ANGEL_ONE" | "KITE";
+
 type BrokerConnectionRepository = {
   find: typeof BrokerConnectionModel.find;
   findOne: typeof BrokerConnectionModel.findOne;
@@ -166,6 +168,21 @@ export class BrokerConnectionService {
     }).exec();
 
     return connection ? toBrokerConnectionSafeResponse(connection as BrokerConnection) : null;
+  }
+
+  public async hasActiveBrokerConnection(
+    userId: string,
+    broker: SupportedBrokerConnection,
+  ): Promise<boolean> {
+    this.assertValidUserId(userId);
+    const connection = await this.repository.findOne({
+      user: new Types.ObjectId(userId),
+      broker,
+      status: "ACTIVE",
+      "permissions.marketData": true,
+    }).exec();
+
+    return Boolean(connection);
   }
 
   public async getActiveAngelSessionForUser(userId: string): Promise<ActiveAngelSession> {

@@ -46,6 +46,8 @@ Current automated tests:
 - `src/services/broker-connection.service.test.ts`
 - `src/integrations/market-data/angel/angel-quote.mapper.test.ts`
 - `src/services/market-quote.service.test.ts`
+- `src/services/monitor.service.test.ts`
+- `src/utils/market-subscription-key.test.ts`
 
 Current commands:
 
@@ -65,6 +67,8 @@ Current recommendation:
 - Keep broker connection tests focused on encryption/decryption, safe response mapping, mocked Angel login success/failure, and disabled order-placement permission.
 - Keep Angel quote tests focused on mapper behavior, mocked quote service behavior, broker-connection requirements, and no secret leakage.
 - Do not call the real Angel Quote API in automated tests.
+- Keep universal monitor tests focused on `symbolId` creation, legacy Binance compatibility, broker-login validation, and snapshot persistence.
+- Keep market subscription key tests focused on provider-aware key shape and Angel user scoping.
 - Add route integration tests for unauthenticated broker connection rejection when route-test tooling is introduced.
 - Add integration tests for routes after core domain behavior is covered.
 
@@ -166,6 +170,12 @@ Must test:
 - invalid monitor id is rejected
 - unsupported symbol is rejected
 - monitor creation normalizes symbol
+- legacy Binance monitor creation by `symbol`
+- Binance monitor creation by `symbolId`
+- Angel monitor creation by `symbolId` with active BrokerConnection
+- Angel monitor rejection without active BrokerConnection
+- symbol snapshot fields are stored on monitor
+- broker credentials are not decrypted during monitor creation
 - update strips `_id` and `user`
 - delete requires ownership
 

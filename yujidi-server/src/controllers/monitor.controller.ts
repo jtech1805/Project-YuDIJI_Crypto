@@ -118,10 +118,14 @@ export const createMonitor = async (req: Request, res: Response): Promise<void> 
   }
 
   const monitor = await monitorService.createMonitor(userId, {
-    symbol: req.body.symbol as string,
+    ...(typeof req.body.symbolId === "string" ? { symbolId: req.body.symbolId as string } : {}),
+    ...(typeof req.body.symbol === "string" ? { symbol: req.body.symbol as string } : {}),
     thresholdPercentage: req.body.thresholdPercentage as number,
     timeWindowMinutes: req.body.timeWindowMinutes as number,
-    trigger: req.body.trigger as string
+    trigger: req.body.trigger as "drop" | "spike",
+    ...(typeof req.body.provider === "string" ? { provider: req.body.provider } : {}),
+    ...(typeof req.body.exchange === "string" ? { exchange: req.body.exchange } : {}),
+    ...(typeof req.body.instrumentToken === "string" ? { instrumentToken: req.body.instrumentToken } : {}),
   });
   await sharedWebsocketManager.refreshMonitorCache(monitor.symbol, "monitor_created");
 

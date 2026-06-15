@@ -17,13 +17,16 @@ import { requireAuth } from "../middlewares/requireAuth.js";
 const monitorRouter = Router();
 
 const createMonitorSchema = z.object({
-  symbol: z.string().min(1),
+  symbolId: z.string().min(1).optional(),
+  symbol: z.string().min(1).optional(),
   thresholdPercentage: z.number().positive().max(100),
   timeWindowMinutes: z.number().int().positive().max(24 * 60),
   trigger: z.string().min(1).max(10),
   provider: z.string().optional(),
   exchange: z.string().optional(),
   instrumentToken: z.string().optional(),
+}).refine((value) => Boolean(value.symbolId || value.symbol), {
+  message: "symbolId or symbol is required",
 });
 
 const validateBody =

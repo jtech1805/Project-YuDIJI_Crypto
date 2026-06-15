@@ -15,7 +15,9 @@ import {
   type Exchange,
   type MarketProvider,
   type MarketType,
+  type SupportedBroker,
 } from "../types/market-data.types.js";
+import { BrokerConnectionService } from "./broker-connection.service.js";
 // Define an interface for the fields a user is allowed to edit
 export interface UpdateMonitorDTO {
   thresholdPercentage?: number;
@@ -24,13 +26,16 @@ export interface UpdateMonitorDTO {
   isActive?: boolean;
 }
 const createMonitorSchema = z.object({
-  symbol: z.string().min(1).transform((value): string => value.toUpperCase().trim()),
+  symbolId: z.string().min(1).optional(),
+  symbol: z.string().min(1).transform((value): string => value.toUpperCase().trim()).optional(),
   thresholdPercentage: z.number().positive().max(100),
   timeWindowMinutes: z.number().int().positive().max(24 * 60),
-  trigger: z.string().min(1).max(10),
+  trigger: z.enum(["drop", "spike"]),
   provider: z.enum(MARKET_PROVIDERS).optional(),
   exchange: z.enum(EXCHANGES).optional(),
   instrumentToken: z.string().min(1).optional(),
+}).refine((value) => Boolean(value.symbolId || value.symbol), {
+  message: "symbolId or symbol is required",
 });
 const SUPPORTED_CRYPTO_SYMBOL_STATUSES = ["TRADING", "ACTIVE"];
 const SYMBOL_LIST_CACHE_TTL_MS = 60_000;
@@ -62,11 +67,36 @@ export type SearchSymbolsInput = {
   limit?: number;
 };
 
+type SymbolSnapshot = {
+  _id?: Types.ObjectId | string;
+  symbol: string;
+  provider: MarketProvider;
+  marketType: MarketType;
+  exchange: Exchange;
+  displayName?: string;
+  providerSymbol?: string;
+  instrumentToken?: string;
+  instrumentType?: string;
+  requiresBrokerLogin: boolean;
+  supportedBroker: SupportedBroker;
+  status: string;
+};
+
+type MonitorServiceDependencies = {
+  symbolModel: typeof SymbolModel;
+  tripwireConfigModel: typeof TripwireConfigModel;
+  brokerConnectionService: Pick<BrokerConnectionService, "hasActiveBrokerConnection">;
+};
+
 export class MonitorService {
   private static symbolListCache: {
     expiresAt: number;
     symbols: SymbolDocument[];
   } | null = null;
+
+  public constructor(
+    private readonly dependencies: Partial<MonitorServiceDependencies> = {},
+  ) {}
 
   public async getSymbols(): Promise<SymbolDocument[]> {
     const cachedSymbols = MonitorService.symbolListCache;
@@ -74,7 +104,7 @@ export class MonitorService {
       return cachedSymbols.symbols;
     }
 
-    const universalSymbols = await SymbolModel.find({
+    const universalSymbols = await this.getSymbolModel().find({
       provider: "BINANCE",
       exchange: "BINANCE",
       quoteAsset: "USDT",
@@ -93,7 +123,7 @@ export class MonitorService {
       return universalSymbols;
     }
 
-    const legacySymbols = await SymbolModel.find({
+    const legacySymbols = await this.getSymbolModel().find({
       provider: { $exists: false },
       exchange: { $exists: false },
       quoteAsset: "USDT",
@@ -144,7 +174,7 @@ export class MonitorService {
       ];
     }
 
-    return SymbolModel.find(filters, symbolListProjection)
+    return this.getSymbolModel().find(filters, symbolListProjection)
       .sort({ provider: 1, exchange: 1, symbol: 1 })
       .limit(limit)
       .lean()
@@ -156,7 +186,7 @@ export class MonitorService {
       throw new AppError("Invalid user id", 400);
     }
 
-    const monitors = await TripwireConfigModel.aggregate<TripwireConfigWithSymbolMetadata>([
+    const monitors = await this.getTripwireConfigModel().aggregate<TripwireConfigWithSymbolMetadata>([
       {
         $match: {
           user: new Types.ObjectId(userId),
@@ -179,6 +209,7 @@ export class MonitorService {
       {
         $project: {
           user: 1,
+          symbolId: 1,
           symbol: 1,
           thresholdPercentage: 1,
           timeWindowMinutes: 1,
@@ -190,8 +221,11 @@ export class MonitorService {
           marketType: 1,
           exchange: 1,
           instrumentToken: 1,
+          providerSymbol: 1,
+          instrumentType: 1,
           displayName: 1,
           requiresBrokerLogin: 1,
+          supportedBroker: 1,
           symbolMeta: {
             baseAsset: "$symbolMeta.baseAsset",
             quoteAsset: "$symbolMeta.quoteAsset",
@@ -201,7 +235,10 @@ export class MonitorService {
             exchange: "$symbolMeta.exchange",
             displayName: "$symbolMeta.displayName",
             instrumentToken: "$symbolMeta.instrumentToken",
+            providerSymbol: "$symbolMeta.providerSymbol",
+            instrumentType: "$symbolMeta.instrumentType",
             requiresBrokerLogin: "$symbolMeta.requiresBrokerLogin",
+            supportedBroker: "$symbolMeta.supportedBroker",
           },
         },
       },
@@ -228,41 +265,93 @@ export class MonitorService {
     const symbolDocument = await this.findMonitorSymbol(parsedPayload.data);
 
     if (!symbolDocument) {
-      throw new AppError("Symbol not supported", 400);
+      throw new AppError("SYMBOL_NOT_FOUND", 404);
     }
 
-    if (symbolDocument.requiresBrokerLogin) {
-      throw new AppError("Broker login is required before this symbol can be monitored", 400);
-    }
+    await this.assertCanMonitorSymbol(userId, symbolDocument);
 
     const monitorPayload: Record<string, unknown> = {
-      user: userId,
+      user: new Types.ObjectId(userId),
       symbol: symbolDocument.symbol,
-      provider: symbolDocument.provider ?? "BINANCE",
-      marketType: symbolDocument.marketType ?? "CRYPTO",
-      exchange: symbolDocument.exchange ?? "BINANCE",
-      requiresBrokerLogin: symbolDocument.requiresBrokerLogin ?? false,
+      provider: symbolDocument.provider,
+      marketType: symbolDocument.marketType,
+      exchange: symbolDocument.exchange,
+      requiresBrokerLogin: symbolDocument.requiresBrokerLogin,
+      supportedBroker: symbolDocument.supportedBroker,
       thresholdPercentage: parsedPayload.data.thresholdPercentage,
       timeWindowMinutes: parsedPayload.data.timeWindowMinutes,
       trigger: parsedPayload.data.trigger,
       isActive: true,
     };
 
+    if (symbolDocument._id) {
+      monitorPayload.symbolId = symbolDocument._id;
+    }
     if (symbolDocument.instrumentToken) {
       monitorPayload.instrumentToken = symbolDocument.instrumentToken;
     }
-
+    if (symbolDocument.providerSymbol) {
+      monitorPayload.providerSymbol = symbolDocument.providerSymbol;
+    }
+    if (symbolDocument.instrumentType) {
+      monitorPayload.instrumentType = symbolDocument.instrumentType;
+    }
     if (symbolDocument.displayName) {
       monitorPayload.displayName = symbolDocument.displayName;
     }
 
-    const monitor = await TripwireConfigModel.create(monitorPayload);
+    const monitor = await this.getTripwireConfigModel().create(monitorPayload);
     return monitor.toObject() as TripwireConfig;
   }
 
-  private async findMonitorSymbol(payload: CreateMonitorInput): Promise<SymbolDocument | null> {
+  public async getActiveMonitorsByMarketKey(input: {
+    provider: string;
+    exchange: string;
+    instrumentToken: string;
+    userId?: string;
+  }): Promise<TripwireConfig[]> {
+    const filter: Record<string, unknown> = {
+      provider: input.provider,
+      exchange: input.exchange,
+      instrumentToken: input.instrumentToken,
+      isActive: true,
+    };
+
+    if (input.userId) {
+      if (!isValidObjectId(input.userId)) {
+        throw new AppError("Invalid user id", 400);
+      }
+      filter.user = new Types.ObjectId(input.userId);
+    }
+
+    // TODO Phase 7: Analyzer should use provider/exchange/instrumentToken market key instead of symbol string.
+    return this.getTripwireConfigModel().find(filter).lean().exec() as Promise<TripwireConfig[]>;
+  }
+
+  private async findMonitorSymbol(payload: CreateMonitorInput): Promise<SymbolSnapshot | null> {
+    if (payload.symbolId) {
+      if (!isValidObjectId(payload.symbolId)) {
+        throw new AppError("INVALID_SYMBOL_SELECTION", 400);
+      }
+
+      const symbolById = await this.getSymbolModel().findById(
+        payload.symbolId,
+        symbolListProjection,
+      ).lean().exec();
+
+      if (!symbolById) {
+        return null;
+      }
+
+      if (!SUPPORTED_CRYPTO_SYMBOL_STATUSES.includes(symbolById.status)) {
+        throw new AppError("SYMBOL_NOT_ACTIVE", 400);
+      }
+
+      return this.toSymbolSnapshot(symbolById);
+    }
+
     if (payload.provider && payload.exchange && payload.instrumentToken) {
-      return SymbolModel.findOne({
+      const providerSymbol = await this.getSymbolModel().findOne({
         provider: payload.provider,
         exchange: payload.exchange,
         instrumentToken: payload.instrumentToken,
@@ -270,20 +359,98 @@ export class MonitorService {
       }, symbolListProjection)
         .lean()
         .exec();
+
+      return providerSymbol ? this.toSymbolSnapshot(providerSymbol) : null;
     }
 
-    return SymbolModel.findOne({
+    const legacySymbol = payload.symbol;
+    if (!legacySymbol) {
+      return null;
+    }
+
+    const binanceSymbol = await this.getSymbolModel().findOne({
       $and: [
         { $or: [{ provider: "BINANCE" }, { provider: { $exists: false } }] },
         { $or: [{ exchange: "BINANCE" }, { exchange: { $exists: false } }] },
       ],
-      symbol: payload.symbol,
+      symbol: legacySymbol,
       quoteAsset: "USDT",
       status: { $in: SUPPORTED_CRYPTO_SYMBOL_STATUSES },
     }, symbolListProjection)
       .lean()
       .exec();
+
+    return binanceSymbol ? this.toSymbolSnapshot(binanceSymbol) : this.buildLegacyBinanceSnapshot(legacySymbol);
   }
+
+  private toSymbolSnapshot(symbol: SymbolDocument & { _id?: Types.ObjectId | string }): SymbolSnapshot {
+    return {
+      ...(symbol._id ? { _id: symbol._id } : {}),
+      symbol: symbol.symbol,
+      provider: symbol.provider ?? "BINANCE",
+      marketType: symbol.marketType ?? "CRYPTO",
+      exchange: symbol.exchange ?? "BINANCE",
+      ...(symbol.displayName ? { displayName: symbol.displayName } : {}),
+      ...(symbol.providerSymbol ? { providerSymbol: symbol.providerSymbol } : {}),
+      ...(symbol.instrumentToken ? { instrumentToken: symbol.instrumentToken } : {}),
+      ...(symbol.instrumentType ? { instrumentType: symbol.instrumentType } : {}),
+      requiresBrokerLogin: symbol.requiresBrokerLogin ?? false,
+      supportedBroker: symbol.supportedBroker ?? "NONE",
+      status: symbol.status,
+    };
+  }
+
+  private buildLegacyBinanceSnapshot(symbol: string): SymbolSnapshot {
+    return {
+      symbol,
+      provider: "BINANCE",
+      marketType: "CRYPTO",
+      exchange: "BINANCE",
+      displayName: symbol,
+      providerSymbol: symbol,
+      instrumentToken: symbol,
+      instrumentType: "SPOT",
+      requiresBrokerLogin: false,
+      supportedBroker: "NONE",
+      status: "ACTIVE",
+    };
+  }
+
+  private async assertCanMonitorSymbol(userId: string, symbol: SymbolSnapshot): Promise<void> {
+    if (!SUPPORTED_CRYPTO_SYMBOL_STATUSES.includes(symbol.status)) {
+      throw new AppError("SYMBOL_NOT_ACTIVE", 400);
+    }
+
+    if (!symbol.requiresBrokerLogin) {
+      return;
+    }
+
+    if (symbol.supportedBroker === "NONE") {
+      throw new AppError("UNSUPPORTED_BROKER", 400);
+    }
+
+    const hasActiveConnection = await this.getBrokerConnectionService().hasActiveBrokerConnection(
+      userId,
+      symbol.supportedBroker,
+    );
+
+    if (!hasActiveConnection) {
+      throw new AppError(`BROKER_LOGIN_REQUIRED: Connect your ${symbol.supportedBroker} account to monitor this symbol.`, 400);
+    }
+  }
+
+  private getSymbolModel(): typeof SymbolModel {
+    return this.dependencies.symbolModel ?? SymbolModel;
+  }
+
+  private getTripwireConfigModel(): typeof TripwireConfigModel {
+    return this.dependencies.tripwireConfigModel ?? TripwireConfigModel;
+  }
+
+  private getBrokerConnectionService(): Pick<BrokerConnectionService, "hasActiveBrokerConnection"> {
+    return this.dependencies.brokerConnectionService ?? new BrokerConnectionService();
+  }
+
   public async updateMonitor(
     userId: string,
     monitorId: string,
@@ -301,7 +468,7 @@ export class MonitorService {
     delete (sanitizedUpdate as any)._id;
     delete (sanitizedUpdate as any).user;
 
-    const updatedMonitor = await TripwireConfigModel.findOneAndUpdate(
+    const updatedMonitor = await this.getTripwireConfigModel().findOneAndUpdate(
       {
         _id: monitorId,
         user: userId,
@@ -327,7 +494,7 @@ export class MonitorService {
       throw new AppError("Invalid monitor id", 400);
     }
 
-    const deletedMonitor = await TripwireConfigModel.findOneAndDelete({
+    const deletedMonitor = await this.getTripwireConfigModel().findOneAndDelete({
       _id: new Types.ObjectId(monitorId),
       user: new Types.ObjectId(userId),
     }).exec();
