@@ -1091,6 +1091,19 @@ High-priority edge cases:
   - maps rows into universal `Symbol` records
   - upserts by provider + exchange + instrument token
   - supports manual script and optional non-fatal startup sync
+- Angel Integration Phase 3 BrokerConnection domain:
+  - encrypted Angel credential storage
+  - encrypted Angel session token storage
+  - Angel `loginByPassword` verification service
+  - broker connection status/reconnect/delete APIs
+  - order placement remains disabled
+- Angel Integration Phase 4 Angel Quote API:
+  - uses active user Angel BrokerConnection
+  - decrypts API key and JWT only inside backend service logic
+  - calls Angel read-only Quote API
+  - supports single-symbol `LTP`, `OHLC`, and `FULL` modes
+  - returns normalized `NormalizedMarketSnapshot`
+  - does not persist quote snapshots
 
 ### Partially Implemented
 
@@ -1101,11 +1114,12 @@ High-priority edge cases:
 - Angel SmartAPI integration.
   - Phase 1 foundation exists.
   - Phase 2 MCX Scrip Master sync exists.
-  - No live Angel connection exists.
-  - No live Angel login/session exists.
-  - No broker credentials are stored.
+  - Phase 3 BrokerConnection login verification exists.
+  - Phase 4 read-only Angel Quote API exists.
+  - Broker credentials are encrypted at rest.
+  - No Angel WebSocket connection exists.
   - No public/admin Angel sync HTTP endpoint exists.
-  - No order placement, portfolio sync, or auto trading exists.
+  - No order placement, portfolio sync, monitor/analyzer integration, or auto trading exists.
 
 - Alert detail endpoint.
   - Route exists.

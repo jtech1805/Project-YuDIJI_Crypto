@@ -9,6 +9,8 @@ import { authRouter } from "./routes/auth.routes.js";
 import { monitorRouter } from "./routes/monitor.routes.js";
 import { alertRouter } from "./routes/alert.routes.js";
 import chatRouter from "./routes/chat.routes.js";
+import { brokerConnectionRouter } from "./routes/broker-connection.routes.js";
+import { marketQuoteRouter } from "./routes/market-quote.routes.js";
 
 const loggerOptions: LoggerOptions = {
   level: process.env.NODE_ENV === "production" ? "info" : "debug",
@@ -88,6 +90,8 @@ app.use("/api/auth", authRouter);
 app.use("/api/monitors", monitorRouter);
 app.use("/api/alerts", alertRouter);
 app.use('/api/chat', chatRouter)
+app.use("/api/broker-connections", brokerConnectionRouter);
+app.use("/api/market-quotes", marketQuoteRouter);
 
 app.use((_req: Request, _res: Response, next: NextFunction): void => {
   next(new AppError("Route not found", 404));

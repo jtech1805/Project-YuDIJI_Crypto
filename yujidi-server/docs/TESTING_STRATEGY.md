@@ -42,6 +42,10 @@ Current automated tests:
 - `src/integrations/market-data/angel/angel-symbol.mapper.test.ts`
 - `src/integrations/market-data/angel/angel-symbol-sync.service.test.ts`
 - `src/integrations/market-data/angel/angel-tick.normalizer.test.ts`
+- `src/services/security/credential-encryption.service.test.ts`
+- `src/services/broker-connection.service.test.ts`
+- `src/integrations/market-data/angel/angel-quote.mapper.test.ts`
+- `src/services/market-quote.service.test.ts`
 
 Current commands:
 
@@ -58,6 +62,10 @@ Current recommendation:
 - Keep Angel Phase 2 sync filters covered: MCX rows pass, non-MCX rows skip, unsupported commodity names skip, and upsert identity uses provider + exchange + instrument token.
 - Do not call the real Angel Scrip Master URL in automated tests.
 - Keep normalized tick bridge covered so provider-specific ticks reuse production analyzer behavior.
+- Keep broker connection tests focused on encryption/decryption, safe response mapping, mocked Angel login success/failure, and disabled order-placement permission.
+- Keep Angel quote tests focused on mapper behavior, mocked quote service behavior, broker-connection requirements, and no secret leakage.
+- Do not call the real Angel Quote API in automated tests.
+- Add route integration tests for unauthenticated broker connection rejection when route-test tooling is introduced.
 - Add integration tests for routes after core domain behavior is covered.
 
 Suggested tools:
@@ -217,6 +225,37 @@ Must test:
 - request failure returns fallback
 
 External CryptoCompare calls must be mocked.
+
+### 4.6 Angel Quote Tests
+
+Primary files:
+
+```txt
+src/integrations/market-data/angel/angel-quote.service.ts
+src/integrations/market-data/angel/angel-quote.mapper.ts
+src/services/market-quote.service.ts
+```
+
+Currently covered:
+
+- LTP quote mapping.
+- OHLC quote mapping.
+- FULL quote mapping with depth and open interest.
+- Missing symbol rejection.
+- Non-Angel provider rejection.
+- Missing broker connection rejection.
+- Successful normalized snapshot response.
+- Safe handling of Angel `unfetched` quote response.
+- No mocked API key/JWT/encrypted fields in normalized snapshot output.
+
+Must test later:
+
+- Auth-protected route integration for `GET /api/market-quotes/:symbolId`.
+- Expired BrokerConnection session behavior.
+- Invalid quote mode route validation.
+- Angel Quote API HTTP client with mocked Axios.
+
+External Angel Quote API calls must be mocked. Tests should never call the real Angel Quote endpoint.
 
 ## 5. Integration Tests
 

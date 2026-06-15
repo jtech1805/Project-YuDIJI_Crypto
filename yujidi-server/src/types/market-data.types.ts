@@ -35,3 +35,56 @@ export type NormalizedMarketTick = {
 
   raw?: unknown;
 };
+
+export type MarketQuoteMode = "LTP" | "OHLC" | "FULL";
+
+export type MarketDepthLevel = {
+  price: number;
+  quantity: number;
+  orders: number;
+};
+
+export type NormalizedMarketSnapshot = {
+  provider: MarketProvider;
+  marketType: MarketType;
+  exchange: Exchange | string;
+
+  symbolId?: string;
+  symbol: string;
+  displayName: string;
+
+  providerSymbol: string;
+  instrumentToken: string;
+
+  mode: MarketQuoteMode;
+
+  ltp?: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  close?: number;
+
+  lastTradeQty?: number;
+  avgPrice?: number;
+  tradeVolume?: number;
+  openInterest?: number;
+
+  netChange?: number;
+  percentChange?: number;
+
+  lowerCircuit?: number;
+  upperCircuit?: number;
+
+  totalBuyQuantity?: number;
+  totalSellQuantity?: number;
+
+  exchangeFeedTime?: string;
+  exchangeTradeTime?: string;
+
+  depth?: {
+    buy: MarketDepthLevel[];
+    sell: MarketDepthLevel[];
+  };
+
+  raw?: unknown;
+};

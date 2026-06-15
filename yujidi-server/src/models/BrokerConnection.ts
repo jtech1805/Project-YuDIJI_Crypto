@@ -16,25 +16,76 @@ const brokerConnectionSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["DISCONNECTED", "READY", "REVOKED", "ERROR"],
+      enum: ["ACTIVE", "EXPIRED", "REAUTH_REQUIRED", "DISABLED", "FAILED"],
       required: true,
-      default: "DISCONNECTED",
+      default: "REAUTH_REQUIRED",
       index: true,
     },
-    scopes: {
-      type: [String],
-      enum: ["READ_MARKET_DATA"],
-      default: ["READ_MARKET_DATA"],
+    clientCode: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    lastConnectedAt: {
-      type: Date,
+    encryptedApiKey: {
+      type: String,
+      required: true,
+      select: false,
+    },
+    encryptedPin: {
+      type: String,
+      required: true,
+      select: false,
+    },
+    encryptedTotpSecret: {
+      type: String,
+      select: false,
+    },
+    session: {
+      encryptedJwtToken: {
+        type: String,
+        select: false,
+      },
+      encryptedRefreshToken: {
+        type: String,
+        select: false,
+      },
+      encryptedFeedToken: {
+        type: String,
+        select: false,
+      },
+      expiresAt: {
+        type: Date,
+      },
+      lastLoginAt: {
+        type: Date,
+      },
+      lastRefreshAt: {
+        type: Date,
+      },
+    },
+    permissions: {
+      marketData: {
+        type: Boolean,
+        required: true,
+        default: true,
+      },
+      orderPlacement: {
+        type: Boolean,
+        required: true,
+        default: false,
+      },
+      portfolioRead: {
+        type: Boolean,
+        required: true,
+        default: false,
+      },
     },
     lastError: {
       type: String,
       trim: true,
     },
-    metadata: {
-      type: Schema.Types.Mixed,
+    lastVerifiedAt: {
+      type: Date,
     },
   },
   {

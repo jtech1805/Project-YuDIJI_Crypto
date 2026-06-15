@@ -46,6 +46,8 @@ These are true in the current codebase:
 - Alerts still keep legacy `dropPercentage` for backward compatibility.
 - Groq is used for alert reports and copilot chat.
 - CryptoCompare is used for news context.
+- Angel BrokerConnection stores user broker credentials and session tokens encrypted at rest.
+- Angel read-only quote snapshots are available through authenticated user BrokerConnection.
 - A first analyzer rules unit-test foundation exists.
 - Documentation exists, but docs must be kept aligned with implementation.
 
@@ -224,6 +226,10 @@ ANGEL_SYMBOL_SYNC_ON_STARTUP
 ANGEL_SYMBOL_SYNC_MARKET_TYPES
 ANGEL_SYMBOL_SYNC_EXCHANGES
 ANGEL_SYMBOL_SYNC_NAMES
+BROKER_CREDENTIAL_ENCRYPTION_KEY
+ANGEL_CLIENT_LOCAL_IP
+ANGEL_CLIENT_PUBLIC_IP
+ANGEL_MAC_ADDRESS
 ANGEL_API_KEY
 ANGEL_CLIENT_CODE
 ANGEL_PIN
@@ -256,6 +262,10 @@ Meaning:
 - `ANGEL_SYMBOL_SYNC_MARKET_TYPES`: future Angel sync market-type filter, currently `COMMODITY`.
 - `ANGEL_SYMBOL_SYNC_EXCHANGES`: Angel sync exchange filter, currently defaults to `MCX`.
 - `ANGEL_SYMBOL_SYNC_NAMES`: Angel sync commodity-name filter, defaults to `CRUDEOIL,GOLD,SILVER,NATURALGAS`.
+- `BROKER_CREDENTIAL_ENCRYPTION_KEY`: required for encrypting broker credentials and session tokens at rest.
+- `ANGEL_CLIENT_LOCAL_IP`: Angel SmartAPI request header value.
+- `ANGEL_CLIENT_PUBLIC_IP`: Angel SmartAPI request header value.
+- `ANGEL_MAC_ADDRESS`: Angel SmartAPI request header value.
 - `ANGEL_API_KEY`: future Angel SmartAPI key placeholder.
 - `ANGEL_CLIENT_CODE`: future Angel client code placeholder.
 - `ANGEL_PIN`: future Angel PIN placeholder.
@@ -1357,8 +1367,8 @@ Phase 1 foundation status:
 - Angel tick normalizer added.
 - Analyzer can process `NormalizedMarketTick` through `processNormalizedTick`.
 - No live Angel connection yet.
-- No live Angel login/session yet.
-- No broker credentials are stored.
+- User-specific Angel login verification is available through BrokerConnection APIs.
+- Broker credentials and session tokens are encrypted at rest.
 - No public/admin Angel sync HTTP endpoint yet.
 - No order placement.
 - No portfolio sync.
@@ -1415,10 +1425,46 @@ Angel sync safety boundary:
 - There is no Angel broker login, WebSocket connection, or order placement.
 - Broker-required instruments are visible but blocked from monitor creation until broker login/live data exists.
 
+## BrokerConnection Baseline
+
+YuJiDi supports user-specific broker connections for Angel One.
+
+Purpose:
+
+- Angel MCX symbols are global reference data.
+- Live Angel monitoring requires the user to connect their own Angel account.
+- Broker credentials are encrypted at rest.
+- Only market-data permission is enabled in this phase.
+- Order placement is explicitly disabled.
+
+Current scope:
+
+- Angel login verification using SmartAPI `loginByPassword`.
+- Encrypted credential storage.
+- Encrypted session token storage.
+- Broker connection status APIs.
+- Reconnect/delete connection APIs.
+
+Out of scope:
+
+- WebSocket streaming.
+- Quote API.
+- Order placement.
+- Portfolio sync.
+- Option chain.
+
+BrokerConnection API:
+
+```txt
+POST   /api/broker-connections/angel
+GET    /api/broker-connections
+GET    /api/broker-connections/angel/status
+POST   /api/broker-connections/angel/reconnect
+DELETE /api/broker-connections/angel
+```
+
 Future phases:
 
-- Approved credential encryption design.
-- Real Angel auth/session service.
 - Real Angel WebSocket connection.
 - Broker-aware monitor activation.
 - Provider-specific analyzer calibration.
@@ -1427,6 +1473,35 @@ Safety:
 
 - Do not log Angel credentials, JWTs, feed tokens, TOTP secrets, PIN, or API keys.
 - Do not implement trading/order APIs without explicit approval.
+
+## Angel Quote API Baseline
+
+YuJiDi can fetch Angel quote snapshots using the logged-in user's Angel BrokerConnection.
+
+Current scope:
+
+- User-specific Angel BrokerConnection is required.
+- Read-only Angel Quote API access is supported.
+- Single-symbol `LTP`, `OHLC`, and `FULL` fetch is supported.
+- Response is normalized into YuJiDi's `NormalizedMarketSnapshot`.
+- Quote data is not persisted by default.
+- Quote endpoint is mounted at `GET /api/market-quotes/:symbolId`.
+
+Business rule:
+
+Angel quote access uses the user's own Angel session. Global `Symbol` records are reference data only.
+
+Out of scope:
+
+- Angel WebSocket streaming.
+- Order placement.
+- Monitor/analyzer integration.
+- Portfolio/RMS sync.
+- Option chain runtime.
+
+Safety boundary:
+
+The quote service decrypts the user's Angel API key and JWT token only inside backend service code. API responses must never return API keys, JWTs, refresh tokens, feed tokens, PINs, TOTP values, or encrypted fields.
 
 Current Phase 0 files:
 
@@ -1806,6 +1881,10 @@ Implemented:
 - Frontend add monitor modal.
 - Frontend alert feed and full analysis modal.
 - Backend documentation suite.
+- Angel universal symbol registry foundation.
+- Angel MCX Scrip Master sync.
+- Angel BrokerConnection login verification with encrypted credentials/session tokens.
+- Angel read-only quote snapshots through `GET /api/market-quotes/:symbolId`.
 
 Partially implemented:
 

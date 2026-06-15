@@ -170,21 +170,39 @@ src/models/BrokerConnection.ts
 
 Purpose:
 
-BrokerConnection is a user-owned scaffold for future broker connectivity state.
+BrokerConnection is a user-owned broker connectivity record. For Angel One, it verifies the user's SmartAPI login, stores broker credentials encrypted at rest, stores session tokens encrypted at rest, and exposes safe connection status to the product.
 
 Current fields:
 
 - `user`
 - `broker`
 - `status`
-- `scopes`
-- `lastConnectedAt`
+- `clientCode`
+- `encryptedApiKey`
+- `encryptedPin`
+- `encryptedTotpSecret`
+- `session.encryptedJwtToken`
+- `session.encryptedRefreshToken`
+- `session.encryptedFeedToken`
+- `session.expiresAt`
+- `session.lastLoginAt`
+- `session.lastRefreshAt`
+- `permissions.marketData`
+- `permissions.orderPlacement`
+- `permissions.portfolioRead`
 - `lastError`
-- `metadata`
+- `lastVerifiedAt`
 
 Important boundary:
 
-BrokerConnection currently stores no API keys, PINs, TOTP secrets, feed tokens, JWTs, refresh tokens, or order permissions.
+BrokerConnection never stores raw API keys, PINs, TOTP secrets, feed tokens, JWTs, or refresh tokens. API responses never return encrypted fields. Order placement remains disabled.
+
+Business rules:
+
+- User owns BrokerConnection.
+- Symbol is global reference data and is not user-owned.
+- BrokerConnection enables future live provider access for symbols requiring login.
+- Current permissions default to `marketData=true`, `orderPlacement=false`, and `portfolioRead=false`.
 - `createdAt`
 - `updatedAt`
 
@@ -194,6 +212,55 @@ Business rules:
 - Existing Binance crypto monitor flows still use `Symbol`.
 - Future Angel/Kite integrations should map provider-specific instrument masters into `Instrument`.
 - Future analyzer bridges should consume `NormalizedMarketTick` rather than raw provider payloads.
+
+### 2.2.3 MarketQuote / NormalizedMarketSnapshot
+
+Implementation:
+
+```txt
+src/types/market-data.types.ts
+src/services/market-quote.service.ts
+src/integrations/market-data/angel/angel-quote.service.ts
+src/integrations/market-data/angel/angel-quote.mapper.ts
+```
+
+Purpose:
+
+MarketQuote is a read-only, on-demand market snapshot. In Angel Phase 4, YuJiDi can fetch a single Angel quote using the logged-in user's active BrokerConnection and normalize the provider payload into `NormalizedMarketSnapshot`.
+
+Current fields:
+
+- `provider`
+- `marketType`
+- `exchange`
+- `symbolId`
+- `symbol`
+- `displayName`
+- `providerSymbol`
+- `instrumentToken`
+- `mode`
+- `ltp`
+- `open`
+- `high`
+- `low`
+- `close`
+- `tradeVolume`
+- `openInterest`
+- `netChange`
+- `percentChange`
+- `depth`
+- `raw`
+
+Business rules:
+
+- Quote access is read-only.
+- Quote access requires authenticated YuJiDi user.
+- Angel quote access requires an active user-owned Angel BrokerConnection.
+- Global `Symbol` records provide reference identity only.
+- Quote data is not persisted by default.
+- Quote response must not include Angel API key, JWT, refresh token, feed token, PIN, TOTP, or encrypted fields.
+- Binance quote support is not implemented in this endpoint yet.
+- Quote API is not an order signal and is not connected to monitor/analyzer workflows yet.
 
 ### 2.3 TripwireConfig / Monitor
 
@@ -221,7 +288,7 @@ Current fields:
 Supported trigger values:
 
 ```txt
-drop
+dropo
 spike
 ```
 

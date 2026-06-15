@@ -100,6 +100,19 @@ const runAngelSymbolSyncOnceIfEnabled = (): void => {
   const syncOnce = async (): Promise<void> => {
     try {
       const result = await syncAngelMcxSymbols();
+      if (!result.enabled) {
+        logger.info(
+          {
+            dryRun: result.dryRun,
+            exchanges: result.exchanges,
+            marketTypes: result.marketTypes,
+            supportedNames: result.supportedNames,
+          },
+          "Angel MCX symbol sync skipped because ANGEL_SYMBOL_SYNC_ENABLED is false",
+        );
+        return;
+      }
+
       logger.info(
         {
           fetchedCount: result.fetchedCount,

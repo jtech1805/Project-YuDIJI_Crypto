@@ -54,7 +54,13 @@ Highest-priority current risks:
 | R-029 | Binance monitor compatibility during symbol evolution | High | Medium | Mitigating |
 | R-030 | Provider-specific fields leaking into analyzer through symbol registry | Medium | Medium | Mitigating |
 | R-031 | Broker-required symbols appearing before live broker support | Medium | Medium | Mitigating |
-| R-032 | Broker credential storage risk | Critical | Medium | Open |
+| R-032 | Broker credential storage risk | Critical | Medium | Mitigating |
+| R-036 | Weak broker credential encryption key risk | Critical | Medium | Open |
+| R-037 | Angel session expiry risk | Medium | High | Open |
+| R-038 | Angel quote rate limit risk | Medium | High | Open |
+| R-039 | Angel quote response field drift | Medium | Medium | Open |
+| R-040 | REST quote polling used for high-frequency monitoring | High | Medium | Open |
+| R-041 | Quote API secret/header leakage risk | Critical | Low | Mitigating |
 | R-033 | Angel Scrip Master URL availability failure | Medium | Medium | Mitigating |
 | R-034 | Huge Angel symbol sync load | Medium | Medium | Mitigating |
 | R-035 | Reference sync confused with market-data permission | High | Medium | Mitigating |
@@ -754,7 +760,7 @@ Status: Open
 
 Description:
 
-Future Angel login will require sensitive credentials, tokens, or secrets.
+Angel login stores sensitive credentials, tokens, or secrets encrypted at rest.
 
 Impact:
 
@@ -762,10 +768,10 @@ Leaked broker credentials or tokens could expose user accounts and create financ
 
 Mitigation:
 
-- Current BrokerConnection scaffold stores no secrets.
-- Do not store API keys, PINs, TOTP secrets, feed tokens, JWTs, or refresh tokens without an approved encryption plan.
-- Do not log credential-like fields.
-- Keep order placement out of scope.
+- Encrypt API key, PIN, optional TOTP secret, JWT, refresh token, and feed token at rest.
+- Never return encrypted fields in API responses.
+- Do not log credential-like fields or full Angel responses.
+- Keep order placement out of scope and force `orderPlacement=false`.
 
 ### R-033: Angel Scrip Master URL Availability Failure
 
@@ -834,6 +840,140 @@ Mitigation:
 - Angel symbols are marked `requiresBrokerLogin=true`.
 - Monitor creation rejects broker-required symbols until live broker support exists.
 - Docs state Scrip Master sync is reference data only.
+
+### R-036: Weak Broker Credential Encryption Key Risk
+
+Severity: Critical
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Broker credential encryption depends on `BROKER_CREDENTIAL_ENCRYPTION_KEY`.
+
+Impact:
+
+A weak or leaked key can compromise encrypted broker credentials and session tokens.
+
+Mitigation:
+
+- Use a strong 32-byte base64 key in production.
+- Do not reuse JWT secrets for broker encryption.
+- Do not log or document real encryption keys.
+- Rotate credentials if key exposure is suspected.
+
+### R-037: Angel Session Expiry Risk
+
+Severity: Medium
+
+Likelihood: High
+
+Status: Open
+
+Description:
+
+Angel sessions remain active until midnight unless the user logs out.
+
+Impact:
+
+Connections may become stale and require reauthentication or refresh.
+
+Mitigation:
+
+- Store `session.expiresAt`.
+- Expose safe status APIs.
+- Support reconnect using fresh TOTP or refresh token where available.
+- Future live data phase must check session freshness before market-data subscription.
+
+### R-038: Angel Quote Rate Limit Risk
+
+Severity: Medium
+
+Likelihood: High
+
+Status: Open
+
+Description:
+
+Angel Quote API has a documented limit of one request per second and up to 50 symbols per request.
+
+Impact:
+
+Repeated UI refreshes, option-chain experiments, or polling loops could hit provider throttling and degrade the user experience.
+
+Mitigation:
+
+- Phase 4 implements single-symbol quote only.
+- Do not call quote API in loops.
+- Add provider-level rate limiter before batch quote or option-chain work.
+
+### R-039: Angel Quote Response Field Drift
+
+Severity: Medium
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Angel may rename, omit, or change fields such as `opnInterest`, `depth`, `symbolToken`, or exchange timestamps.
+
+Impact:
+
+Normalized quote responses may miss fields or fail to map important market data.
+
+Mitigation:
+
+- Keep quote mapper tests for LTP, OHLC, and FULL responses.
+- Treat missing optional fields as absent instead of fatal.
+- Review provider docs and real payloads before monitor/analyzer integration.
+
+### R-040: REST Quote Polling Used For High-Frequency Monitoring
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Angel REST quote snapshots are useful for on-demand inspection, but they are not a replacement for provider WebSocket streaming.
+
+Impact:
+
+Using REST polling for live monitoring could hit rate limits, miss fast moves, and produce poor alert quality.
+
+Mitigation:
+
+- Phase 4 is explicitly read-only on-demand quote access.
+- Monitor/analyzer integration remains out of scope.
+- Use Angel WebSocket FULL mode in a later phase for live monitoring.
+
+### R-041: Quote API Secret/Header Leakage Risk
+
+Severity: Critical
+
+Likelihood: Low
+
+Status: Mitigating
+
+Description:
+
+Angel quote calls require the user's decrypted API key and JWT token in request headers.
+
+Impact:
+
+Logging headers, request objects, or errors carelessly could leak broker secrets or session tokens.
+
+Mitigation:
+
+- Quote service does not log API key, JWT, refresh token, feed token, PIN, or TOTP.
+- API responses return only normalized market snapshots.
+- Automated tests assert normalized snapshots do not include mocked secrets.
 
 ## 4. Review Cadence
 
