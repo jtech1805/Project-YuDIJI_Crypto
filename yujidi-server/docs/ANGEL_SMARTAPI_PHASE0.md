@@ -2,21 +2,13 @@
 
 This document describes the Phase 0 scaffold for future Angel SmartAPI read-only market-data integration.
 
-Phase 1 update:
+Phase 1 foundation update:
 
-YuJiDi now has a universal `Symbol` registry scaffold and an offline Angel Scrip Master mapper for MCX rows. Live Angel sync is still not implemented.
+YuJiDi now has the safe foundation for universal symbols, Angel mapper/client, manual sync script, universal symbol visibility, BrokerConnection scaffold without secrets, guarded Angel runtime scaffolds, Angel tick normalization, and analyzer normalized tick processing.
 
 Phase 2 update:
 
-YuJiDi now has a read-only Angel Scrip Master client and symbol sync service. The sync is disabled by default and is not wired into server startup.
-
-Phase 3 update:
-
-YuJiDi now has an explicit backend job trigger for Angel Scrip Master symbol sync. It is an npm script, not a public API route. It supports dry-run, exchange selection, batched writes, and operational result logging.
-
-Phase 4 to 10 update:
-
-YuJiDi now has the safe foundation for universal symbol visibility, frontend universal symbol selection, broker connection metadata, guarded Angel runtime scaffolds, Angel tick normalization, and analyzer normalized tick processing. Live Angel broker login and WebSocket data remain intentionally disabled until credentials and official payloads are approved.
+YuJiDi now has Angel MCX Scrip Master reference sync into the universal `Symbol` collection. Sync is disabled by default, filters to core commodity names by default, and is non-fatal when optionally enabled at startup.
 
 ## Status
 
@@ -48,7 +40,7 @@ Implemented:
 
 Not implemented:
 
-- No automatic/live Angel API calls during startup.
+- No automatic Angel sync during startup unless `ANGEL_SYMBOL_SYNC_ON_STARTUP=true`.
 - No Angel SDK dependency.
 - No live auth/session implementation.
 - No public/admin HTTP endpoint for instrument master sync.
@@ -65,7 +57,11 @@ Do not put real values in documentation.
 Future variables:
 
 ```env
-ANGEL_SCRIP_MASTER_SYNC_ENABLED=false
+ANGEL_SYMBOL_SYNC_ENABLED=false
+ANGEL_SYMBOL_SYNC_ON_STARTUP=false
+ANGEL_SYMBOL_SYNC_MARKET_TYPES=COMMODITY
+ANGEL_SYMBOL_SYNC_EXCHANGES=MCX
+ANGEL_SYMBOL_SYNC_NAMES=CRUDEOIL,GOLD,SILVER,NATURALGAS
 ANGEL_SMARTAPI_ENABLED=false
 ANGEL_API_KEY=
 ANGEL_CLIENT_CODE=
@@ -101,22 +97,28 @@ npm run sync:angel-symbols -- --dry-run --exchanges=MCX,NSE
 Apply mode:
 
 ```bash
-ANGEL_SCRIP_MASTER_SYNC_ENABLED=true npm run sync:angel-symbols -- --apply --exchanges=MCX
+ANGEL_SYMBOL_SYNC_ENABLED=true npm run sync:angel-symbols -- --apply --exchanges=MCX
 ```
 
 Optional batch size:
 
 ```bash
-ANGEL_SCRIP_MASTER_SYNC_ENABLED=true npm run sync:angel-symbols -- --apply --exchanges=MCX --batch-size=1000
+ANGEL_SYMBOL_SYNC_ENABLED=true npm run sync:angel-symbols -- --apply --exchanges=MCX --batch-size=1000
 ```
 
 Safety rules:
 
 - Dry-run fetches and maps Angel rows but does not write to MongoDB.
-- Apply mode requires `ANGEL_SCRIP_MASTER_SYNC_ENABLED=true`.
-- The job is not called from server startup.
+- Apply mode requires `ANGEL_SYMBOL_SYNC_ENABLED=true`.
+- The job is not called from server startup unless `ANGEL_SYMBOL_SYNC_ON_STARTUP=true`.
 - The job does not require Angel broker login.
 - The job does not place orders or open WebSocket connections.
+- Default sync names are `CRUDEOIL`, `GOLD`, `SILVER`, and `NATURALGAS`.
+- TODO: allow full MCX sync after pagination, search, and performance are validated.
+
+## Future Option Chain
+
+Angel does not provide direct option-chain REST output. YuJiDi will later build option-chain matrices by grouping Scrip Master option tokens by name/expiry/strike and streaming FULL mode over WebSocket.
 
 ## Future Analyzer Bridge
 

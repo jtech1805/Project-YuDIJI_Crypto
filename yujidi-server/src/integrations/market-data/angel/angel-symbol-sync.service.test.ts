@@ -30,6 +30,13 @@ const nseCashRow: AngelScripMasterRow = {
   tick_size: "5.000000",
 };
 
+const unsupportedMcxRow: AngelScripMasterRow = {
+  ...mcxOptionRow,
+  token: "999999",
+  symbol: "ALUMINIUM26JUN250CE",
+  name: "ALUMINIUM",
+};
+
 test("AngelSymbolSyncService does nothing when disabled", async () => {
   let fetchCalled = false;
   let bulkWriteCalled = false;
@@ -53,16 +60,16 @@ test("AngelSymbolSyncService does nothing when disabled", async () => {
   assert.equal(result.dryRun, false);
   assert.equal(fetchCalled, false);
   assert.equal(bulkWriteCalled, false);
-  assert.equal(result.fetchedRows, 0);
+  assert.equal(result.fetchedCount, 0);
   assert.equal(result.batchesWritten, 0);
 });
 
-test("AngelSymbolSyncService maps MCX rows and upserts universal Symbol records", async () => {
+test("AngelSymbolSyncService filters supported MCX rows and upserts universal Symbol records", async () => {
   const operations: AnyBulkWriteOperation<SymbolDocument>[] = [];
   const service = new AngelSymbolSyncService({
     isEnabled: () => true,
     client: {
-      fetchScripMaster: async () => [mcxOptionRow, nseCashRow],
+      fetchScripMaster: async () => [mcxOptionRow, nseCashRow, unsupportedMcxRow],
     },
     bulkWrite: async (receivedOperations) => {
       operations.push(...receivedOperations);
@@ -74,9 +81,10 @@ test("AngelSymbolSyncService maps MCX rows and upserts universal Symbol records"
 
   assert.equal(result.enabled, true);
   assert.equal(result.dryRun, false);
-  assert.equal(result.fetchedRows, 2);
-  assert.equal(result.mappedRows, 1);
-  assert.equal(result.skippedRows, 1);
+  assert.equal(result.fetchedCount, 3);
+  assert.equal(result.filteredCount, 1);
+  assert.equal(result.mappedCount, 1);
+  assert.equal(result.skippedCount, 2);
   assert.equal(result.upsertedCount, 1);
   assert.equal(result.batchesWritten, 1);
   assert.equal(operations.length, 1);
@@ -100,7 +108,7 @@ test("AngelSymbolSyncService dry-run fetches and maps without writing", async ()
   const service = new AngelSymbolSyncService({
     isEnabled: () => false,
     client: {
-      fetchScripMaster: async () => [mcxOptionRow, nseCashRow],
+      fetchScripMaster: async () => [mcxOptionRow, nseCashRow, unsupportedMcxRow],
     },
     bulkWrite: async () => {
       bulkWriteCalled = true;
@@ -112,9 +120,10 @@ test("AngelSymbolSyncService dry-run fetches and maps without writing", async ()
 
   assert.equal(result.enabled, false);
   assert.equal(result.dryRun, true);
-  assert.equal(result.fetchedRows, 2);
-  assert.equal(result.mappedRows, 1);
-  assert.equal(result.skippedRows, 1);
+  assert.equal(result.fetchedCount, 3);
+  assert.equal(result.filteredCount, 1);
+  assert.equal(result.mappedCount, 1);
+  assert.equal(result.skippedCount, 2);
   assert.equal(result.upsertedCount, 0);
   assert.equal(result.modifiedCount, 0);
   assert.equal(result.batchesWritten, 0);
@@ -136,8 +145,38 @@ test("AngelSymbolSyncService writes mapped symbols in batches", async () => {
 
   const result = await service.syncSymbols({ batchSize: 1 });
 
-  assert.equal(result.mappedRows, 2);
+  assert.equal(result.mappedCount, 2);
   assert.equal(result.upsertedCount, 2);
   assert.equal(result.batchesWritten, 2);
   assert.deepEqual(batchSizes, [1, 1]);
+});
+
+test("AngelSymbolSyncService can override supported commodity names", async () => {
+  const operations: AnyBulkWriteOperation<SymbolDocument>[] = [];
+  const service = new AngelSymbolSyncService({
+    isEnabled: () => true,
+    client: {
+      fetchScripMaster: async () => [mcxOptionRow, unsupportedMcxRow],
+    },
+    bulkWrite: async (receivedOperations) => {
+      operations.push(...receivedOperations);
+      return { upsertedCount: receivedOperations.length, modifiedCount: 0 };
+    },
+  });
+
+  const result = await service.syncSymbols({ supportedNames: ["ALUMINIUM"] });
+
+  assert.equal(result.fetchedCount, 2);
+  assert.equal(result.filteredCount, 1);
+  assert.equal(result.mappedCount, 1);
+  assert.equal(result.skippedCount, 1);
+  assert.equal(operations.length, 1);
+
+  const operation = operations[0];
+  assert.ok(operation && "updateOne" in operation);
+  assert.deepEqual(operation.updateOne.filter, {
+    provider: "ANGEL_ONE",
+    exchange: "MCX",
+    instrumentToken: "999999",
+  });
 });

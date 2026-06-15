@@ -6,6 +6,7 @@ import mongoose from "mongoose";
 import { z } from "zod";
 
 import { app, logger } from "./app.js";
+import { syncAngelMcxSymbols } from "./integrations/market-data/angel/angel-symbol-sync.service.js";
 import { syncBinanceSymbols } from "./services/binance.service.js";
 // import { WebSocketManager } from "./services/websocket.service.js";
 import { sharedWebsocketManager } from "./services/websocket.service.js";
@@ -90,6 +91,38 @@ const runBinanceSymbolSyncLoop = (): void => {
   void syncOnce();
 };
 
+const runAngelSymbolSyncOnceIfEnabled = (): void => {
+  if (process.env.ANGEL_SYMBOL_SYNC_ON_STARTUP !== "true") {
+    logger.info("Angel MCX symbol sync on startup is disabled");
+    return;
+  }
+
+  const syncOnce = async (): Promise<void> => {
+    try {
+      const result = await syncAngelMcxSymbols();
+      logger.info(
+        {
+          fetchedCount: result.fetchedCount,
+          filteredCount: result.filteredCount,
+          mappedCount: result.mappedCount,
+          skippedCount: result.skippedCount,
+          upsertedCount: result.upsertedCount,
+          modifiedCount: result.modifiedCount,
+          batchesWritten: result.batchesWritten,
+        },
+        "Angel MCX symbols synchronized",
+      );
+    } catch (error: unknown) {
+      logger.warn(
+        { error },
+        "Angel MCX symbol synchronization failed; startup will continue",
+      );
+    }
+  };
+
+  void syncOnce();
+};
+
 const startServer = async (): Promise<void> => {
   await connectMongoWithRetry();
 
@@ -102,6 +135,7 @@ const startServer = async (): Promise<void> => {
   sharedWebsocketManager.initialize(server);
   logger.info("WebSocket manager initialized");
   runBinanceSymbolSyncLoop();
+  runAngelSymbolSyncOnceIfEnabled();
 };
 
 const shutdown = async (signal: string): Promise<void> => {

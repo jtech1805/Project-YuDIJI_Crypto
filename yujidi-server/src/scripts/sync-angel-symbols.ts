@@ -3,8 +3,11 @@ import "dotenv/config";
 import mongoose from "mongoose";
 import pino from "pino";
 
-import { AngelSymbolSyncService } from "../integrations/market-data/angel/angel-symbol-sync.service.js";
-import { EXCHANGES, type Exchange } from "../types/market-data.types.js";
+import {
+  getAngelSymbolSyncConfigFromEnv,
+  syncAngelMcxSymbols,
+} from "../integrations/market-data/angel/angel-symbol-sync.service.js";
+import { EXCHANGES, MARKET_TYPES, type Exchange, type MarketType } from "../types/market-data.types.js";
 
 const logger = pino({
   level: process.env.NODE_ENV === "production" ? "info" : "debug",
@@ -14,10 +17,11 @@ type CliOptions = {
   apply: boolean;
   dryRun: boolean;
   exchanges: Exchange[];
+  marketTypes: MarketType[];
+  supportedNames: string[];
   batchSize: number;
 };
 
-const DEFAULT_EXCHANGES: Exchange[] = ["MCX"];
 const DEFAULT_BATCH_SIZE = 1_000;
 
 const parseBooleanFlag = (argument: string, flagName: string): boolean => {
@@ -44,10 +48,33 @@ const parseExchangeList = (rawValue: string): Exchange[] => {
   return exchanges as Exchange[];
 };
 
+const parseMarketTypeList = (rawValue: string): MarketType[] => {
+  const allowedMarketTypes = new Set<string>(MARKET_TYPES);
+  const marketTypes = rawValue
+    .split(",")
+    .map((value) => value.trim().toUpperCase())
+    .filter(Boolean);
+
+  if (marketTypes.length === 0) {
+    throw new Error("At least one market type must be provided");
+  }
+
+  for (const marketType of marketTypes) {
+    if (!allowedMarketTypes.has(marketType)) {
+      throw new Error(`Unsupported market type '${marketType}'. Supported market types: ${MARKET_TYPES.join(", ")}`);
+    }
+  }
+
+  return marketTypes as MarketType[];
+};
+
 const parseCliOptions = (args: string[]): CliOptions => {
   let apply = false;
   let dryRun = false;
-  let exchanges = DEFAULT_EXCHANGES;
+  const envConfig = getAngelSymbolSyncConfigFromEnv();
+  let exchanges = envConfig.exchanges;
+  let marketTypes = envConfig.marketTypes;
+  let supportedNames = envConfig.supportedNames;
   let batchSize = DEFAULT_BATCH_SIZE;
 
   for (const argument of args) {
@@ -63,6 +90,23 @@ const parseCliOptions = (args: string[]): CliOptions => {
 
     if (argument.startsWith("--exchanges=")) {
       exchanges = parseExchangeList(argument.slice("--exchanges=".length));
+      continue;
+    }
+
+    if (argument.startsWith("--market-types=")) {
+      marketTypes = parseMarketTypeList(argument.slice("--market-types=".length));
+      continue;
+    }
+
+    if (argument.startsWith("--names=")) {
+      supportedNames = argument
+        .slice("--names=".length)
+        .split(",")
+        .map((value) => value.trim().toUpperCase())
+        .filter(Boolean);
+      if (supportedNames.length === 0) {
+        throw new Error("--names must include at least one commodity name");
+      }
       continue;
     }
 
@@ -89,6 +133,8 @@ const parseCliOptions = (args: string[]): CliOptions => {
     apply,
     dryRun,
     exchanges,
+    marketTypes,
+    supportedNames,
     batchSize,
   };
 };
@@ -100,13 +146,15 @@ const main = async (): Promise<void> => {
     {
       mode: options.dryRun ? "dry-run" : "apply",
       exchanges: options.exchanges,
+      marketTypes: options.marketTypes,
+      supportedNames: options.supportedNames,
       batchSize: options.batchSize,
     },
     "Starting Angel Scrip Master symbol sync",
   );
 
-  if (options.apply && process.env.ANGEL_SCRIP_MASTER_SYNC_ENABLED !== "true") {
-    throw new Error("Set ANGEL_SCRIP_MASTER_SYNC_ENABLED=true before running Angel symbol sync in apply mode");
+  if (options.apply && process.env.ANGEL_SYMBOL_SYNC_ENABLED !== "true") {
+    throw new Error("Set ANGEL_SYMBOL_SYNC_ENABLED=true before running Angel symbol sync in apply mode");
   }
 
   if (options.apply) {
@@ -120,12 +168,10 @@ const main = async (): Promise<void> => {
   }
 
   try {
-    const service = new AngelSymbolSyncService({
-      isEnabled: () => options.apply && process.env.ANGEL_SCRIP_MASTER_SYNC_ENABLED === "true",
-    });
-
-    const result = await service.syncSymbols({
+    const result = await syncAngelMcxSymbols({
       exchanges: options.exchanges,
+      marketTypes: options.marketTypes,
+      supportedNames: options.supportedNames,
       dryRun: options.dryRun,
       batchSize: options.batchSize,
     });

@@ -55,6 +55,9 @@ Highest-priority current risks:
 | R-030 | Provider-specific fields leaking into analyzer through symbol registry | Medium | Medium | Mitigating |
 | R-031 | Broker-required symbols appearing before live broker support | Medium | Medium | Mitigating |
 | R-032 | Broker credential storage risk | Critical | Medium | Open |
+| R-033 | Angel Scrip Master URL availability failure | Medium | Medium | Mitigating |
+| R-034 | Huge Angel symbol sync load | Medium | Medium | Mitigating |
+| R-035 | Reference sync confused with market-data permission | High | Medium | Mitigating |
 
 ## 3. Detailed Risks
 
@@ -763,6 +766,74 @@ Mitigation:
 - Do not store API keys, PINs, TOTP secrets, feed tokens, JWTs, or refresh tokens without an approved encryption plan.
 - Do not log credential-like fields.
 - Keep order placement out of scope.
+
+### R-033: Angel Scrip Master URL Availability Failure
+
+Severity: Medium
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+Angel's public Scrip Master URL may be down, slow, blocked, or return malformed data.
+
+Impact:
+
+Reference symbols may become stale or sync may fail.
+
+Mitigation:
+
+- Validate that the response is an array.
+- Keep startup sync disabled by default.
+- Optional startup sync is non-fatal and logs warning only.
+- Manual sync prints summary counts only.
+
+### R-034: Huge Angel Symbol Sync Load
+
+Severity: Medium
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+The Angel Scrip Master can contain a large number of instruments. Syncing all rows could increase database load and slow symbol search.
+
+Impact:
+
+MongoDB write pressure, larger indexes, slower symbol lookup, and UI search noise.
+
+Mitigation:
+
+- Phase 2 filters to MCX.
+- Default commodity names are restricted to `CRUDEOIL`, `GOLD`, `SILVER`, and `NATURALGAS`.
+- Writes are batched.
+- TODO: allow full MCX sync only after pagination/search/performance is validated.
+
+### R-035: Reference Sync Confused With Market-Data Permission
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+Angel symbols can be visible globally before a user has connected an Angel broker account.
+
+Impact:
+
+Users may think visible Angel symbols are already live-monitorable.
+
+Mitigation:
+
+- Angel symbols are marked `requiresBrokerLogin=true`.
+- Monitor creation rejects broker-required symbols until live broker support exists.
+- Docs state Scrip Master sync is reference data only.
 
 ## 4. Review Cadence
 

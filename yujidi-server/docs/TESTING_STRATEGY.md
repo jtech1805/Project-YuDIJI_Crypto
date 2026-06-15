@@ -55,6 +55,8 @@ Current recommendation:
 - Continue domain/unit tests around analyzer logic first.
 - Keep provider mappers covered with pure unit tests before live sync.
 - Keep Angel symbol sync safety covered: disabled mode, dry-run mode, and batched write mode.
+- Keep Angel Phase 2 sync filters covered: MCX rows pass, non-MCX rows skip, unsupported commodity names skip, and upsert identity uses provider + exchange + instrument token.
+- Do not call the real Angel Scrip Master URL in automated tests.
 - Keep normalized tick bridge covered so provider-specific ticks reuse production analyzer behavior.
 - Add integration tests for routes after core domain behavior is covered.
 

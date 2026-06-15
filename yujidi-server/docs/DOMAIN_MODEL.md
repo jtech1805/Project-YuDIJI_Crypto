@@ -106,9 +106,12 @@ Current fields:
 
 Business rules:
 
+- Symbol is global reference data, not user-owned data.
 - Existing Binance monitor flow still uses symbol strings such as `BTCUSDT`.
 - Binance crypto symbols are globally visible and do not require broker login.
 - Binance sync writes universal fields with provider `BINANCE`, exchange `BINANCE`, market type `CRYPTO`, and instrument type `SPOT`.
+- Angel MCX Scrip Master sync writes universal fields with provider `ANGEL_ONE`, exchange `MCX`, market type `COMMODITY`, and `requiresBrokerLogin=true`.
+- Angel Phase 2 defaults to core commodity names: `CRUDEOIL`, `GOLD`, `SILVER`, and `NATURALGAS`.
 - Angel/Kite symbols should use provider/exchange/instrument token identity.
 - Angel live market data will require user-specific broker login in a later phase.
 - Universal symbol search is available for UI discovery.
@@ -119,6 +122,12 @@ Business meaning:
 
 ```txt
 Symbol = provider-aware, globally searchable market instrument.
+```
+
+Angel MCX sync source:
+
+```txt
+https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json
 ```
 
 ### 2.2.1 Instrument

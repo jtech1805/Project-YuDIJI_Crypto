@@ -16,6 +16,10 @@ export class AngelScripMasterClient {
       timeout: 30000,
     });
 
+    if (!Array.isArray(response.data)) {
+      throw new Error("Angel Scrip Master response must be an array");
+    }
+
     return response.data;
   }
 }

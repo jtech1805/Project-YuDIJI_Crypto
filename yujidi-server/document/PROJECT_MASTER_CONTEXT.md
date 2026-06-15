@@ -14,7 +14,8 @@ Related detailed docs:
 - `../docs/DOMAIN_MODEL.md`: detailed domain model.
 - `../docs/ANALYZER_ENGINE.md`: analyzer engine details.
 - `../docs/ANGEL_SMARTAPI_PHASE0.md`: Angel SmartAPI read-only integration scaffold.
-- `../docs/ANGEL_PHASE_4_TO_10_DESIGN.md`: Angel Phase 4 to 10 foundation design.
+- `../docs/ANGEL_PHASE_2_SCRIP_MASTER_SYNC.md`: Angel Phase 2 Scrip Master sync.
+- `../docs/ANGEL_PHASE_4_TO_10_DESIGN.md`: Legacy design note for the foundation now treated as Angel Phase 1.
 - `../docs/TESTING_STRATEGY.md`: testing strategy.
 - `../docs/RISK_REGISTER.md`: risk register.
 - `BACKEND_ARCHITECTURE.md`: backend architecture reference.
@@ -218,7 +219,11 @@ COOKIE_ACCESS_EXPIRY_MS
 COOKIE_REFRESH_EXPIRY_MS
 NODE_ENV
 ANGEL_SMARTAPI_ENABLED
-ANGEL_SCRIP_MASTER_SYNC_ENABLED
+ANGEL_SYMBOL_SYNC_ENABLED
+ANGEL_SYMBOL_SYNC_ON_STARTUP
+ANGEL_SYMBOL_SYNC_MARKET_TYPES
+ANGEL_SYMBOL_SYNC_EXCHANGES
+ANGEL_SYMBOL_SYNC_NAMES
 ANGEL_API_KEY
 ANGEL_CLIENT_CODE
 ANGEL_PIN
@@ -246,7 +251,11 @@ Meaning:
 - `COOKIE_REFRESH_EXPIRY_MS`: cookie max age override.
 - `NODE_ENV`: runtime environment.
 - `ANGEL_SMARTAPI_ENABLED`: future read-only Angel integration flag, defaults should remain disabled.
-- `ANGEL_SCRIP_MASTER_SYNC_ENABLED`: must be `true` before running Angel symbol sync in apply mode; defaults should remain disabled.
+- `ANGEL_SYMBOL_SYNC_ENABLED`: must be `true` before running Angel symbol sync in apply mode; defaults should remain disabled.
+- `ANGEL_SYMBOL_SYNC_ON_STARTUP`: enables non-fatal startup Angel symbol sync when `true`; defaults should remain disabled.
+- `ANGEL_SYMBOL_SYNC_MARKET_TYPES`: future Angel sync market-type filter, currently `COMMODITY`.
+- `ANGEL_SYMBOL_SYNC_EXCHANGES`: Angel sync exchange filter, currently defaults to `MCX`.
+- `ANGEL_SYMBOL_SYNC_NAMES`: Angel sync commodity-name filter, defaults to `CRUDEOIL,GOLD,SILVER,NATURALGAS`.
 - `ANGEL_API_KEY`: future Angel SmartAPI key placeholder.
 - `ANGEL_CLIENT_CODE`: future Angel client code placeholder.
 - `ANGEL_PIN`: future Angel PIN placeholder.
@@ -1329,7 +1338,7 @@ Important boundary:
 
 Angel SmartAPI integration is planned as read-only market data first.
 
-Phase 1 registry status:
+Phase 1 foundation status:
 
 - Provider-neutral market-data types added.
 - Instrument model scaffold added.
@@ -1355,19 +1364,54 @@ Phase 1 registry status:
 - No portfolio sync.
 - No auto trading.
 
+## Angel Scrip Master Sync Baseline
+
+YuJiDi syncs Angel MCX reference symbols from the Angel Scrip Master into the universal `Symbol` collection.
+
+Source:
+
+```txt
+https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json
+```
+
+Current Phase 2 scope:
+
+- MCX reference-data sync only.
+- Commodity symbol normalization.
+- Global `Symbol` collection upsert.
+- Symbols marked `requiresBrokerLogin=true`.
+- Supported broker marked `ANGEL_ONE`.
+- Default synced commodity names:
+  - `CRUDEOIL`
+  - `GOLD`
+  - `SILVER`
+  - `NATURALGAS`
+
+Out of scope:
+
+- User Angel login.
+- Live WebSocket streaming.
+- Order placement.
+- Option chain runtime.
+- Broker credential storage.
+
+Business rule:
+
+Angel symbols may be visible to all users, but live monitoring requires user-specific Angel broker connection in a later phase.
+
 Angel manual sync commands:
 
 ```bash
 npm run sync:angel-symbols
-npm run sync:angel-symbols -- --dry-run --exchanges=MCX,NSE
-ANGEL_SCRIP_MASTER_SYNC_ENABLED=true npm run sync:angel-symbols -- --apply --exchanges=MCX
+npm run sync:angel-symbols -- --dry-run --exchanges=MCX --names=CRUDEOIL,GOLD
+ANGEL_SYMBOL_SYNC_ENABLED=true npm run sync:angel-symbols -- --apply --exchanges=MCX
 ```
 
 Angel sync safety boundary:
 
-- The job is not called from server startup.
+- The job is not called from server startup unless `ANGEL_SYMBOL_SYNC_ON_STARTUP=true`.
 - Dry-run is the default.
-- Apply mode requires `ANGEL_SCRIP_MASTER_SYNC_ENABLED=true`.
+- Apply mode requires `ANGEL_SYMBOL_SYNC_ENABLED=true`.
 - There is no Angel broker login, WebSocket connection, or order placement.
 - Broker-required instruments are visible but blocked from monitor creation until broker login/live data exists.
 

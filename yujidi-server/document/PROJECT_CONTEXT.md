@@ -15,6 +15,7 @@ Detailed docs live separately:
 - `../docs/DOMAIN_MODEL.md`: detailed domain entities, relationships, workflows, state machines, and business rules.
 - `../docs/ANALYZER_ENGINE.md`: detailed analyzer inputs, state, trigger logic, cooldowns, failures, tests, and limitations.
 - `../docs/ANGEL_SMARTAPI_PHASE0.md`: Angel SmartAPI Phase 0 scaffold and safety boundaries.
+- `../docs/ANGEL_PHASE_2_SCRIP_MASTER_SYNC.md`: Angel Phase 2 MCX Scrip Master reference sync.
 - `../docs/TESTING_STRATEGY.md`: recommended backend test strategy and priority order.
 - `../docs/RISK_REGISTER.md`: known risks, impact, mitigation, and review cadence.
 
@@ -1076,11 +1077,7 @@ High-priority edge cases:
 - Frontend alert feed.
 - Frontend full analysis modal.
 - Backend architecture documentation.
-- Angel SmartAPI Phase 0 scaffold for future read-only market data.
-- Angel Universal Symbol Registry Phase 1 scaffold.
-- Angel Scrip Master sync Phase 2 service, disabled by default.
-- Angel Scrip Master sync Phase 3 manual job trigger.
-- Angel Phase 4 to 10 safe foundation:
+- Angel Integration Phase 1 foundation:
   - universal symbol search API
   - frontend universal symbol picker support
   - BrokerConnection scaffold without secrets
@@ -1088,6 +1085,12 @@ High-priority edge cases:
   - guarded Angel auth/live-data scaffolds
   - Angel tick normalizer
   - analyzer normalized tick bridge
+- Angel Integration Phase 2 MCX Scrip Master sync:
+  - downloads Angel Scrip Master JSON
+  - filters MCX core commodity rows
+  - maps rows into universal `Symbol` records
+  - upserts by provider + exchange + instrument token
+  - supports manual script and optional non-fatal startup sync
 
 ### Partially Implemented
 
@@ -1096,11 +1099,8 @@ High-priority edge cases:
   - Legacy `dropPercentage` is still kept for backward compatibility.
 
 - Angel SmartAPI integration.
-  - Phase 0 scaffold exists.
-  - Phase 1 universal symbol registry scaffold exists.
-  - Phase 2 disabled-by-default Scrip Master sync service exists.
-  - Phase 3 manual Scrip Master sync job exists.
-  - Phase 4 to 10 foundation exists.
+  - Phase 1 foundation exists.
+  - Phase 2 MCX Scrip Master sync exists.
   - No live Angel connection exists.
   - No live Angel login/session exists.
   - No broker credentials are stored.
