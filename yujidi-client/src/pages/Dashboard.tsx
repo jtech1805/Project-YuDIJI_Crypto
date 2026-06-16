@@ -97,7 +97,7 @@ function MonitorItem({
   const positive = change ? change >= 0 : false;
   const trigger = monitor?.trigger ? monitor?.trigger : 'spike'
   const threshold = monitor.thresholdPercentage
-  const symbol = monitor.symbol
+  const symbol = monitor.displayName
   // const positive = change ? change >= 0 : 0;
   const meta = triggerMeta[trigger];
   const TriggerIcon = meta?.icon;
@@ -112,17 +112,46 @@ function MonitorItem({
       {/* Top row: identity + price */}
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-foreground flex-shrink-0">
-          {symbol.slice(0, 2)}
+          {(symbol ?? '').slice(0, 2)}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground overflow-auto">{symbol}</span>
-            <span className="text-xs font-mono text-muted-foreground">{price != null
+            {/* <span className="text-sm font-medium text-foreground overflow-auto">{symbol}</span> */}
+            <>
+              <span className="relative block max-w-[120px] overflow-hidden whitespace-nowrap text-sm font-medium text-foreground">
+                <span className="inline-block symbol-auto-scroll">
+                  {symbol}
+                </span>
+              </span>
+
+              <style>{`
+    @keyframes symbolAutoScroll {
+      0%,
+      20% {
+        transform: translateX(0);
+      }
+
+      50%,
+      70% {
+        transform: translateX(calc(-100% + 120px));
+      }
+
+      100% {
+        transform: translateX(0);
+      }
+    }
+
+    .symbol-auto-scroll {
+      animation: symbolAutoScroll 8s ease-in-out infinite;
+    }
+  `}</style>
+            </>
+            <span className="text-xs font-mono text-muted-foreground ml-2">{price != null
               ? `${monitor?.provider === 'ANGEL_ONE' ? "" : "$"}${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
               : '---'}</span>
           </div>
           <div className="flex items-center justify-between mt-1">
-            <MiniSparkline symbol={symbol} positive={positive} />
+            <MiniSparkline symbol={symbol ?? 'DEFAULT'} positive={positive} />
             <span className={`text-xs font-mono flex items-center gap-0.5 ${positive ? "text-bullish" : "text-bearish"}`}>
               {positive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
               {positive ? "+" : ""}{change}%

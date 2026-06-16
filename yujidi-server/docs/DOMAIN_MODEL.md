@@ -298,6 +298,8 @@ Current behavior:
 - Incoming binary LTP packets are parsed and normalized into `NormalizedMarketTick`.
 - Normal product flow returns `SUBSCRIPTION_UPDATE_RESULT` and forwards Angel ticks as `MARKET_TICK`.
 - Protected debug subscribe/unsubscribe/status routes still exist for backend verification.
+- Angel `NormalizedMarketTick` is also sent into the analyzer once per provider session tick.
+- Analyzer processing is asynchronous and must not block frontend tick delivery.
 
 Normalized tick fields:
 
@@ -316,7 +318,30 @@ Normalized tick fields:
 
 Important boundary:
 
-The frontend must not connect directly to Angel and must not send Angel credentials, JWTs, feed tokens, exchange types, or modes. Angel WebSocket LTP streaming is not yet connected to analyzer alert generation. Phase 7 should wire `NormalizedMarketTick` into provider-aware monitor lookup and existing drop/spike rules.
+The frontend must not connect directly to Angel and must not send Angel credentials, JWTs, feed tokens, exchange types, or modes. Angel WebSocket LTP streaming now feeds analyzer alert generation, but it does not place orders or provide trade execution.
+
+### 2.2.5 Provider-Aware Analyzer Identity
+
+Analyzer identity follows the market-data scope:
+
+- Binance crypto ticks are global and use `BINANCE:BINANCE:<symbol>` for provider-aware subscription identity, while the legacy analyzer path still supports symbol-keyed processing for existing crypto monitors.
+- Angel MCX ticks are user-session scoped and use `ANGEL_ONE:<userId>:MCX:<instrumentToken>` for analyzer price buffers, CVD buffers, and active-monitor cache.
+- Angel monitor lookup uses user + provider + exchange + instrument token.
+- Angel tick for user A must never evaluate user B's monitor.
+
+Angel alert metadata:
+
+- `monitor`
+- `displayName`
+- `provider`
+- `marketType`
+- `exchange`
+- `instrumentToken`
+- `providerSymbol`
+- `currentPrice`
+- `previousPrice`
+
+The existing drop/spike rules are reused for Angel alerts. There is no separate Angel alert engine.
 
 ### 2.3 TripwireConfig / Monitor
 

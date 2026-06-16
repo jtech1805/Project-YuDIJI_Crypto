@@ -3,6 +3,7 @@ import pino from "pino";
 import { AlertModel, type Alert } from "../models/Alert.js";
 import { TripwireConfigModel } from "../models/TripwireConfig.js";
 import type { NormalizedMarketTick } from "../types/market-data.types.js";
+import { buildMarketSubscriptionKey } from "../utils/market-subscription-key.js";
 import {
   createMonitorCacheSnapshot,
   evaluateMonitorThreshold,
@@ -47,7 +48,15 @@ type AnalyzerDependencies = {
   llmService: AnalyzerLlmService;
   fetchRecentHeadlines: (symbol: string) => Promise<string>;
   findActiveMonitors: (symbol: string) => Promise<ActiveMonitorDocument[]>;
+  findActiveMonitorsForNormalizedTick: (tick: NormalizedMarketTick) => Promise<ActiveMonitorDocument[]>;
   createAlert: (payload: Record<string, unknown>) => Promise<AnalyzerAlertDocument>;
+};
+
+type ProcessTickContext = {
+  streamKey?: string;
+  monitorCacheKey?: string;
+  findActiveMonitors?: () => Promise<ActiveMonitorDocument[]>;
+  metadata?: Record<string, unknown>;
 };
 
 const defaultAnalyzerDependencies: AnalyzerDependencies = {
@@ -56,6 +65,28 @@ const defaultAnalyzerDependencies: AnalyzerDependencies = {
   findActiveMonitors: async (symbol: string): Promise<ActiveMonitorDocument[]> => {
     return TripwireConfigModel.find({
       symbol,
+      isActive: true,
+    }).exec();
+  },
+  findActiveMonitorsForNormalizedTick: async (tick: NormalizedMarketTick): Promise<ActiveMonitorDocument[]> => {
+    if (tick.provider === "ANGEL_ONE") {
+      if (!tick.userId) {
+        return [];
+      }
+
+      return TripwireConfigModel.find({
+        user: tick.userId,
+        provider: "ANGEL_ONE",
+        exchange: tick.exchange,
+        instrumentToken: tick.instrumentToken,
+        isActive: true,
+      }).exec();
+    }
+
+    return TripwireConfigModel.find({
+      provider: tick.provider,
+      exchange: tick.exchange,
+      instrumentToken: tick.instrumentToken,
       isActive: true,
     }).exec();
   },
@@ -97,14 +128,57 @@ export class AnalyzerEngine {
   }
 
   public async processNormalizedTick(tick: NormalizedMarketTick): Promise<void> {
+    if (!Number.isFinite(tick.price) || tick.price <= 0) {
+      logger.warn(
+        {
+          event: "ANALYZER_NORMALIZED_TICK_REJECTED",
+          provider: tick.provider,
+          symbol: tick.symbol,
+          instrumentToken: tick.instrumentToken,
+          price: tick.price,
+          timestamp: tick.timestamp,
+        },
+        "Rejected invalid normalized market tick",
+      );
+      return;
+    }
+    if (tick.provider === "ANGEL_ONE" && !tick.userId) {
+      logger.warn(
+        {
+          event: "ANALYZER_NORMALIZED_TICK_REJECTED",
+          provider: tick.provider,
+          symbol: tick.symbol,
+          instrumentToken: tick.instrumentToken,
+          reason: "MISSING_USER_ID",
+        },
+        "Rejected Angel normalized tick without user id",
+      );
+      return;
+    }
+
+    const subscriptionKey = tick.provider === "ANGEL_ONE"
+      ? buildMarketSubscriptionKey({
+        provider: tick.provider,
+        userId: tick.userId!,
+        exchange: tick.exchange,
+        instrumentToken: tick.instrumentToken,
+      })
+      : buildMarketSubscriptionKey({
+        provider: tick.provider,
+        exchange: tick.exchange,
+        instrumentToken: tick.instrumentToken,
+      });
+
     logger.info(
       {
         event: "ANALYZER_NORMALIZED_TICK_RECEIVED",
+        subscriptionKey,
         provider: tick.provider,
         marketType: tick.marketType,
         exchange: tick.exchange,
         symbol: tick.symbol,
         instrumentToken: tick.instrumentToken,
+        price: tick.price,
       },
       "Analyzer received normalized market tick",
     );
@@ -115,6 +189,20 @@ export class AnalyzerEngine {
       tick.timestamp,
       false,
       tick.volume ?? 0,
+      {
+        streamKey: subscriptionKey,
+        monitorCacheKey: subscriptionKey,
+        findActiveMonitors: () => this.dependencies.findActiveMonitorsForNormalizedTick(tick),
+        metadata: {
+          displayName: tick.displayName ?? tick.displaySymbol,
+          provider: tick.provider,
+          marketType: tick.marketType,
+          exchange: tick.exchange,
+          instrumentToken: tick.instrumentToken,
+          providerSymbol: tick.providerSymbol,
+          currentPrice: tick.price,
+        },
+      },
     );
   }
 
@@ -160,7 +248,11 @@ export class AnalyzerEngine {
     return this.loadActiveMonitorCache(symbol, reason);
   }
 
-  private async loadActiveMonitorCache(symbol: string, reason: string): Promise<ActiveMonitorDocument[]> {
+  private async loadActiveMonitorCache(
+    symbol: string,
+    reason: string,
+    loader?: () => Promise<ActiveMonitorDocument[]>,
+  ): Promise<ActiveMonitorDocument[]> {
     const now = Date.now();
 
     // logger.info(
@@ -173,7 +265,7 @@ export class AnalyzerEngine {
     //   "Refreshing active monitor cache from MongoDB",
     // );
 
-    const monitors = await this.dependencies.findActiveMonitors(symbol);
+    const monitors = loader ? await loader() : await this.dependencies.findActiveMonitors(symbol);
 
     this.activeMonitorCache.set(symbol, {
       monitors,
@@ -195,7 +287,10 @@ export class AnalyzerEngine {
     return monitors;
   }
 
-  private async getActiveMonitorsForSymbol(symbol: string): Promise<ActiveMonitorDocument[]> {
+  private async getActiveMonitorsForSymbol(
+    symbol: string,
+    loader?: () => Promise<ActiveMonitorDocument[]>,
+  ): Promise<ActiveMonitorDocument[]> {
     const now = Date.now();
     const cached = this.activeMonitorCache.get(symbol);
 
@@ -213,7 +308,7 @@ export class AnalyzerEngine {
       return cached.monitors;
     }
 
-    return this.loadActiveMonitorCache(symbol, cached ? "expired" : "miss");
+    return this.loadActiveMonitorCache(symbol, cached ? "expired" : "miss", loader);
   }
 
   // public findHeavySupportResistance(symbol: string) {
@@ -605,7 +700,8 @@ export class AnalyzerEngine {
     currentPrice: number,
     currentTimestamp: number,
     isbuyermaker: boolean,
-    quantity: number
+    quantity: number,
+    context: ProcessTickContext = {},
   ): Promise<void> {
     if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
       logger.warn(
@@ -616,6 +712,8 @@ export class AnalyzerEngine {
     }
 
     const normalizedSymbol = symbol.toUpperCase();
+    const streamKey = context.streamKey ?? normalizedSymbol;
+    const monitorCacheKey = context.monitorCacheKey ?? normalizedSymbol;
     // logger.info(
     //   {
     //     event: "ANALYZER_TICK_RECEIVED",
@@ -628,7 +726,7 @@ export class AnalyzerEngine {
     //   "Analyzer received price tick",
     // );
 
-    const ticks = this.priceBuffer.get(normalizedSymbol) ?? [];
+    const ticks = this.priceBuffer.get(streamKey) ?? [];
     const bufferSizeBeforePush = ticks.length;
     ticks.push({ price: currentPrice, timestamp: currentTimestamp });
 
@@ -642,7 +740,7 @@ export class AnalyzerEngine {
       ticks.shift();
       culledCount += 1;
     }
-    this.priceBuffer.set(normalizedSymbol, ticks);
+    this.priceBuffer.set(streamKey, ticks);
     // logger.info(
     //   {
     //     event: "ANALYZER_BUFFER_UPDATED",
@@ -658,8 +756,8 @@ export class AnalyzerEngine {
     // ==========================================
     // 🧠 CVD & WHALE FILTER ENGINE
     // ==========================================
-    let runningCVD = this.currentCVD.get(normalizedSymbol) ?? 0;
-    const cvdTrades = this.cvdBuffer.get(normalizedSymbol) ?? [];
+    let runningCVD = this.currentCVD.get(streamKey) ?? 0;
+    const cvdTrades = this.cvdBuffer.get(streamKey) ?? [];
 
     // // 1. The Whale Filter
     // if (quantity >= WHALE_THRESHOLD_BTC) {
@@ -692,8 +790,8 @@ export class AnalyzerEngine {
     }
 
     // 4. Save state
-    this.cvdBuffer.set(normalizedSymbol, cvdTrades);
-    this.currentCVD.set(normalizedSymbol, runningCVD);
+    this.cvdBuffer.set(streamKey, cvdTrades);
+    this.currentCVD.set(streamKey, runningCVD);
 
     // logger.info(
     //   {
@@ -705,15 +803,17 @@ export class AnalyzerEngine {
     //   "Updated high-frequency CVD momentum"
     // );
     // ==========================================
-    const activeMonitors = await this.getActiveMonitorsForSymbol(normalizedSymbol);
-    // logger.info(
-    //   {
-    //     event: "ANALYZER_MONITORS_FETCHED",
-    //     symbol: normalizedSymbol,
-    //     activeMonitorCount: activeMonitors.length,
-    //   },
-    //   "Fetched active monitors for symbol",
-    // );
+    const activeMonitors = await this.getActiveMonitorsForSymbol(monitorCacheKey, context.findActiveMonitors);
+    logger.info(
+      {
+        event: "ANALYZER_MONITORS_FOUND",
+        symbol: normalizedSymbol,
+        streamKey,
+        monitorCacheKey,
+        activeMonitorCount: activeMonitors.length,
+      },
+      "Fetched active monitors for analyzer stream",
+    );
 
     for (const monitor of activeMonitors) {
       const monitorId = monitor._id.toString();
@@ -810,6 +910,8 @@ export class AnalyzerEngine {
           movementMagnitude,
           triggerType,
           direction,
+          streamKey,
+          monitorCacheKey,
           cooldownUntil: currentTimestamp + COOLDOWN_MS,
         },
         "Threshold breached; starting trigger pipeline",
@@ -897,8 +999,18 @@ export class AnalyzerEngine {
         // });
         const alertDocument = await this.dependencies.createAlert({
           user: monitor.user,
+          monitor: monitor._id,
           symbol: normalizedSymbol,
+          displayName: monitor.displayName,
+          provider: monitor.provider,
+          marketType: monitor.marketType,
+          exchange: monitor.exchange,
+          instrumentToken: monitor.instrumentToken,
+          providerSymbol: monitor.providerSymbol,
+          ...context.metadata,
           triggerPrice: currentPrice,
+          currentPrice,
+          previousPrice: baseTick.price,
           dropPercentage: movementMagnitude,
           changePercentage,
           triggerType,

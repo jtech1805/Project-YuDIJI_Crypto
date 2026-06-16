@@ -838,6 +838,24 @@ export class WebSocketManager {
         this.sendToClient(client, payload);
       }
     }
+
+    void this.analyzerEngine.processNormalizedTick({
+      ...tick,
+      raw: tick.raw,
+    }).catch((error: unknown): void => {
+      logger.error(
+        {
+          event: "WS_ANALYZER_NORMALIZED_TICK_FAILED",
+          error,
+          provider: tick.provider,
+          userId: tick.userId,
+          exchange: tick.exchange,
+          symbol: tick.symbol,
+          instrumentToken: tick.instrumentToken,
+        },
+        "Analyzer failed while processing normalized market tick",
+      );
+    });
   }
 
   private errorReason(error: unknown): string {

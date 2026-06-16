@@ -1127,6 +1127,13 @@ High-priority edge cases:
   - Angel MCX symbols route to user-specific Angel WebSocket sessions
   - per-symbol subscription results are returned through `SUBSCRIPTION_UPDATE_RESULT`
   - Angel ticks are forwarded to subscribed frontend sockets as `MARKET_TICK`
+- Angel Integration Phase 7 Angel Analyzer Alerts:
+  - Angel `NormalizedMarketTick` reaches the analyzer
+  - Angel monitor lookup uses user + provider + exchange + instrument token
+  - Angel price buffers and monitor cache use user-specific provider-aware keys
+  - existing drop/spike analyzer rules are reused
+  - Angel threshold breaches create alerts with provider/exchange/instrument metadata
+  - Angel alerts emit through the existing `NEW_ALERT` flow
 
 ### Partially Implemented
 
@@ -1142,11 +1149,11 @@ High-priority edge cases:
   - Phase 5 universal Symbol monitor creation exists.
   - Phase 6 user-specific Angel WebSocket LTP debug streaming exists.
   - Phase 6B provider-aware frontend WebSocket routing exists.
+  - Phase 7 Angel normalized tick analyzer alert generation exists.
   - Broker credentials are encrypted at rest.
   - Angel WebSocket is connected to the frontend subscription path for live `MARKET_TICK` delivery.
-  - Angel WebSocket is not connected to analyzer alert generation yet.
   - No public/admin Angel sync HTTP endpoint exists.
-  - No order placement, portfolio sync, analyzer provider-key processing, or auto trading exists.
+  - No order placement, portfolio sync, or auto trading exists.
 
 - Alert detail endpoint.
   - Route exists.
@@ -1229,7 +1236,7 @@ Risk math should be deterministic and auditable. The LLM should explain or veto,
 
 Best next fixes:
 
-1. Wire `NormalizedMarketTick` into provider-aware analyzer monitor lookup for Angel alert generation.
+1. Harden Angel streaming/analyzer reliability: reconnect strategy, token refresh, session expiry handling, subscription cleanup, and production-safe observability.
 2. Expand analyzer edge-case tests for invalid ticks, CVD, order-book snapshots, and cooldown expiry.
 3. Align max monitor window with analyzer buffer, either both 60 minutes or both 24 hours.
 4. Fix `getAlertById` user lookup.

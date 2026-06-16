@@ -330,6 +330,34 @@ Must test later:
 - Two users subscribed to the same Angel instrument do not receive each other's ticks.
 - Cleanup on browser socket close routes provider unsubscribe correctly.
 
+### 4.9 Angel Analyzer Tests
+
+Primary files:
+
+```txt
+src/services/analyzer.service.ts
+src/services/analyzer.rules.ts
+src/types/market-data.types.ts
+src/utils/market-subscription-key.ts
+```
+
+Currently covered:
+
+- `processNormalizedTick` creates an Angel spike alert using existing analyzer rules.
+- `processNormalizedTick` creates an Angel drop alert using existing analyzer rules.
+- Angel alert payload includes provider/exchange/instrument metadata.
+- Angel alert payload includes current and previous price.
+- Angel tick for user A does not trigger user B's monitor.
+- Angel analyzer cache and price buffer use `ANGEL_ONE:<userId>:MCX:<instrumentToken>`.
+- Existing Binance `processTick` tests still pass.
+
+Must test later:
+
+- WebSocket manager live Angel tick invokes analyzer exactly once.
+- Analyzer failure does not block frontend `MARKET_TICK` delivery.
+- Duplicate tick de-duplication if provider repeats the same timestamp/sequence.
+- Production DB query shape for provider-aware monitor lookup.
+
 ## 5. Integration Tests
 
 ### 5.1 Auth Routes

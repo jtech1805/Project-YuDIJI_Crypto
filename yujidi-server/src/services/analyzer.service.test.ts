@@ -9,6 +9,13 @@ const START_AT = Date.UTC(2026, 0, 1, 0, 0, 0);
 type FakeMonitorOptions = {
   id?: string;
   userId?: string;
+  symbol?: string;
+  provider?: "BINANCE" | "ANGEL_ONE";
+  marketType?: "CRYPTO" | "COMMODITY";
+  exchange?: "BINANCE" | "MCX";
+  instrumentToken?: string;
+  providerSymbol?: string;
+  displayName?: string;
   trigger?: "drop" | "spike";
   thresholdPercentage?: number;
   timeWindowMinutes?: number;
@@ -33,7 +40,13 @@ const makeMonitor = (options: FakeMonitorOptions = {}) => {
   return {
     _id: { toString: () => id },
     user: { toString: () => userId },
-    symbol: SYMBOL,
+    symbol: options.symbol ?? SYMBOL,
+    provider: options.provider ?? "BINANCE",
+    marketType: options.marketType ?? "CRYPTO",
+    exchange: options.exchange ?? "BINANCE",
+    instrumentToken: options.instrumentToken ?? options.symbol ?? SYMBOL,
+    providerSymbol: options.providerSymbol ?? options.symbol ?? SYMBOL,
+    displayName: options.displayName ?? options.symbol ?? SYMBOL,
     thresholdPercentage: options.thresholdPercentage ?? 2.5,
     timeWindowMinutes: options.timeWindowMinutes ?? 1,
     trigger: options.trigger ?? "drop",
@@ -70,6 +83,35 @@ const createHarness = (
       findActiveMonitors: async () => {
         calls.findActiveMonitors += 1;
         return monitors as never;
+      },
+      findActiveMonitorsForNormalizedTick: async (tick) => {
+        calls.findActiveMonitors += 1;
+        return monitors.filter((monitor) => {
+          const candidate = monitor as {
+            user?: { toString(): string };
+            provider?: string;
+            exchange?: string;
+            instrumentToken?: string;
+            isActive?: boolean;
+          };
+
+          if (tick.provider === "ANGEL_ONE") {
+            return (
+              candidate.user?.toString() === tick.userId &&
+              candidate.provider === tick.provider &&
+              candidate.exchange === tick.exchange &&
+              candidate.instrumentToken === tick.instrumentToken &&
+              candidate.isActive === true
+            );
+          }
+
+          return (
+            candidate.provider === tick.provider &&
+            candidate.exchange === tick.exchange &&
+            candidate.instrumentToken === tick.instrumentToken &&
+            candidate.isActive === true
+          );
+        }) as never;
       },
       fetchRecentHeadlines: async () => {
         calls.fetchRecentHeadlines += 1;
@@ -205,26 +247,34 @@ test("processTick negative cache avoids repeated monitor fetch within TTL", asyn
   assert.equal(activeMonitorCache[SYMBOL]?.isNegativeCache, true);
 });
 
-test("processNormalizedTick reuses production processTick behavior", async () => {
+test("processNormalizedTick creates Angel spike alert with provider metadata", async () => {
   const universalSymbol = "MCX:CRUDEOIL:26JUN2026:7200:CE";
   const harness = createHarness([
-    {
-      _id: { toString: () => "monitor-1" },
-      user: { toString: () => "user-1" },
+    makeMonitor({
+      id: "monitor-1",
+      userId: "user-1",
       symbol: universalSymbol,
+      displayName: "MCX CRUDEOIL 26JUN2026 7200 CE",
+      provider: "ANGEL_ONE",
+      marketType: "COMMODITY",
+      exchange: "MCX",
+      instrumentToken: "253456",
+      providerSymbol: "CRUDEOIL26JUN7200CE",
       thresholdPercentage: 2.5,
-      timeWindowMinutes: 1,
       trigger: "spike",
-      isActive: true,
-    },
+    }),
   ]);
 
   await harness.engine.processNormalizedTick({
     provider: "ANGEL_ONE",
+    scope: "USER_SESSION",
+    userId: "user-1",
     marketType: "COMMODITY",
     exchange: "MCX",
     symbol: universalSymbol,
+    displayName: "MCX CRUDEOIL 26JUN2026 7200 CE",
     displaySymbol: "MCX CRUDEOIL 26JUN2026 7200 CE",
+    providerSymbol: "CRUDEOIL26JUN7200CE",
     instrumentToken: "253456",
     price: 7200,
     volume: 100,
@@ -233,10 +283,14 @@ test("processNormalizedTick reuses production processTick behavior", async () =>
 
   await harness.engine.processNormalizedTick({
     provider: "ANGEL_ONE",
+    scope: "USER_SESSION",
+    userId: "user-1",
     marketType: "COMMODITY",
     exchange: "MCX",
     symbol: universalSymbol,
+    displayName: "MCX CRUDEOIL 26JUN2026 7200 CE",
     displaySymbol: "MCX CRUDEOIL 26JUN2026 7200 CE",
+    providerSymbol: "CRUDEOIL26JUN7200CE",
     instrumentToken: "253456",
     price: 7380,
     volume: 100,
@@ -245,5 +299,134 @@ test("processNormalizedTick reuses production processTick behavior", async () =>
 
   assert.equal(harness.calls.createAlert, 1);
   assert.equal(harness.createdAlerts[0]?.symbol, universalSymbol);
+  assert.equal(harness.createdAlerts[0]?.provider, "ANGEL_ONE");
+  assert.equal(harness.createdAlerts[0]?.exchange, "MCX");
+  assert.equal(harness.createdAlerts[0]?.instrumentToken, "253456");
+  assert.equal(harness.createdAlerts[0]?.previousPrice, 7200);
+  assert.equal(harness.createdAlerts[0]?.currentPrice, 7380);
   assert.equal(harness.createdAlerts[0]?.triggerType, "spike");
+});
+
+test("processNormalizedTick creates Angel drop alert", async () => {
+  const universalSymbol = "MCX:GOLD:04DEC2026:FUTURE";
+  const harness = createHarness([
+    makeMonitor({
+      id: "monitor-1",
+      userId: "user-1",
+      symbol: universalSymbol,
+      provider: "ANGEL_ONE",
+      marketType: "COMMODITY",
+      exchange: "MCX",
+      instrumentToken: "495213",
+      providerSymbol: "GOLD04DEC26FUT",
+      displayName: "MCX GOLD 04DEC2026 FUTURE",
+      thresholdPercentage: 1,
+      trigger: "drop",
+    }),
+  ]);
+
+  await harness.engine.processNormalizedTick({
+    provider: "ANGEL_ONE",
+    scope: "USER_SESSION",
+    userId: "user-1",
+    marketType: "COMMODITY",
+    exchange: "MCX",
+    symbol: universalSymbol,
+    displayName: "MCX GOLD 04DEC2026 FUTURE",
+    displaySymbol: "MCX GOLD 04DEC2026 FUTURE",
+    providerSymbol: "GOLD04DEC26FUT",
+    instrumentToken: "495213",
+    price: 160000,
+    timestamp: START_AT,
+  });
+  await harness.engine.processNormalizedTick({
+    provider: "ANGEL_ONE",
+    scope: "USER_SESSION",
+    userId: "user-1",
+    marketType: "COMMODITY",
+    exchange: "MCX",
+    symbol: universalSymbol,
+    displayName: "MCX GOLD 04DEC2026 FUTURE",
+    displaySymbol: "MCX GOLD 04DEC2026 FUTURE",
+    providerSymbol: "GOLD04DEC26FUT",
+    instrumentToken: "495213",
+    price: 158400,
+    timestamp: START_AT + 60_000,
+  });
+
+  assert.equal(harness.calls.createAlert, 1);
+  assert.equal(harness.createdAlerts[0]?.triggerType, "drop");
+  assert.equal(harness.createdAlerts[0]?.direction, "down");
+  assert.equal(harness.createdAlerts[0]?.changePercentage, -1);
+});
+
+test("processNormalizedTick isolates Angel monitors by user id", async () => {
+  const universalSymbol = "MCX:GOLD:04DEC2026:FUTURE";
+  const harness = createHarness([
+    makeMonitor({
+      id: "monitor-1",
+      userId: "user-2",
+      symbol: universalSymbol,
+      provider: "ANGEL_ONE",
+      marketType: "COMMODITY",
+      exchange: "MCX",
+      instrumentToken: "495213",
+      thresholdPercentage: 1,
+      trigger: "spike",
+    }),
+  ]);
+
+  await harness.engine.processNormalizedTick({
+    provider: "ANGEL_ONE",
+    scope: "USER_SESSION",
+    userId: "user-1",
+    marketType: "COMMODITY",
+    exchange: "MCX",
+    symbol: universalSymbol,
+    displaySymbol: "MCX GOLD 04DEC2026 FUTURE",
+    instrumentToken: "495213",
+    price: 160000,
+    timestamp: START_AT,
+  });
+  await harness.engine.processNormalizedTick({
+    provider: "ANGEL_ONE",
+    scope: "USER_SESSION",
+    userId: "user-1",
+    marketType: "COMMODITY",
+    exchange: "MCX",
+    symbol: universalSymbol,
+    displaySymbol: "MCX GOLD 04DEC2026 FUTURE",
+    instrumentToken: "495213",
+    price: 162000,
+    timestamp: START_AT + 60_000,
+  });
+
+  assert.equal(harness.calls.createAlert, 0);
+  assert.equal(harness.emittedAlerts.length, 0);
+});
+
+test("processNormalizedTick cache key includes Angel user id", async () => {
+  const universalSymbol = "MCX:GOLD:04DEC2026:FUTURE";
+  const harness = createHarness([]);
+
+  await harness.engine.processNormalizedTick({
+    provider: "ANGEL_ONE",
+    scope: "USER_SESSION",
+    userId: "user-1",
+    marketType: "COMMODITY",
+    exchange: "MCX",
+    symbol: universalSymbol,
+    displaySymbol: "MCX GOLD 04DEC2026 FUTURE",
+    instrumentToken: "495213",
+    price: 160000,
+    timestamp: START_AT,
+  });
+
+  const snapshot = harness.engine.getEngineStateSnapshot();
+  const activeMonitorCache = snapshot.activeMonitorCache as Record<string, unknown>;
+  const priceBuffer = snapshot.priceBuffer as Record<string, unknown>;
+  const cacheKey = "ANGEL_ONE:user-1:MCX:495213";
+
+  assert.ok(activeMonitorCache[cacheKey]);
+  assert.ok(priceBuffer[cacheKey]);
 });

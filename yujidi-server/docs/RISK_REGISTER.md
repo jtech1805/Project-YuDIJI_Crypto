@@ -75,6 +75,11 @@ Highest-priority current risks:
 | R-053 | Provider-aware subscription resolves wrong symbol/provider | High | Medium | Mitigating |
 | R-054 | Angel market ticks delivered to wrong user socket | Critical | Low | Mitigating |
 | R-055 | Partial WebSocket subscription failures confuse frontend state | Medium | Medium | Mitigating |
+| R-056 | Angel tick triggers wrong user's alert | Critical | Low | Mitigating |
+| R-057 | Provider-aware analyzer cache key mismatch | High | Medium | Mitigating |
+| R-058 | Duplicate analyzer processing for Angel ticks | Medium | Medium | Open |
+| R-059 | Analyzer processing blocks frontend tick delivery | High | Low | Mitigating |
+| R-060 | Illiquid Angel contracts are hard to validate live | Medium | High | Open |
 | R-033 | Angel Scrip Master URL availability failure | Medium | Medium | Mitigating |
 | R-034 | Huge Angel symbol sync load | Medium | Medium | Mitigating |
 | R-035 | Reference sync confused with market-data permission | High | Medium | Mitigating |
@@ -1301,6 +1306,114 @@ Mitigation:
 - Legacy `SUBSCRIPTION_ACK` remains for compatibility.
 - Frontend should prefer `SUBSCRIPTION_UPDATE_RESULT` for new mixed-provider UX.
 - Future frontend work should display safe failure messages such as broker-login-required.
+
+### R-056: Angel Tick Triggers Wrong User's Alert
+
+Severity: Critical
+
+Likelihood: Low
+
+Status: Mitigating
+
+Description:
+
+Angel ticks are user-session scoped. If analyzer monitor lookup ignores user id, one user's broker stream could trigger another user's monitor.
+
+Impact:
+
+Users could receive alerts derived from another user's broker session.
+
+Mitigation:
+
+- Phase 7 monitor lookup uses user + provider + exchange + instrument token for Angel ticks.
+- Analyzer tests cover user isolation.
+- Angel analyzer cache keys include user id.
+
+### R-057: Provider-Aware Analyzer Cache Key Mismatch
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+If analyzer price buffers and monitor cache use different keys, Angel threshold calculations may use one stream while monitor lookup uses another.
+
+Impact:
+
+Alerts can fail to trigger, trigger late, or trigger against the wrong price history.
+
+Mitigation:
+
+- Phase 7 uses `ANGEL_ONE:<userId>:MCX:<instrumentToken>` for Angel price buffer, CVD buffer, and monitor cache.
+- Tests assert Angel cache and price buffer use the user-specific key.
+- Existing Binance symbol-key path remains for backward compatibility.
+
+### R-058: Duplicate Analyzer Processing For Angel Ticks
+
+Severity: Medium
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Debug subscriptions, normal frontend subscriptions, or multiple client sockets could cause the same provider tick to reach analyzer more than once.
+
+Impact:
+
+Analyzer work and LLM calls may duplicate, and alerts may be generated sooner than intended unless cooldown catches them.
+
+Mitigation:
+
+- Normal Phase 6B path processes the provider session tick once in `WebSocketManager`.
+- Cooldowns limit repeated alert emission.
+- Future work should add explicit tick de-duplication by provider/user/token/timestamp if needed.
+
+### R-059: Analyzer Processing Blocks Frontend Tick Delivery
+
+Severity: High
+
+Likelihood: Low
+
+Status: Mitigating
+
+Description:
+
+Analyzer alert generation can involve DB queries, news calls, and LLM calls. If that work blocks live tick delivery, frontend prices can lag.
+
+Impact:
+
+Users may see stale live rates during alert-generation work.
+
+Mitigation:
+
+- Phase 7 sends `MARKET_TICK` to frontend before starting analyzer work.
+- Analyzer work runs asynchronously and errors are logged without breaking tick delivery.
+
+### R-060: Illiquid Angel Contracts Are Hard To Validate Live
+
+Severity: Medium
+
+Likelihood: High
+
+Status: Open
+
+Description:
+
+Some far-expiry MCX contracts may not produce frequent ticks, making manual live validation slow.
+
+Impact:
+
+Alert behavior may be hard to confirm from live market movement alone.
+
+Mitigation:
+
+- Phase 7 added unit tests for simulated normalized Angel ticks.
+- Future dev-only analyzer simulation endpoint can be added behind an explicit debug flag if needed.
 
 ## 4. Review Cadence
 

@@ -1577,7 +1577,6 @@ Snapshot fields stored on monitors:
 Out of scope:
 
 - Angel WebSocket.
-- Analyzer provider-key processing.
 - Order placement.
 - Option chain.
 
@@ -1616,7 +1615,6 @@ Out of scope:
 - Option chain.
 - Order placement.
 - Portfolio sync.
-- Analyzer alert generation from Angel ticks.
 
 ## Provider-Aware WebSocket Subscription Routing
 
@@ -1658,7 +1656,34 @@ Important boundary:
 - Normal product flow should use the existing frontend WebSocket subscription message.
 - Frontend must not connect directly to Angel.
 - Frontend must not send Angel JWT, feed token, API key, client code, exchange type, or mode.
-- Analyzer alert generation from Angel ticks is still out of scope.
+
+## Angel Analyzer Integration Baseline
+
+YuJiDi can process Angel `NormalizedMarketTick` events through the analyzer.
+
+Angel analyzer behavior:
+
+- Angel ticks are user-session scoped.
+- Monitor lookup uses user + provider + exchange + instrument token.
+- Price buffer and monitor cache keys use provider-aware subscription keys.
+- Existing drop/spike analyzer rules are reused.
+- Angel alerts include provider, market type, exchange, instrument token, provider symbol, display name, current price, and previous price metadata.
+- Angel alerts emit through the existing `NEW_ALERT` flow.
+- Analyzer failures are logged and do not block live `MARKET_TICK` delivery.
+
+Angel analyzer key:
+
+```txt
+ANGEL_ONE:<userId>:MCX:<instrumentToken>
+```
+
+Out of scope:
+
+- Order placement.
+- Option chain.
+- WebSocket FULL/SnapQuote mode.
+- Portfolio sync.
+- Advisory or trade recommendation logic.
 
 Current Phase 0 files:
 
@@ -2045,6 +2070,7 @@ Implemented:
 - Universal Symbol monitor creation through `symbolId` with monitor snapshot metadata.
 - User-specific Angel WebSocket LTP debug streaming for Angel MCX monitors.
 - Provider-aware frontend WebSocket subscription routing for Binance and Angel MCX.
+- Angel normalized tick analyzer alert generation for Angel MCX monitors.
 
 Partially implemented:
 

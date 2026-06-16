@@ -17,9 +17,50 @@ const alertSchema = new Schema(
       trim: true,
       index: true,
     },
+    monitor: {
+      type: Schema.Types.ObjectId,
+      ref: "TripwireConfig",
+      index: true,
+    },
+    displayName: {
+      type: String,
+      trim: true,
+    },
+    provider: {
+      type: String,
+      enum: ["BINANCE", "ANGEL_ONE", "KITE"],
+      index: true,
+    },
+    marketType: {
+      type: String,
+      enum: ["CRYPTO", "EQUITY", "FNO", "COMMODITY", "CURRENCY", "INDEX"],
+      index: true,
+    },
+    exchange: {
+      type: String,
+      enum: ["BINANCE", "NSE", "BSE", "NFO", "BFO", "MCX", "CDS", "NCDEX"],
+      index: true,
+    },
+    instrumentToken: {
+      type: String,
+      trim: true,
+      index: true,
+    },
+    providerSymbol: {
+      type: String,
+      trim: true,
+    },
     triggerPrice: {
       type: Number,
       required: true,
+      min: 0,
+    },
+    currentPrice: {
+      type: Number,
+      min: 0,
+    },
+    previousPrice: {
+      type: Number,
       min: 0,
     },
     dropPercentage: {
