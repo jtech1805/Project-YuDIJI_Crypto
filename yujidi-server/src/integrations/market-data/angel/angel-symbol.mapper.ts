@@ -4,6 +4,7 @@ import type {
   MarketType,
 } from "../../../types/market-data.types.js";
 import type { AngelScripMasterRow } from "./angel-scrip-master.types.js";
+import { tokenizeSymbolSearch } from "../../../utils/symbol-search-tokenizer.js";
 
 const ANGEL_MONTHS: Record<string, number> = {
   JAN: 0,
@@ -38,6 +39,13 @@ export type UniversalSymbolSet = {
   requiresBrokerLogin: true;
   supportedBroker: "ANGEL_ONE";
   status: "ACTIVE" | "EXPIRED" | "DISABLED";
+  searchName: string;
+  searchSymbol: string;
+  searchDisplayName: string;
+  searchProviderSymbol: string;
+  searchTokens: string[];
+  autocompleteTokens: string[];
+  searchRank: number;
   raw: AngelScripMasterRow;
 };
 
@@ -193,15 +201,29 @@ export const mapAngelScripToUniversalSymbol = (row: AngelScripMasterRow): Univer
     ? Number(row.tick_size) / 100
     : undefined;
   const lotSize = parsePositiveNumber(row.lotsize);
+  const symbol = buildUniversalSymbol(row, exchange, instrumentType, expiryLabel, strikePrice, optionType);
+  const displayName = buildDisplayName(row, exchange, instrumentType, expiryLabel, strikePrice, optionType);
+  const providerSymbol = row.symbol.trim().toUpperCase();
+  const name = row.name.trim().toUpperCase();
+  const searchFields = tokenizeSymbolSearch({
+    symbol,
+    displayName,
+    providerSymbol,
+    name,
+    exchange,
+    marketType,
+    instrumentType,
+    expiry: expiry ?? expiryLabel,
+  });
 
   return {
     provider: "ANGEL_ONE",
     marketType,
     exchange,
-    symbol: buildUniversalSymbol(row, exchange, instrumentType, expiryLabel, strikePrice, optionType),
-    name: row.name.trim().toUpperCase(),
-    displayName: buildDisplayName(row, exchange, instrumentType, expiryLabel, strikePrice, optionType),
-    providerSymbol: row.symbol.trim().toUpperCase(),
+    symbol,
+    name,
+    displayName,
+    providerSymbol,
     instrumentToken: row.token.trim(),
     instrumentType,
     ...(expiry ? { expiry } : {}),
@@ -212,6 +234,8 @@ export const mapAngelScripToUniversalSymbol = (row: AngelScripMasterRow): Univer
     requiresBrokerLogin: true,
     supportedBroker: "ANGEL_ONE",
     status: "ACTIVE",
+    ...searchFields,
+    searchRank: instrumentType === "FUTURE" ? 80 : instrumentType === "OPTION" ? 10 : 0,
     raw: row,
   };
 };

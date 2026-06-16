@@ -113,6 +113,39 @@ const symbolSchema = new Schema(
     raw: {
       type: Schema.Types.Mixed,
     },
+    searchName: {
+      type: String,
+      trim: true,
+      index: true,
+    },
+    searchSymbol: {
+      type: String,
+      trim: true,
+      index: true,
+    },
+    searchDisplayName: {
+      type: String,
+      trim: true,
+    },
+    searchProviderSymbol: {
+      type: String,
+      trim: true,
+      index: true,
+    },
+    searchTokens: {
+      type: [String],
+      default: [],
+    },
+    autocompleteTokens: {
+      type: [String],
+      default: [],
+      index: true,
+    },
+    searchRank: {
+      type: Number,
+      default: 0,
+      index: true,
+    },
   },
   {
     timestamps: true,
@@ -125,6 +158,9 @@ symbolSchema.index({ provider: 1, exchange: 1, symbol: 1 });
 symbolSchema.index({ provider: 1, exchange: 1, quoteAsset: 1, status: 1, symbol: 1 });
 symbolSchema.index({ marketType: 1, instrumentType: 1, status: 1 });
 symbolSchema.index({ name: "text", symbol: "text", displayName: "text" });
+symbolSchema.index({ status: 1, provider: 1, marketType: 1, exchange: 1 });
+symbolSchema.index({ provider: 1, exchange: 1, marketType: 1, autocompleteTokens: 1, status: 1 });
+symbolSchema.index({ marketType: 1, instrumentType: 1, status: 1, expiry: 1 });
 
 export type SymbolDocument = InferSchemaType<typeof symbolSchema>;
 

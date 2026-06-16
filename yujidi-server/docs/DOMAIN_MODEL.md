@@ -101,6 +101,13 @@ Current fields:
 - `supportedBroker`
 - `status`
 - `raw`
+- `searchName`
+- `searchSymbol`
+- `searchDisplayName`
+- `searchProviderSymbol`
+- `searchTokens`
+- `autocompleteTokens`
+- `searchRank`
 - `createdAt`
 - `updatedAt`
 
@@ -115,6 +122,10 @@ Business rules:
 - Angel/Kite symbols should use provider/exchange/instrument token identity.
 - Angel live market data will require user-specific broker login in a later phase.
 - Universal symbol search is available for UI discovery.
+- Universal symbol search uses normalized token fields and indexed autocomplete tokens.
+- Frontend symbol pickers should search `GET /api/symbols/search` instead of loading the full symbol collection.
+- Search results should expose safe reference fields only and must not expose provider `raw` payloads.
+- Monitor creation should prefer `symbolId` from search results so backend can store provider/exchange/instrument snapshots.
 - Broker-required instruments are visible but blocked from monitor creation until broker login/live market data is implemented.
 - During transition, crypto monitor lookup accepts both legacy `TRADING` and universal `ACTIVE` status.
 
@@ -771,6 +782,9 @@ Untracked
 
 - Synced Binance `USDT` symbols with legacy `TRADING` or universal `ACTIVE` status can be monitored.
 - Universal symbols can be searched by provider, market type, exchange, and text query.
+- Universal symbol search requires at least two query characters and caps results to prevent large accidental responses.
+- Expired instruments are excluded from symbol search unless explicitly requested.
+- Search ranking should favor exact matches, prefix matches, active contracts, spot/cash/future instruments, and configured `searchRank`.
 - Broker-required symbols cannot be monitored until broker login/live data support exists.
 - Symbol input should be normalized to uppercase.
 

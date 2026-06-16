@@ -7,6 +7,7 @@
     "dev": "nodemon --watch src --ext ts --exec \"tsx src/server.ts\"",
     "start": "tsx src/server.ts",
     "sync:angel-symbols": "tsx src/scripts/sync-angel-symbols.ts",
+    "symbols:backfill-search": "tsx src/scripts/backfill-symbol-search-fields.ts",
     "test": "node --import tsx --test src/services/*.test.ts src/services/security/*.test.ts src/integrations/market-data/angel/*.test.ts src/utils/*.test.ts",
     "test:analyzer": "node --import tsx --test src/services/analyzer.*.test.ts",
     "typecheck": "tsc --noEmit"

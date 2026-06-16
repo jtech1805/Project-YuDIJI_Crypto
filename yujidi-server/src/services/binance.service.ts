@@ -2,6 +2,7 @@ import axios, { type AxiosResponse } from "axios";
 import type { AnyBulkWriteOperation } from "mongoose";
 
 import { SymbolModel, type SymbolDocument } from "../models/Symbol.js";
+import { tokenizeSymbolSearch } from "../utils/symbol-search-tokenizer.js";
 
 interface BinanceExchangeInfoSymbol {
   symbol: string;
@@ -67,6 +68,17 @@ export const syncBinanceSymbols = async (): Promise<number> => {
   const writeOperations: AnyBulkWriteOperation<SymbolDocument>[] = filteredSymbols.map((item) => {
     const name = cryptoNameMap[item.baseAsset] ?? item.baseAsset;
     const displayName = `${item.baseAsset} / ${item.quoteAsset}`;
+    const searchFields = tokenizeSymbolSearch({
+      symbol: item.symbol,
+      displayName,
+      providerSymbol: item.symbol,
+      name,
+      baseAsset: item.baseAsset,
+      quoteAsset: item.quoteAsset,
+      exchange: "BINANCE",
+      marketType: "CRYPTO",
+      instrumentType: "SPOT",
+    });
 
     return {
       updateOne: {
@@ -98,6 +110,8 @@ export const syncBinanceSymbols = async (): Promise<number> => {
             requiresBrokerLogin: false,
             supportedBroker: "NONE",
             status: "ACTIVE",
+            ...searchFields,
+            searchRank: item.symbol === "BTCUSDT" ? 100 : item.symbol === "ETHUSDT" ? 90 : 0,
             raw: item,
           },
         },

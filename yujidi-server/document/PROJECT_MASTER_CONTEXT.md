@@ -2320,6 +2320,54 @@ Also list any manual verification steps, such as:
 - confirm WebSocket payload
 - confirm frontend display
 
+## Phase 9: Scalable Symbol Search Baseline
+
+YuJiDi no longer expects frontend symbol pickers to load the full global `Symbol` collection and filter locally.
+
+Backend search:
+
+- Route: `GET /api/symbols/search`
+- Minimum query length: 2 characters.
+- Default limit: 20.
+- Maximum limit: 50.
+- Supported filters: `provider`, `marketType`, `exchange`, `instrumentType`, `includeExpired`, and `limit`.
+- Expired instruments are excluded by default.
+- Response excludes `raw` provider payloads.
+- Search uses normalized token fields instead of unbounded collection-wide regex scans.
+- A short in-memory LRU cache protects repeated searches.
+- Route-level rate limiting protects the search API from request bursts.
+
+Symbol search fields:
+
+- `searchName`
+- `searchSymbol`
+- `searchDisplayName`
+- `searchProviderSymbol`
+- `searchTokens`
+- `autocompleteTokens`
+- `searchRank`
+
+Search field population:
+
+- Binance sync writes search fields for crypto symbols.
+- Angel symbol mapper writes search fields for MCX symbols.
+- Existing records can be repaired with:
+
+```bash
+cd yujidi-server
+npm run symbols:backfill-search
+```
+
+Frontend behavior:
+
+- Add-monitor flows search symbols through the backend API with debounce and request cancellation.
+- Frontend should not call `/api/monitors/symbols` or `/api/monitors/symbols/universal` on modal/page open for symbol discovery.
+- Monitor creation should prefer `symbolId` from search results.
+
+Important boundary:
+
+Search is reference-data discovery only. It does not grant live market-data permission, broker login, or order capability.
+
 ## 25. Commit And Documentation Rules
 
 Commit rules:

@@ -1,37 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Zap } from 'lucide-react';
 import { apiClient } from '../api/client';
+import { type SymbolSearchResult } from '../api/symbols';
+import { useSymbolSearch } from '../hooks/useSymbolSearch';
 
 export function SetupMonitor() {
-  const [symbols, setSymbols] = useState<{ symbol: string }[]>([]);
-  const [selectedSymbol, setSelectedSymbol] = useState('');
+  const [query, setQuery] = useState('');
+  const [selectedSymbol, setSelectedSymbol] = useState<SymbolSearchResult | null>(null);
   const [threshold, setThreshold] = useState('5');
   const [timeWindow, setTimeWindow] = useState('15');
+  const { results, isLoading } = useSymbolSearch(query, { limit: 20 });
   const navigate = useNavigate();
-  useEffect(() => {
-    const fetchSymbols = async () => {
-      try {
-        const { data } = await apiClient.get('/monitors/symbols');
-        // DEFENSIVE CHECK: Extract the array whether it is raw or wrapped in a 'data' property
-        const symbolArray = Array.isArray(data) ? data : (data.data || []);
-
-        setSymbols(symbolArray);
-        if (symbolArray.length > 0) setSelectedSymbol(symbolArray[0].symbol);
-      } catch (error) {
-        console.error('Failed to fetch symbols');
-      }
-    };
-    fetchSymbols();
-  }, []);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedSymbol) return;
     try {
       await apiClient.post('/monitors', {
-        symbol: selectedSymbol,
+        symbolId: selectedSymbol.symbolId,
         thresholdPercentage: Number(threshold),
-        timeWindowMinutes: Number(timeWindow)
+        timeWindowMinutes: Number(timeWindow),
+        trigger: 'drop',
       });
       navigate('/');
     } catch (error) {
@@ -56,16 +46,37 @@ export function SetupMonitor() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-2">Select Asset</label>
-            <select
-              value={selectedSymbol}
-              onChange={(e) => setSelectedSymbol(e.target.value)}
+            <label className="block text-sm font-medium text-zinc-400 mb-2">Search Asset</label>
+            <input
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setSelectedSymbol(null);
+              }}
+              placeholder="Type at least 2 characters..."
               className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-purple-500"
-            >
-              {symbols.map(s => (
-                <option key={s.symbol} value={s.symbol}>{s.symbol}</option>
-              ))}
-            </select>
+            />
+            {query.trim().length >= 2 && !selectedSymbol && (
+              <div className="mt-2 bg-black/70 border border-white/10 rounded-lg max-h-48 overflow-y-auto">
+                {isLoading && <div className="px-4 py-3 text-sm text-zinc-500">Searching...</div>}
+                {!isLoading && results.map((result) => (
+                  <button
+                    type="button"
+                    key={result.symbolId}
+                    onClick={() => {
+                      setSelectedSymbol(result);
+                      setQuery(result.displayName || result.symbol);
+                    }}
+                    className="w-full text-left px-4 py-3 text-sm text-zinc-300 hover:bg-white/10"
+                  >
+                    <span className="block text-white">{result.displayName || result.symbol}</span>
+                    <span className="text-xs text-zinc-500">
+                      {[result.provider, result.exchange, result.instrumentType].filter(Boolean).join(' · ')}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -91,6 +102,7 @@ export function SetupMonitor() {
 
           <button
             type="submit"
+            disabled={!selectedSymbol}
             className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-4 rounded-xl transition-colors mt-8"
           >
             Deploy AI Tripwire

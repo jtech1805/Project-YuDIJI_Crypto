@@ -526,6 +526,27 @@ When fixed, add regression tests for:
 3. Monitor windows cannot exceed analyzer buffer unless buffer is expanded.
 4. Failed alert pipeline does not create misleading successful state.
 5. HTTP LTP ignition does not create permanent unmanaged subscriptions.
+6. Symbol search does not call MongoDB for queries shorter than two characters.
+7. Symbol search ranks common futures/spot results ahead of noisy option matches for generic queries.
+8. Frontend add-monitor flows do not fetch the full symbol collection on open.
+
+## 10.1 Symbol Search Tests
+
+Phase 9 adds scalable symbol discovery through `GET /api/symbols/search`.
+
+Current and future test coverage should include:
+
+- tokenizer normalization for Binance symbols and Angel MCX symbols
+- autocomplete prefix token generation
+- search result ranking for exact, prefix, and generic queries
+- provider, market type, exchange, and instrument type filters
+- default expired-contract exclusion
+- query limit validation
+- short-query no-op behavior
+- search cache behavior
+- frontend debounce and request cancellation behavior
+
+Real provider APIs should not be called in symbol search tests. Tests should use fake repositories or local fixtures.
 
 ## 11. Suggested Test Script
 

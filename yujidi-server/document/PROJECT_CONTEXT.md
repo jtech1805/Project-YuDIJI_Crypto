@@ -1021,6 +1021,7 @@ High-priority edge cases:
 8. CVD whale threshold is not normalized per asset.
 9. Spike/drop analyzer behavior needs automated regression tests.
 10. The frontend `/engine` page describes future architecture elements not currently implemented.
+11. Symbol search must stay indexed and paginated as the universal registry grows.
 
 ## 21. Current Progress
 
@@ -1134,6 +1135,14 @@ High-priority edge cases:
   - existing drop/spike analyzer rules are reused
   - Angel threshold breaches create alerts with provider/exchange/instrument metadata
   - Angel alerts emit through the existing `NEW_ALERT` flow
+- Angel Integration Phase 9 Scalable Symbol Search:
+  - `Symbol` records now include normalized search and autocomplete token fields
+  - Binance sync and Angel mapper populate search fields
+  - `GET /api/symbols/search` provides indexed, filtered, ranked symbol discovery
+  - search has minimum query length, result caps, LRU cache, and route rate limiting
+  - `npm run symbols:backfill-search` backfills search fields for existing records
+  - frontend add-monitor flows use debounced backend search with request cancellation
+  - frontend no longer loads the full symbol universe on monitor modal/page open
 
 ### Partially Implemented
 

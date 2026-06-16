@@ -80,6 +80,11 @@ Highest-priority current risks:
 | R-058 | Duplicate analyzer processing for Angel ticks | Medium | Medium | Open |
 | R-059 | Analyzer processing blocks frontend tick delivery | High | Low | Mitigating |
 | R-060 | Illiquid Angel contracts are hard to validate live | Medium | High | Open |
+| R-061 | Unindexed symbol search causes slow API responses | High | Medium | Mitigating |
+| R-062 | Frontend loads too many symbols into memory | High | Medium | Mitigating |
+| R-063 | Stale frontend symbol search responses override newer searches | Medium | Medium | Mitigating |
+| R-064 | Symbol search ranking returns option contracts before intended futures/spot matches | Medium | Medium | Mitigating |
+| R-065 | High symbol search request volume overloads backend | Medium | Medium | Mitigating |
 | R-033 | Angel Scrip Master URL availability failure | Medium | Medium | Mitigating |
 | R-034 | Huge Angel symbol sync load | Medium | Medium | Mitigating |
 | R-035 | Reference sync confused with market-data permission | High | Medium | Mitigating |
@@ -1414,6 +1419,113 @@ Mitigation:
 
 - Phase 7 added unit tests for simulated normalized Angel ticks.
 - Future dev-only analyzer simulation endpoint can be added behind an explicit debug flag if needed.
+
+### R-061: Unindexed Symbol Search Causes Slow API Responses
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+Universal symbols can grow to thousands or millions of records. Regex scans or unbounded symbol-list APIs can push search latency from milliseconds to seconds.
+
+Impact:
+
+Add-monitor workflows become slow and MongoDB load increases sharply.
+
+Mitigation:
+
+- Phase 9 added normalized search fields and indexed `autocompleteTokens`.
+- New search route requires a minimum query length.
+- Search returns a capped result set.
+- Backfill script can populate search fields for existing records.
+
+### R-062: Frontend Loads Too Many Symbols Into Memory
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+Loading all symbols into add-monitor UI does not scale after Angel MCX and future equity/FNO reference data are added.
+
+Impact:
+
+The browser can become slow, network payloads become large, and modal open time can regress badly.
+
+Mitigation:
+
+- Phase 9 symbol pickers use debounced backend search.
+- Frontend add-monitor flows no longer fetch the full symbol universe on open.
+
+### R-063: Stale Frontend Symbol Search Responses Override Newer Searches
+
+Severity: Medium
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+Fast typing can create overlapping search requests. Older responses may return after newer ones.
+
+Impact:
+
+The user could select from stale results.
+
+Mitigation:
+
+- Phase 9 `useSymbolSearch` uses debounce, `AbortController`, and latest-query checks.
+
+### R-064: Symbol Search Ranking Returns Option Contracts Before Intended Futures/Spot Matches
+
+Severity: Medium
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+Generic searches such as `gold` or `btc` can match many instruments. Poor ranking could surface distant options above the more likely future, spot, or cash instrument.
+
+Impact:
+
+Users may create monitors for the wrong instrument.
+
+Mitigation:
+
+- Phase 9 ranking boosts exact/prefix matches, active records, configured `searchRank`, and spot/cash/future instruments.
+- Tests cover GOLD futures ranking above options.
+
+### R-065: High Symbol Search Request Volume Overloads Backend
+
+Severity: Medium
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+Autocomplete search can generate many requests if not throttled.
+
+Impact:
+
+Backend and MongoDB can see avoidable load spikes.
+
+Mitigation:
+
+- Frontend search is debounced.
+- Backend search uses a short LRU cache.
+- `/api/symbols/search` has route-level rate limiting.
 
 ## 4. Review Cadence
 
