@@ -974,7 +974,7 @@ Because analyzer state is local memory, multiple backend instances can produce i
 
 Scaling safely would require shared state or a separate ingestion/analyzer service.
 
-## 9. Future Trade Monitoring Boundary
+## 9. Trade Monitoring Boundary
 
 The existing AnalyzerEngine is a market-monitor alert engine. It detects threshold breaches for user-created Monitor/Tripwire records.
 
@@ -988,20 +988,18 @@ Market data tick
   -> AI explanation
 ```
 
-Future ActiveTrade monitoring is a separate lifecycle concern and should not be folded directly into `analyzer.service.ts`.
+ActiveTrade monitoring is a separate lifecycle concern and is not folded directly into `analyzer.service.ts`.
 
-Future responsibility:
+Current Phase 6 foundation:
 
 ```txt
-Normalized market data
+Manual/synthetic price
   -> MonitoringRuleEngine
   -> ActiveTrade rule evaluation
   -> TradeEvent
-  -> TradeResult when closed
-  -> RiskState projection
-  -> Structured Journal
-  -> AI review/explanation
 ```
+
+Future live flow may replace the manual price input with normalized market ticks. TradeResult, risk projection, journal, and AI explanation remain later concerns.
 
 ### 9.1 AnalyzerEngine vs MonitoringRuleEngine
 
@@ -1016,10 +1014,12 @@ AnalyzerEngine:
 MonitoringRuleEngine:
 
 - evaluates ActiveTrade lifecycle rules
-- works with `TradeSetup`, `ActiveTrade`, and monitoring templates
+- works with actual/current `ActiveTrade` values
 - creates `TradeEvent`
-- may trigger `TradeResult` closeout/projection workflows
-- must be template-driven and market-specific
+- currently supports manual/synthetic evaluation
+- currently detects stoploss, target 1, target 2, +1R, and near-stop conditions
+- does not close trades or create TradeResult
+- may become template-driven and market-specific later
 - must not use AI for final lifecycle decisions
 
 ### 9.2 AI Boundary
@@ -1046,7 +1046,7 @@ Deterministic services own decisions:
 
 ### 9.3 Shared Market Data
 
-The future MonitoringRuleEngine can consume the same normalized market data stream as the analyzer where practical.
+The Phase 6 MonitoringRuleEngine is not wired to live WebSocket ticks. A future phase can consume the same normalized market data stream as the analyzer where practical.
 
 Rules:
 

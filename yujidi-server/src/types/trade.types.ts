@@ -93,6 +93,54 @@ export const TRADE_RULE_VIOLATIONS = [
 ] as const;
 export type TradeRuleViolation = (typeof TRADE_RULE_VIOLATIONS)[number];
 
+export const TRADE_RESULT_STATUSES = [
+  "DRAFT",
+  "FINALIZED",
+  "ADJUSTED",
+  "VOIDED",
+] as const;
+export type TradeResultStatus = (typeof TRADE_RESULT_STATUSES)[number];
+
+export const TRADE_RESULT_TYPES = ["WIN", "LOSS", "BREAKEVEN"] as const;
+export type TradeResultType = (typeof TRADE_RESULT_TYPES)[number];
+
+export const TRADE_EXIT_REASONS = [
+  "STOPLOSS",
+  "TARGET_1",
+  "TARGET_2",
+  "TRAILING_STOP",
+  "MANUAL_EXIT",
+  "TIME_EXIT",
+  "RISK_EXIT",
+  "BROKER_SYNC_EXIT",
+] as const;
+export type TradeExitReason = (typeof TRADE_EXIT_REASONS)[number];
+
+export const TRADE_RESULT_PROJECTION_STATUSES = [
+  "PENDING",
+  "APPLIED",
+  "REVERSED",
+  "FAILED",
+] as const;
+export type TradeResultProjectionStatus =
+  (typeof TRADE_RESULT_PROJECTION_STATUSES)[number];
+
+export const COST_COMPONENT_TYPES = [
+  "BROKERAGE",
+  "EXCHANGE_FEE",
+  "TAX",
+  "GST",
+  "STT",
+  "STAMP_DUTY",
+  "SEBI_CHARGE",
+  "TRANSACTION_CHARGE",
+  "CRYPTO_TRADING_FEE",
+  "FUNDING_COST",
+  "CONVERSION_FEE",
+  "OTHER",
+] as const;
+export type CostComponentType = (typeof COST_COMPONENT_TYPES)[number];
+
 export type CanonicalSymbolRef = {
   symbolId: string;
   symbol: string;

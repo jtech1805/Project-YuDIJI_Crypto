@@ -645,7 +645,23 @@ Current Phase 5 foundation tests:
 - ACTIVE trade cancellation succeeds.
 - CLOSED trade cancellation rejects.
 
-These tests cover the Phase 1/2/3/4/5 foundation. They do not yet prove MonitoringRuleEngine, TradeEvent, TradeResult, risk projection, Journal, AI review, broker-fill linking, or order-flow behavior because those modules are intentionally not implemented yet.
+Current Phase 6 foundation tests:
+
+- LONG and SHORT stoploss-hit detection.
+- LONG and SHORT target 1 detection.
+- LONG and SHORT target 2 detection.
+- LONG and SHORT current-R calculation.
+- +1R detection.
+- LONG and SHORT near-stop detection.
+- Repeated stoploss events are deduplicated.
+- Stoploss events do not mutate ActiveTrade status.
+- Monitoring does not create TradeResult or mutate risk state.
+- Closed/non-active trades reject evaluation.
+- Monitoring evaluation and event creation are audited.
+- TradeEvent listing is scoped by user ownership.
+- Manual evaluation returns created events and current R.
+
+These tests cover the Phase 1/2/3/4/5/6 foundation. They do not yet prove live market-tick wiring, TradeResult, risk projection, Journal, AI review, broker-fill linking, or order-flow behavior because those modules are intentionally not implemented yet.
 
 ### Geometry And Direction Tests
 
@@ -714,8 +730,29 @@ Must cover in later phases:
 
 - broker-sync-assisted fill reconciliation
 - partial exits and remaining quantity changes
-- monitoring-driven status transitions
+- automatic monitoring-driven status transitions
 - TradeResult finalization and risk-state projection
+
+### TradeEvent And Monitoring Tests
+
+Currently covered:
+
+- monitoring uses actual/current ActiveTrade values
+- SL, target 1, target 2, +1R, and near-SL rules are direction-aware
+- one event type per ActiveTrade is enforced by idempotency
+- manual/synthetic evaluation is user-owned
+- events are append-oriented and auditable
+- evaluation does not close the trade
+- evaluation does not create TradeResult
+- evaluation does not mutate risk state
+
+Must cover in later phases:
+
+- normalized live market-tick integration
+- repeating event windows and cooldown policy
+- previous-price crossing semantics
+- degraded/stale market-feed events
+- partial-exit and current-stop updates
 
 ### TradeResult And Risk Projection Tests
 

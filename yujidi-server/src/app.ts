@@ -17,6 +17,7 @@ import { symbolRouter } from "./routes/symbol.routes.js";
 import { tradePlanRouter } from "./routes/trade-plan.routes.js";
 import { tradeSetupRouter } from "./routes/trade-setup.routes.js";
 import { activeTradeRouter } from "./routes/active-trade.routes.js";
+import { tradeEventRouter } from "./routes/trade-event.routes.js";
 
 const loggerOptions: LoggerOptions = {
   level: process.env.NODE_ENV === "production" ? "info" : "debug",
@@ -104,6 +105,7 @@ app.use("/api/symbols", symbolRouter);
 app.use("/api/trade-plans", tradePlanRouter);
 app.use("/api/trade-setups", tradeSetupRouter);
 app.use("/api/active-trades", activeTradeRouter);
+app.use("/api/trade-events", tradeEventRouter);
 
 app.use((_req: Request, _res: Response, next: NextFunction): void => {
   next(new AppError("Route not found", 404));

@@ -39,24 +39,30 @@ Implemented:
 - Planned-versus-actual execution quality and rule-violation detection.
 - TradeSetup transition to `EXECUTED` after successful ActiveTrade creation.
 - Audit logging for actual confirmation, ActiveTrade creation/cancellation, and TradeSetup execution.
+- `TradeEvent` Mongoose model and user-owned query APIs.
+- Deterministic ActiveTrade evaluation for stoploss, targets, +1R, and near-stop conditions.
+- Manual/synthetic ActiveTrade price evaluation endpoint.
+- Event idempotency using one `activeTradeId:eventType` key per event type.
+- Audit logging for monitoring evaluation, event creation, and dedupe.
 - Unit tests for audit sanitization and symbol resolution.
 - Unit tests for TradePlan lifecycle and risk-state initialization.
 - Unit tests for ScoreCheck geometry, RR calculation, score bands, snapshots, and audit calls.
 - Unit tests for TradeSetup conversion and RiskGovernor behavior.
 - Unit tests for ActiveTrade confirmation, geometry, execution quality, setup execution, audit calls, and cancellation.
+- Unit tests for ActiveTrade monitoring rules, event ownership, idempotency, and non-mutation boundaries.
 
 Not implemented yet:
 
 - TradeResult.
 - TradeJournal.
-- MonitoringRuleEngine.
+- Live market-tick wiring for MonitoringRuleEngine.
 - AI trade/risk review.
 - RAG ingestion.
 - Order placement, order modification, or order cancellation.
 
 Boundary:
 
-The implemented Phase 1/2/3/4/5 foundation does not alter existing analyzer, WebSocket, monitor, auth, Angel login, or Binance behavior.
+The implemented Phase 1/2/3/4/5/6 foundation does not alter existing analyzer, WebSocket, monitor, auth, Angel login, or Binance behavior.
 
 ## 1. Current System Summary
 
@@ -528,7 +534,7 @@ Only APPROVED TradeSetup records with TAKE_TRADE or TAKE_SMALL_RISK can execute.
 Expired scores, invalid geometry, actual RR below 1, and repeated execution are rejected.
 ActiveTrade starts as ACTIVE and can be manually cancelled only while ACTIVE.
 Risk state is not mutated.
-MonitoringRuleEngine, broker fill linking, TradeResult, and order placement are not implemented.
+Live MonitoringRuleEngine wiring, broker fill linking, TradeResult, and order placement are not implemented.
 ```
 
 Implemented API:
@@ -541,7 +547,35 @@ POST /api/active-trades/:id/cancel
 GET /api/trade-plans/:id/active-trades
 ```
 
-### Phase 6: TradeResult, Risk Projection, Journal
+### Phase 6: TradeEvent And Monitoring Foundation
+
+- Implement append-oriented TradeEvent persistence.
+- Evaluate actual/current ActiveTrade levels against manual or synthetic prices.
+- Detect direction-aware stoploss, target 1, target 2, +1R, and near-stop events.
+- Deduplicate each event type per ActiveTrade.
+- Audit evaluations, created events, and dedupe.
+- Do not close ActiveTrade or mutate risk state.
+
+Current status:
+
+```txt
+Implemented.
+Monitoring uses actual/current ActiveTrade values, not TradeSetup planned values.
+The manual endpoint creates deterministic TradeEvents without AI.
+MONITORING_EVALUATED is audited but not persisted for every evaluation.
+No live WebSocket hook, automatic close, TradeResult, risk-state projection, or order action exists.
+```
+
+Implemented API:
+
+```txt
+POST /api/active-trades/:id/evaluate
+GET /api/trade-events
+GET /api/trade-events/:id
+GET /api/active-trades/:id/events
+```
+
+### Phase 7: TradeResult, Risk Projection, Journal
 
 - Implement TradeResult.
 - Implement idempotent RiskState projection.
@@ -549,7 +583,7 @@ GET /api/trade-plans/:id/active-trades
 - Create structured Journal facts.
 - Add AI review summary.
 
-### Phase 7: Audit, RAG Restrictions, Hardening
+### Phase 8: Audit, RAG Restrictions, Hardening
 
 - Add AuditLogService.
 - Add audit routes if needed.
@@ -636,9 +670,9 @@ POST /api/trade-plans/:id/capital-adjustments
 Next recommended coding task:
 
 ```txt
-Phase 6:
-  add deterministic MonitoringRuleEngine foundations around ActiveTrade
-  consume normalized market data without changing AnalyzerEngine
-  emit structured TradeEvents without order placement or risk-state projection
-  keep broker fills, TradeResult, Journal, and AI review out until their later phases
+Phase 7:
+  add TradeResult finalization without broker order placement
+  project finalized results idempotently into risk state
+  keep journal and AI review downstream of deterministic result facts
+  evaluate live MonitoringRuleEngine wiring separately from result projection
 ```

@@ -851,14 +851,20 @@ Implemented foundation files:
 - `src/services/trade-setup.service.ts`
 - `src/models/active-trade.model.ts`
 - `src/services/active-trade.service.ts`
+- `src/models/trade-event.model.ts`
+- `src/services/trade-event.service.ts`
+- `src/services/trade-monitoring.service.ts`
 - `src/controllers/trade-plan.controller.ts`
 - `src/controllers/score-check.controller.ts`
 - `src/controllers/trade-setup.controller.ts`
 - `src/controllers/active-trade.controller.ts`
+- `src/controllers/trade-event.controller.ts`
+- `src/controllers/trade-monitoring.controller.ts`
 - `src/routes/trade-plan.routes.ts`
 - `src/routes/score-check.routes.ts`
 - `src/routes/trade-setup.routes.ts`
 - `src/routes/active-trade.routes.ts`
+- `src/routes/trade-event.routes.ts`
 
 Implemented behavior:
 
@@ -882,10 +888,14 @@ Implemented behavior:
 - Actual LONG/SHORT geometry, risk, reward, risk amount, RR, execution quality, and rule violations are deterministic.
 - Successful confirmation marks the TradeSetup `EXECUTED`.
 - ActiveTrade confirmation and cancellation are audited.
+- TradeEvent persistence and deterministic ActiveTrade monitoring foundation exist.
+- Manual/synthetic prices can evaluate current stoploss, targets, +1R, and near-stop conditions.
+- Event creation is idempotent per ActiveTrade and event type.
+- Monitoring evaluations and event creation/dedupe are audited.
 
 Not implemented yet:
 
-- TradeEvent.
+- Live market-tick integration for TradeEvent monitoring.
 - TradeResult.
 - TradeJournal.
 - AI trade/risk review.
@@ -894,7 +904,7 @@ Not implemented yet:
 
 Boundary:
 
-The Phase 1/2/3/4/5 foundation is additive. It does not change existing monitor, analyzer, WebSocket, auth, Binance, or Angel live-data behavior.
+The Phase 1/2/3/4/5/6 foundation is additive. It does not change existing monitor, analyzer, WebSocket, auth, Binance, or Angel live-data behavior.
 
 New lifecycle:
 
@@ -1245,7 +1255,7 @@ GET /api/trade-plans/:id/active-trades
 Current boundary:
 
 - No broker fill auto-linking.
-- No MonitoringRuleEngine or TradeEvent generation.
+- No live MonitoringRuleEngine WebSocket hook.
 - No TradeResult.
 - No risk-state projection.
 - No order placement, modification, or cancellation.
@@ -1270,7 +1280,33 @@ Rules:
 
 - Must be append-oriented.
 - Must be auditable.
-- Should use idempotency keys where events come from broker/provider sync.
+- Is user-owned and linked to ActiveTrade, TradePlan, canonical symbol, and symbol snapshot.
+- Uses actual entry, current stoploss, actual targets, and actual risk per unit.
+- Evaluates LONG and SHORT rules direction-aware.
+- Uses `${activeTradeId}:${eventType}` idempotency for the Phase 6 baseline.
+- Audits `MONITORING_EVALUATED` rather than persisting it for every price.
+- Does not close ActiveTrade.
+- Does not create TradeResult or mutate risk state.
+- Does not use AI for event detection.
+
+Current detected events:
+
+```txt
+PRICE_NEAR_SL
+SL_HIT
+PLUS_ONE_R_HIT
+TARGET_1_HIT
+TARGET_2_HIT
+```
+
+Current API:
+
+```txt
+POST /api/active-trades/:id/evaluate
+GET /api/trade-events
+GET /api/trade-events/:id
+GET /api/active-trades/:id/events
+```
 
 ### 7.10 TradeResult
 
