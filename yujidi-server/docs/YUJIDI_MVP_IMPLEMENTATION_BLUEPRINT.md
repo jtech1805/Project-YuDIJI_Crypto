@@ -28,14 +28,18 @@ Implemented:
 - Direction-aware LONG/SHORT geometry validation.
 - Baseline deterministic scoring engine with template registry foundation.
 - Audit logging for ScoreCheck creation and score calculation.
+- `TradeSetup` Mongoose model.
+- TradeSetup service/controller/routes for list, read, cancel, and ScoreCheck conversion.
+- RiskGovernor foundation with deterministic final managed permission.
+- ScoreCheck-to-TradeSetup conversion with active TradePlan validation.
+- Audit logging for ScoreCheck conversion, TradeSetup creation, cancellation, and RiskGovernor evaluation.
 - Unit tests for audit sanitization and symbol resolution.
 - Unit tests for TradePlan lifecycle and risk-state initialization.
 - Unit tests for ScoreCheck geometry, RR calculation, score bands, snapshots, and audit calls.
+- Unit tests for TradeSetup conversion and RiskGovernor behavior.
 
 Not implemented yet:
 
-- TradeSetup.
-- RiskGovernor.
 - ActiveTrade.
 - TradeResult.
 - TradeJournal.
@@ -46,7 +50,7 @@ Not implemented yet:
 
 Boundary:
 
-The implemented Phase 1/2/3 foundation does not alter existing analyzer, WebSocket, monitor, auth, Angel login, or Binance behavior.
+The implemented Phase 1/2/3/4 foundation does not alter existing analyzer, WebSocket, monitor, auth, Angel login, or Binance behavior.
 
 ## 1. Current System Summary
 
@@ -420,8 +424,9 @@ Normalized market data
 Current status:
 
 ```txt
-Implemented as foundation only.
-TradePlan, ScoreCheck, TradeSetup, RiskGovernor, ActiveTrade, TradeResult, Journal, AI review, and order flows are still pending.
+Implemented as Phase 1 foundation.
+TradePlan, ScoreCheck, TradeSetup, and RiskGovernor are implemented in later phases.
+ActiveTrade, TradeResult, Journal, AI review, and order flows are still pending.
 ```
 
 ### Phase 2: TradePlan And Risk State Foundation
@@ -437,7 +442,7 @@ Current status:
 Implemented.
 TradePlan can be created, listed, read, updated while DRAFT, activated, paused, stopped, completed, archived, and capital-adjusted.
 Activation initializes TradePlanRiskState idempotently.
-ScoreCheck and downstream trade lifecycle modules are still pending.
+ScoreCheck, TradeSetup conversion, and RiskGovernor foundation are now implemented.
 ```
 
 ### Phase 3: ScoreCheck Foundation
@@ -453,7 +458,7 @@ Current status:
 ```txt
 Implemented without AI decisioning.
 ScoreCheck is standalone, uses canonical Symbol by symbolId, stores symbol snapshot, validates trade geometry, calculates risk/reward/RR, creates TradeScoreSnapshot, and returns score-level permission.
-TradeSetup conversion and RiskGovernor final permission are still pending.
+TradeSetup conversion and RiskGovernor final managed permission are now implemented.
 ```
 
 Implemented API:
@@ -471,6 +476,27 @@ GET /api/score-checks/:id
 - Implement RiskGovernor permission output.
 - Add STOP_TRADING behavior.
 - Add tests for AI non-authority.
+
+Current status:
+
+```txt
+Implemented.
+ScoreCheck can be converted into TradeSetup only under an ACTIVE matching TradePlan.
+TradeSetup stores planned values only.
+RiskGovernor reads TradePlan, TradePlanRiskState, optional UserDailyRiskState, score permission, and planned RR to produce final managed permission.
+RiskGovernor does not mutate risk state.
+ActiveTrade, monitoring, order placement, and result projection are still pending.
+```
+
+Implemented API:
+
+```txt
+POST /api/score-checks/:id/convert-to-trade-setup
+GET /api/trade-setups
+GET /api/trade-setups/:id
+POST /api/trade-setups/:id/cancel
+GET /api/trade-plans/:id/trade-setups
+```
 
 ### Phase 5: ActiveTrade And Monitoring Rules
 
@@ -574,10 +600,9 @@ POST /api/trade-plans/:id/capital-adjustments
 Next recommended coding task:
 
 ```txt
-Phase 3:
-Phase 4:
-  add TradeSetup planned values
-  add long/short setup validation using ScoreCheck output
-  add RiskGovernor final permission output
-  keep ActiveTrade and order placement out until later phases
+Phase 5:
+  add ActiveTrade activation from approved TradeSetup
+  store actual/current trade values separately from planned values
+  add lifecycle status transitions without order placement
+  keep broker fills, MonitoringRuleEngine, TradeResult, and Journal out until later phases
 ```

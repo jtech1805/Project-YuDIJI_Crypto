@@ -43,6 +43,7 @@ Current automated tests:
 - `src/services/symbol-resolver.service.test.ts`
 - `src/services/trade-plan.service.test.ts`
 - `src/services/score-check.service.test.ts`
+- `src/services/trade-setup.service.test.ts`
 - `src/integrations/market-data/angel/angel-symbol.mapper.test.ts`
 - `src/integrations/market-data/angel/angel-symbol-sync.service.test.ts`
 - `src/integrations/market-data/angel/angel-tick.normalizer.test.ts`
@@ -603,7 +604,29 @@ Current Phase 3 foundation tests:
 - Missing symbol rejects safely.
 - Inactive symbol rejects safely.
 
-These tests cover the Phase 1/2/3 foundation only. They do not yet prove TradeSetup, RiskGovernor, ActiveTrade, TradeResult, Journal, AI review, or order-flow behavior because those modules are intentionally not implemented yet.
+Current Phase 4 foundation tests:
+
+- ScoreCheck cannot convert without an `ACTIVE` TradePlan.
+- ScoreCheck from another user cannot convert.
+- TradePlan from another user cannot receive conversion.
+- TradePlan/ScoreCheck market scope mismatch rejects.
+- Expired ScoreCheck rejects.
+- Already-converted ScoreCheck rejects.
+- Valid conversion creates TradeSetup.
+- Valid conversion updates `ScoreCheck.convertedToTradeSetupId`.
+- Valid conversion copies planned values.
+- Valid conversion copies symbol snapshot.
+- RiskGovernor returns `STOP_TRADING` when plan risk mode is `STOP_TRADING`.
+- RiskGovernor returns `REJECT` when score permission is `REJECT`.
+- RiskGovernor caps final permission to `TAKE_SMALL_RISK` in `REDUCED_RISK`.
+- RiskGovernor caps final permission to `TAKE_SMALL_RISK` in `MICRO_RISK`.
+- RiskGovernor rejects when `maxTrades` is reached.
+- RiskGovernor returns `STOP_TRADING` when consecutive-loss limit is reached.
+- AuditLogService is called for conversion, setup creation, and risk evaluation.
+- TradeSetup cancellation works if not executed.
+- TradeSetup cancellation rejects if already executed.
+
+These tests cover the Phase 1/2/3/4 foundation only. They do not yet prove ActiveTrade, TradeResult, Journal, AI review, or order-flow behavior because those modules are intentionally not implemented yet.
 
 ### Geometry And Direction Tests
 
@@ -619,17 +642,21 @@ Must cover:
 
 ### RiskGovernor Tests
 
-Must cover:
+Currently covered:
 
 - final permission values: `TAKE_TRADE`, `TAKE_SMALL_RISK`, `WAIT`, `REJECT`, `STOP_TRADING`
 - RiskGovernor can downgrade scoring output
 - RiskGovernor can reject a high-scoring trade
 - RiskGovernor can force `STOP_TRADING`
+- consecutive-loss limit
+
+Must cover in later phases:
+
 - AI cannot override RiskGovernor
-- daily loss limit breach
-- plan risk limit breach
-- max open trades breach
-- loss streak or cooldown rule
+- daily loss limit breach with projected TradeResult updates
+- plan risk limit breach with projected open risk
+- max open trades breach after ActiveTrade exists
+- cooldown rule if added to plan/risk templates
 
 ### ScoreCheck Tests
 
@@ -650,12 +677,15 @@ Must cover in later phases:
 
 ### TradeSetup And ActiveTrade Tests
 
-Must cover:
+Currently covered:
 
 - TradeSetup stores planned entry, stop, target, size, and invalidation
-- ActiveTrade stores actual entry, actual quantity, current stop, and current state
 - planned values are not overwritten by actual values
 - activation requires RiskGovernor permission
+
+Must cover in later phases:
+
+- ActiveTrade stores actual entry, actual quantity, current stop, and current state
 - order placement remains disabled
 
 ### TradeResult And Risk Projection Tests

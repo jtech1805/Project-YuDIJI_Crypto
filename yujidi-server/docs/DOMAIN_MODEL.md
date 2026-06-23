@@ -840,16 +840,21 @@ Implemented foundation files:
 - `src/models/user-daily-risk-state.model.ts`
 - `src/models/score-check.model.ts`
 - `src/models/trade-score-snapshot.model.ts`
+- `src/models/trade-setup.model.ts`
 - `src/services/audit-sanitizer.service.ts`
 - `src/services/audit-log.service.ts`
 - `src/services/symbol-resolver.service.ts`
 - `src/services/trade-plan.service.ts`
 - `src/services/scoring-engine.service.ts`
 - `src/services/score-check.service.ts`
+- `src/services/risk-governor.service.ts`
+- `src/services/trade-setup.service.ts`
 - `src/controllers/trade-plan.controller.ts`
 - `src/controllers/score-check.controller.ts`
+- `src/controllers/trade-setup.controller.ts`
 - `src/routes/trade-plan.routes.ts`
 - `src/routes/score-check.routes.ts`
+- `src/routes/trade-setup.routes.ts`
 
 Implemented behavior:
 
@@ -865,11 +870,12 @@ Implemented behavior:
 - ScoreCheck validates LONG/SHORT geometry and stores risk/reward/RR math.
 - Baseline scoring maps reward/risk bands to score-level permission.
 - TradeScoreSnapshot stores deterministic scoring output for replay/audit.
+- TradeSetup foundation exists for converting ScoreCheck into managed planned trade setup.
+- RiskGovernor foundation exists for final managed permission calculation.
+- RiskGovernor reads risk state but does not mutate it.
 
 Not implemented yet:
 
-- TradeSetup.
-- RiskGovernor.
 - ActiveTrade.
 - TradeEvent.
 - TradeResult.
@@ -880,7 +886,7 @@ Not implemented yet:
 
 Boundary:
 
-The Phase 1 foundation is additive. It does not change existing monitor, analyzer, WebSocket, auth, Binance, or Angel live-data behavior.
+The Phase 1/2/3/4 foundation is additive. It does not change existing monitor, analyzer, WebSocket, auth, Binance, or Angel live-data behavior.
 
 New lifecycle:
 
@@ -1072,6 +1078,44 @@ Rules:
 
 - TradeSetup is not the same as ActiveTrade.
 - TradeSetup values are planned values and must be preserved for review.
+- TradeSetup requires an `ACTIVE` TradePlan.
+- TradeSetup may be created from one ScoreCheck.
+- TradeSetup stores the referenced TradeScoreSnapshot.
+- TradeSetup stores RiskGovernor final managed decision.
+- TradeSetup cannot mutate risk state.
+- TradeSetup cannot start monitoring.
+- TradeSetup cannot place orders.
+- Current Phase 4 conversion rejects already-converted ScoreChecks.
+- Current Phase 4 conversion rejects expired ScoreChecks.
+- Current Phase 4 conversion requires TradePlan `marketType`, `tradeStyle`, and `instrumentType` to match ScoreCheck.
+- Current Phase 4 `APPROVED` means final permission is `TAKE_TRADE` or `TAKE_SMALL_RISK`.
+- Current Phase 4 `REJECTED` covers `WAIT`, `REJECT`, and `STOP_TRADING`.
+
+Current API:
+
+```txt
+POST /api/score-checks/:id/convert-to-trade-setup
+GET /api/trade-setups
+GET /api/trade-setups/:id
+POST /api/trade-setups/:id/cancel
+GET /api/trade-plans/:id/trade-setups
+```
+
+Current RiskGovernor baseline:
+
+```txt
+TradePlan not ACTIVE -> REJECT
+TradePlanRiskState STOP_TRADING -> STOP_TRADING
+UserDailyRiskState stopTradingTriggered -> STOP_TRADING
+Score permission REJECT -> REJECT
+planned RR < 1 -> REJECT
+MICRO_RISK or REDUCED_RISK -> cap TAKE_TRADE to TAKE_SMALL_RISK
+NORMAL_RISK + TAKE_TRADE -> TAKE_TRADE
+TAKE_SMALL_RISK -> TAKE_SMALL_RISK
+WAIT -> WAIT
+maxTrades reached -> REJECT
+consecutive loss limit reached -> STOP_TRADING
+```
 
 ### 7.5 TradeScoreSnapshot
 

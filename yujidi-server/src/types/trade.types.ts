@@ -44,6 +44,16 @@ export const CAPITAL_ADJUSTMENT_TYPES = [
 ] as const;
 export type CapitalAdjustmentType = (typeof CAPITAL_ADJUSTMENT_TYPES)[number];
 
+export const TRADE_SETUP_STATUSES = [
+  "DRAFT",
+  "APPROVED",
+  "REJECTED",
+  "EXPIRED",
+  "EXECUTED",
+  "CANCELLED",
+] as const;
+export type TradeSetupStatus = (typeof TRADE_SETUP_STATUSES)[number];
+
 export type CanonicalSymbolRef = {
   symbolId: string;
   symbol: string;
