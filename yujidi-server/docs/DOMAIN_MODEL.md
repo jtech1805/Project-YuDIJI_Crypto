@@ -849,12 +849,16 @@ Implemented foundation files:
 - `src/services/score-check.service.ts`
 - `src/services/risk-governor.service.ts`
 - `src/services/trade-setup.service.ts`
+- `src/models/active-trade.model.ts`
+- `src/services/active-trade.service.ts`
 - `src/controllers/trade-plan.controller.ts`
 - `src/controllers/score-check.controller.ts`
 - `src/controllers/trade-setup.controller.ts`
+- `src/controllers/active-trade.controller.ts`
 - `src/routes/trade-plan.routes.ts`
 - `src/routes/score-check.routes.ts`
 - `src/routes/trade-setup.routes.ts`
+- `src/routes/active-trade.routes.ts`
 
 Implemented behavior:
 
@@ -873,10 +877,14 @@ Implemented behavior:
 - TradeSetup foundation exists for converting ScoreCheck into managed planned trade setup.
 - RiskGovernor foundation exists for final managed permission calculation.
 - RiskGovernor reads risk state but does not mutate it.
+- ActiveTrade foundation exists for user-confirmed actual executions from approved TradeSetup records.
+- ActiveTrade stores actual/current values while preserving TradeSetup planned values.
+- Actual LONG/SHORT geometry, risk, reward, risk amount, RR, execution quality, and rule violations are deterministic.
+- Successful confirmation marks the TradeSetup `EXECUTED`.
+- ActiveTrade confirmation and cancellation are audited.
 
 Not implemented yet:
 
-- ActiveTrade.
 - TradeEvent.
 - TradeResult.
 - TradeJournal.
@@ -886,7 +894,7 @@ Not implemented yet:
 
 Boundary:
 
-The Phase 1/2/3/4 foundation is additive. It does not change existing monitor, analyzer, WebSocket, auth, Binance, or Angel live-data behavior.
+The Phase 1/2/3/4/5 foundation is additive. It does not change existing monitor, analyzer, WebSocket, auth, Binance, or Angel live-data behavior.
 
 New lifecycle:
 
@@ -1188,8 +1196,59 @@ Examples:
 Rules:
 
 - ActiveTrade stores actual/current values, separate from planned TradeSetup values.
-- ActiveTrade monitoring uses rules, not AI.
+- ActiveTrade is created only from a user-owned `APPROVED` TradeSetup.
+- Final permission must be `TAKE_TRADE` or `TAKE_SMALL_RISK`.
+- `WAIT`, `REJECT`, and `STOP_TRADING` cannot execute.
+- Expired score validity rejects confirmation.
+- Actual LONG geometry requires `initialStopLoss < actualEntry < actualTarget1`.
+- Actual SHORT geometry requires `actualTarget1 < actualEntry < initialStopLoss`.
+- Actual RR below `1` rejects confirmation.
+- Stop widening, degraded RR, and actual risk above planned risk are recorded without mutating planned values.
+- ActiveTrade starts with status `ACTIVE`.
+- `currentStopLoss` starts from the confirmed `initialStopLoss`.
+- `remainingQuantity` starts from the confirmed `actualQuantity`.
+- ActiveTrade can be cancelled only while status is `ACTIVE`.
+- ActiveTrade does not update TradePlanRiskState or UserDailyRiskState.
+- Later ActiveTrade monitoring must use deterministic rules, not AI.
 - Order placement is not part of MVP.
+
+Execution sources:
+
+```txt
+MANUAL_CONFIRMATION
+BROKER_SYNC_ASSISTED
+```
+
+Execution-quality vocabulary:
+
+```txt
+AS_PLANNED
+LATE_ENTRY
+EARLY_ENTRY
+DEGRADED_RR
+EXCEEDED_APPROVED_RISK
+STOPLOSS_CHANGED
+QUANTITY_CHANGED
+MANUAL_OVERRIDE
+```
+
+Current API:
+
+```txt
+POST /api/trade-setups/:id/confirm-actual-trade
+GET /api/active-trades
+GET /api/active-trades/:id
+POST /api/active-trades/:id/cancel
+GET /api/trade-plans/:id/active-trades
+```
+
+Current boundary:
+
+- No broker fill auto-linking.
+- No MonitoringRuleEngine or TradeEvent generation.
+- No TradeResult.
+- No risk-state projection.
+- No order placement, modification, or cancellation.
 
 ### 7.9 TradeEvent
 

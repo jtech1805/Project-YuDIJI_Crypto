@@ -110,8 +110,6 @@ const tradeScoreSnapshotSchema = new Schema(
 );
 
 tradeScoreSnapshotSchema.index({ userId: 1, createdAt: -1 });
-tradeScoreSnapshotSchema.index({ scoreCheckId: 1 });
-tradeScoreSnapshotSchema.index({ tradeSetupId: 1 });
 tradeScoreSnapshotSchema.index({ symbolId: 1, calculatedAt: -1 });
 
 export type TradeScoreSnapshot = InferSchemaType<typeof tradeScoreSnapshotSchema>;

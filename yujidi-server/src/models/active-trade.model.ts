@@ -7,11 +7,13 @@ import {
   MARKET_TYPES,
 } from "../types/market-data.types.js";
 import { RISK_MODES } from "../types/risk.types.js";
-import { SCORING_TEMPLATE_KEYS } from "../types/scoring.types.js";
 import {
+  ACTIVE_TRADE_STATUSES,
+  EXECUTION_QUALITIES,
+  EXECUTION_SOURCES,
   TRADE_DIRECTIONS,
   TRADE_PERMISSIONS,
-  TRADE_SETUP_STATUSES,
+  TRADE_RULE_VIOLATIONS,
 } from "../types/trade.types.js";
 
 const symbolSnapshotSchema = new Schema(
@@ -64,7 +66,7 @@ const symbolSnapshotSchema = new Schema(
   },
 );
 
-const tradeSetupSchema = new Schema(
+const activeTradeSchema = new Schema(
   {
     userId: {
       type: Schema.Types.ObjectId,
@@ -78,9 +80,15 @@ const tradeSetupSchema = new Schema(
       required: true,
       index: true,
     },
+    tradeSetupId: {
+      type: Schema.Types.ObjectId,
+      ref: "TradeSetup",
+      required: true,
+    },
     sourceScoreCheckId: {
       type: Schema.Types.ObjectId,
       ref: "ScoreCheck",
+      index: true,
     },
     symbolId: {
       type: Schema.Types.ObjectId,
@@ -140,90 +148,111 @@ const tradeSetupSchema = new Schema(
       required: true,
       min: 0,
     },
-    plannedRewardPerUnit: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
     plannedRewardRiskRatio: {
       type: Number,
       required: true,
       min: 0,
     },
-    scoringTemplateKey: {
-      type: String,
-      enum: SCORING_TEMPLATE_KEYS,
-      required: true,
-    },
-    scoringTemplateVersion: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    tradeScoreSnapshotId: {
-      type: Schema.Types.ObjectId,
-      ref: "TradeScoreSnapshot",
-      required: true,
-      index: true,
-    },
-    score: {
+    actualEntry: {
       type: Number,
       required: true,
       min: 0,
-      max: 100,
     },
-    scorePermission: {
+    actualQuantity: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    initialStopLoss: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    currentStopLoss: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    actualTarget1: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    actualTarget2: {
+      type: Number,
+      min: 0,
+    },
+    remainingQuantity: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    actualRiskPerUnit: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    actualRiskAmount: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    actualRewardPerUnit: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    actualRewardRiskRatio: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    executionSource: {
+      type: String,
+      enum: EXECUTION_SOURCES,
+      required: true,
+    },
+    executionQuality: {
+      type: [{
+        type: String,
+        enum: EXECUTION_QUALITIES,
+      }],
+      required: true,
+      default: ["AS_PLANNED"],
+    },
+    ruleViolations: {
+      type: [{
+        type: String,
+        enum: TRADE_RULE_VIOLATIONS,
+      }],
+      required: true,
+      default: [],
+    },
+    finalPermissionAtExecution: {
       type: String,
       enum: TRADE_PERMISSIONS,
       required: true,
     },
-    riskGovernorPermission: {
-      type: String,
-      enum: TRADE_PERMISSIONS,
-      required: true,
-    },
-    finalPermission: {
-      type: String,
-      enum: TRADE_PERMISSIONS,
-      required: true,
-      index: true,
-    },
-    riskModeAtDecision: {
+    riskModeAtExecution: {
       type: String,
       enum: RISK_MODES,
       required: true,
     },
-    reasonCodes: {
-      type: [String],
-      default: [],
-    },
-    warnings: {
-      type: [String],
-      default: [],
-    },
     status: {
       type: String,
-      enum: TRADE_SETUP_STATUSES,
+      enum: ACTIVE_TRADE_STATUSES,
       required: true,
+      default: "ACTIVE",
       index: true,
     },
-    scoreCalculatedAt: {
-      type: Date,
-    },
-    scoreValidUntil: {
-      type: Date,
-    },
-    riskEvaluatedAt: {
+    openedAt: {
       type: Date,
       required: true,
     },
-    expiresAt: {
-      type: Date,
-    },
-    executedAt: {
-      type: Date,
-    },
     cancelledAt: {
+      type: Date,
+    },
+    closedAt: {
       type: Date,
     },
   },
@@ -233,12 +262,12 @@ const tradeSetupSchema = new Schema(
   },
 );
 
-tradeSetupSchema.index({ userId: 1, createdAt: -1 });
-tradeSetupSchema.index({ userId: 1, tradePlanId: 1, createdAt: -1 });
-tradeSetupSchema.index({ userId: 1, status: 1, createdAt: -1 });
-tradeSetupSchema.index({ sourceScoreCheckId: 1 }, { unique: true, sparse: true });
-tradeSetupSchema.index({ symbolId: 1, createdAt: -1 });
+activeTradeSchema.index({ userId: 1, status: 1, createdAt: -1 });
+activeTradeSchema.index({ userId: 1, tradePlanId: 1, status: 1, createdAt: -1 });
+activeTradeSchema.index({ tradeSetupId: 1 }, { unique: true });
+activeTradeSchema.index({ symbolId: 1, status: 1, createdAt: -1 });
+activeTradeSchema.index({ userId: 1, openedAt: -1 });
 
-export type TradeSetup = InferSchemaType<typeof tradeSetupSchema>;
+export type ActiveTrade = InferSchemaType<typeof activeTradeSchema>;
 
-export const TradeSetupModel = model<TradeSetup>("TradeSetup", tradeSetupSchema);
+export const ActiveTradeModel = model<ActiveTrade>("ActiveTrade", activeTradeSchema);

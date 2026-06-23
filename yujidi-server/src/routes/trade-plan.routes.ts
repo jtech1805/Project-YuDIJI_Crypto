@@ -13,6 +13,7 @@ import {
   updateTradePlan,
 } from "../controllers/trade-plan.controller.js";
 import { listTradeSetupsForPlan } from "../controllers/trade-setup.controller.js";
+import { listActiveTradesForPlan } from "../controllers/active-trade.controller.js";
 import { asyncHandler } from "../middlewares/errorHandler.js";
 import { requireAuth } from "../middlewares/requireAuth.js";
 
@@ -24,6 +25,7 @@ tradePlanRouter.post("/", asyncHandler(createTradePlan));
 tradePlanRouter.get("/", asyncHandler(listTradePlans));
 tradePlanRouter.get("/:id", asyncHandler(getTradePlan));
 tradePlanRouter.get("/:id/trade-setups", asyncHandler(listTradeSetupsForPlan));
+tradePlanRouter.get("/:id/active-trades", asyncHandler(listActiveTradesForPlan));
 tradePlanRouter.patch("/:id", asyncHandler(updateTradePlan));
 tradePlanRouter.post("/:id/activate", asyncHandler(activateTradePlan));
 tradePlanRouter.post("/:id/pause", asyncHandler(pauseTradePlan));

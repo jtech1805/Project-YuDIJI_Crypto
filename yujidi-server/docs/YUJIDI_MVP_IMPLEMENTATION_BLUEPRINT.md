@@ -2,7 +2,7 @@
 
 This document is the implementation blueprint for adding YuJiDi's risk-first trade lifecycle.
 
-It is intentionally documentation-only. It does not mean the modules described here already exist in code.
+It began as a documentation-only blueprint. Each phase is marked as implemented only after the corresponding code and tests exist.
 
 ## 0. Implementation Status
 
@@ -33,14 +33,20 @@ Implemented:
 - RiskGovernor foundation with deterministic final managed permission.
 - ScoreCheck-to-TradeSetup conversion with active TradePlan validation.
 - Audit logging for ScoreCheck conversion, TradeSetup creation, cancellation, and RiskGovernor evaluation.
+- `ActiveTrade` Mongoose model.
+- ActiveTrade service/controller/routes for actual-trade confirmation, list, read, plan-scoped list, and cancellation.
+- Direction-aware actual LONG/SHORT geometry and risk/reward/RR calculation.
+- Planned-versus-actual execution quality and rule-violation detection.
+- TradeSetup transition to `EXECUTED` after successful ActiveTrade creation.
+- Audit logging for actual confirmation, ActiveTrade creation/cancellation, and TradeSetup execution.
 - Unit tests for audit sanitization and symbol resolution.
 - Unit tests for TradePlan lifecycle and risk-state initialization.
 - Unit tests for ScoreCheck geometry, RR calculation, score bands, snapshots, and audit calls.
 - Unit tests for TradeSetup conversion and RiskGovernor behavior.
+- Unit tests for ActiveTrade confirmation, geometry, execution quality, setup execution, audit calls, and cancellation.
 
 Not implemented yet:
 
-- ActiveTrade.
 - TradeResult.
 - TradeJournal.
 - MonitoringRuleEngine.
@@ -50,7 +56,7 @@ Not implemented yet:
 
 Boundary:
 
-The implemented Phase 1/2/3/4 foundation does not alter existing analyzer, WebSocket, monitor, auth, Angel login, or Binance behavior.
+The implemented Phase 1/2/3/4/5 foundation does not alter existing analyzer, WebSocket, monitor, auth, Angel login, or Binance behavior.
 
 ## 1. Current System Summary
 
@@ -193,10 +199,14 @@ Owns actual/current trade state.
 
 Responsibilities:
 
-- activate approved TradeSetup
+- confirm actual execution from an approved TradeSetup
 - store actual entry/quantity/current stop/current state
 - keep planned values separate from actual/current values
+- calculate actual risk, risk amount, reward, and RR
+- detect execution quality and rule violations
 - expose active trade status
+
+Current Phase 5 does not place orders, consume broker fills, start monitoring, or mutate risk state.
 
 ### MonitoringRule Module
 
@@ -425,8 +435,8 @@ Current status:
 
 ```txt
 Implemented as Phase 1 foundation.
-TradePlan, ScoreCheck, TradeSetup, and RiskGovernor are implemented in later phases.
-ActiveTrade, TradeResult, Journal, AI review, and order flows are still pending.
+TradePlan, ScoreCheck, TradeSetup, RiskGovernor, and ActiveTrade are implemented in later phases.
+TradeResult, Journal, AI review, and order flows are still pending.
 ```
 
 ### Phase 2: TradePlan And Risk State Foundation
@@ -485,7 +495,8 @@ ScoreCheck can be converted into TradeSetup only under an ACTIVE matching TradeP
 TradeSetup stores planned values only.
 RiskGovernor reads TradePlan, TradePlanRiskState, optional UserDailyRiskState, score permission, and planned RR to produce final managed permission.
 RiskGovernor does not mutate risk state.
-ActiveTrade, monitoring, order placement, and result projection are still pending.
+ActiveTrade confirmation is implemented in Phase 5.
+Monitoring, order placement, and result projection are still pending.
 ```
 
 Implemented API:
@@ -498,12 +509,37 @@ POST /api/trade-setups/:id/cancel
 GET /api/trade-plans/:id/trade-setups
 ```
 
-### Phase 5: ActiveTrade And Monitoring Rules
+### Phase 5: ActiveTrade Foundation
 
-- Implement ActiveTrade activation.
-- Add MonitoringRuleService interfaces and registry.
-- Add market-specific monitoring templates.
-- Consume normalized market data without rewriting AnalyzerEngine.
+- Implement actual-trade confirmation from approved TradeSetup.
+- Preserve TradeSetup planned values.
+- Store actual/current values in ActiveTrade.
+- Validate actual LONG/SHORT geometry.
+- Calculate actual risk, reward, risk amount, and RR.
+- Detect execution quality and rule violations.
+- Mark TradeSetup as `EXECUTED`.
+- Add audit events and service-level tests.
+
+Current status:
+
+```txt
+Implemented.
+Only APPROVED TradeSetup records with TAKE_TRADE or TAKE_SMALL_RISK can execute.
+Expired scores, invalid geometry, actual RR below 1, and repeated execution are rejected.
+ActiveTrade starts as ACTIVE and can be manually cancelled only while ACTIVE.
+Risk state is not mutated.
+MonitoringRuleEngine, broker fill linking, TradeResult, and order placement are not implemented.
+```
+
+Implemented API:
+
+```txt
+POST /api/trade-setups/:id/confirm-actual-trade
+GET /api/active-trades
+GET /api/active-trades/:id
+POST /api/active-trades/:id/cancel
+GET /api/trade-plans/:id/active-trades
+```
 
 ### Phase 6: TradeResult, Risk Projection, Journal
 
@@ -600,9 +636,9 @@ POST /api/trade-plans/:id/capital-adjustments
 Next recommended coding task:
 
 ```txt
-Phase 5:
-  add ActiveTrade activation from approved TradeSetup
-  store actual/current trade values separately from planned values
-  add lifecycle status transitions without order placement
-  keep broker fills, MonitoringRuleEngine, TradeResult, and Journal out until later phases
+Phase 6:
+  add deterministic MonitoringRuleEngine foundations around ActiveTrade
+  consume normalized market data without changing AnalyzerEngine
+  emit structured TradeEvents without order placement or risk-state projection
+  keep broker fills, TradeResult, Journal, and AI review out until their later phases
 ```

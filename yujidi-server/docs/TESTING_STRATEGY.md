@@ -626,7 +626,26 @@ Current Phase 4 foundation tests:
 - TradeSetup cancellation works if not executed.
 - TradeSetup cancellation rejects if already executed.
 
-These tests cover the Phase 1/2/3/4 foundation only. They do not yet prove ActiveTrade, TradeResult, Journal, AI review, or order-flow behavior because those modules are intentionally not implemented yet.
+Current Phase 5 foundation tests:
+
+- Non-`APPROVED` TradeSetup confirmation rejects.
+- `WAIT`, `REJECT`, and `STOP_TRADING` final permissions reject.
+- Already-executed TradeSetup rejects.
+- Expired score validity rejects.
+- Another user's TradeSetup cannot be confirmed.
+- Valid LONG and SHORT confirmations create ActiveTrade.
+- Invalid LONG and SHORT actual geometry rejects.
+- LONG and SHORT actual risk/reward/RR math is verified.
+- Actual RR below `1` rejects.
+- LONG and SHORT stoploss widening is detected.
+- Actual risk above planned risk is detected.
+- Successful confirmation marks TradeSetup `EXECUTED`.
+- Symbol snapshot is copied while planned values remain unchanged.
+- AuditLogService receives actual-confirmation, ActiveTrade-creation, and TradeSetup-execution events.
+- ACTIVE trade cancellation succeeds.
+- CLOSED trade cancellation rejects.
+
+These tests cover the Phase 1/2/3/4/5 foundation. They do not yet prove MonitoringRuleEngine, TradeEvent, TradeResult, risk projection, Journal, AI review, broker-fill linking, or order-flow behavior because those modules are intentionally not implemented yet.
 
 ### Geometry And Direction Tests
 
@@ -682,11 +701,21 @@ Currently covered:
 - TradeSetup stores planned entry, stop, target, size, and invalidation
 - planned values are not overwritten by actual values
 - activation requires RiskGovernor permission
+- ActiveTrade stores actual entry, actual quantity, current stop, and current state
+- actual execution geometry is direction-aware
+- actual risk, reward, risk amount, and RR are calculated deterministically
+- actual RR below the minimum is rejected
+- stoploss widening and excess actual risk are recorded
+- TradeSetup is marked `EXECUTED` after successful ActiveTrade creation
+- ActiveTrade cancellation is limited to `ACTIVE` status
+- order placement remains disabled
 
 Must cover in later phases:
 
-- ActiveTrade stores actual entry, actual quantity, current stop, and current state
-- order placement remains disabled
+- broker-sync-assisted fill reconciliation
+- partial exits and remaining quantity changes
+- monitoring-driven status transitions
+- TradeResult finalization and risk-state projection
 
 ### TradeResult And Risk Projection Tests
 
