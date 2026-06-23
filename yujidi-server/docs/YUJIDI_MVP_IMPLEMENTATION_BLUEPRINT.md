@@ -15,11 +15,18 @@ Implemented:
 - `AuditLogService` with sanitize-before-persist behavior.
 - `AuditSanitizerService` for redacting secrets and provider tokens from audit payloads.
 - `SymbolResolverService` for resolving provider/exchange/instrument data back to canonical `Symbol` records.
+- `TradePlan` Mongoose model.
+- `CapitalAdjustmentEvent` Mongoose model.
+- `TradePlanRiskState` Mongoose model.
+- `UserDailyRiskState` Mongoose model.
+- TradePlan service/controller/routes for create, list, read, draft update, lifecycle transitions, and capital adjustments.
+- Idempotent `TradePlanRiskState` initialization on TradePlan activation.
+- Audit logging for TradePlan lifecycle and capital mutations.
 - Unit tests for audit sanitization and symbol resolution.
+- Unit tests for TradePlan lifecycle and risk-state initialization.
 
 Not implemented yet:
 
-- TradePlan CRUD.
 - ScoreCheck.
 - TradeSetup.
 - RiskGovernor.
@@ -33,7 +40,7 @@ Not implemented yet:
 
 Boundary:
 
-The implemented Phase 1 foundation does not alter existing analyzer, WebSocket, monitor, auth, Angel login, or Binance behavior.
+The implemented Phase 1/2 foundation does not alter existing analyzer, WebSocket, monitor, auth, Angel login, or Binance behavior.
 
 ## 1. Current System Summary
 
@@ -418,6 +425,15 @@ TradePlan, ScoreCheck, TradeSetup, RiskGovernor, ActiveTrade, TradeResult, Journ
 - Add CapitalAdjustmentEvent.
 - Add audit logging for plan/risk changes.
 
+Current status:
+
+```txt
+Implemented.
+TradePlan can be created, listed, read, updated while DRAFT, activated, paused, stopped, completed, archived, and capital-adjusted.
+Activation initializes TradePlanRiskState idempotently.
+ScoreCheck and downstream trade lifecycle modules are still pending.
+```
+
 ### Phase 3: ScoreCheck Foundation
 
 - Implement standalone ScoreCheck.
@@ -518,12 +534,27 @@ Phase 1A:
 
 This creates the persistence, vocabulary, audit, and canonical symbol-resolution foundation without touching market data, analyzer, WebSocket, AI, or broker behavior.
 
+Implemented Phase 2 API:
+
+```txt
+POST /api/trade-plans
+GET /api/trade-plans
+GET /api/trade-plans/:id
+PATCH /api/trade-plans/:id
+POST /api/trade-plans/:id/activate
+POST /api/trade-plans/:id/pause
+POST /api/trade-plans/:id/stop
+POST /api/trade-plans/:id/complete
+POST /api/trade-plans/:id/archive
+POST /api/trade-plans/:id/capital-adjustments
+```
+
 Next recommended coding task:
 
 ```txt
-Phase 2:
-  add TradePlan model/service/controller/routes
-  add TradePlanRiskState and UserDailyRiskState initialization
-  add CapitalAdjustmentEvent if needed for risk base changes
-  wire AuditLogService into plan/risk mutations
+Phase 3:
+  add standalone ScoreCheck model/service/controller/routes
+  add scoring strategy interfaces
+  add score snapshot persistence
+  keep RiskGovernor and TradeSetup out until later phases
 ```

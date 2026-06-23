@@ -834,9 +834,16 @@ Implemented foundation files:
 - `src/types/monitoring.types.ts`
 - `src/types/audit.types.ts`
 - `src/models/audit-log.model.ts`
+- `src/models/trade-plan.model.ts`
+- `src/models/capital-adjustment-event.model.ts`
+- `src/models/trade-plan-risk-state.model.ts`
+- `src/models/user-daily-risk-state.model.ts`
 - `src/services/audit-sanitizer.service.ts`
 - `src/services/audit-log.service.ts`
 - `src/services/symbol-resolver.service.ts`
+- `src/services/trade-plan.service.ts`
+- `src/controllers/trade-plan.controller.ts`
+- `src/routes/trade-plan.routes.ts`
 
 Implemented behavior:
 
@@ -844,10 +851,12 @@ Implemented behavior:
 - `AuditLog` exists as the append-oriented persistence foundation for future critical trade/risk/provider/symbol/AI/RAG events.
 - Audit payloads are sanitized before persistence.
 - Canonical symbol resolution exists for provider/exchange/instrument data.
+- TradePlan lifecycle foundation exists for DRAFT creation, DRAFT-only updates, activation, pause, stop, complete, archive, and capital adjustment.
+- TradePlan activation initializes `TradePlanRiskState` idempotently.
+- UserDailyRiskState persistence model exists, but daily projection behavior is still future work.
 
 Not implemented yet:
 
-- TradePlan.
 - ScoreCheck.
 - TradeSetup.
 - RiskGovernor.
@@ -909,16 +918,22 @@ A user-owned risk plan that defines the allowed trade lifecycle scope.
 
 Key fields:
 
-- `user`
+- `userId`
 - `name`
+- `description`
 - `marketType`
-- `strategyTemplate`
-- `capitalBase`
-- `maxDailyLoss`
-- `maxTradeRisk`
-- `maxOpenTrades`
-- `allowedSymbols`
+- `tradeStyle`
+- `instrumentType`
+- `planMode`
 - `status`
+- `startingCapital`
+- `currentCapital`
+- `currency`
+- `maxRiskPerTradePercent`
+- `maxDailyLossPercent`
+- `maxConsecutiveLosses`
+- `maxTrades`
+- template keys and versions for scoring, risk, and monitoring
 - `createdAt`
 - `updatedAt`
 
@@ -927,6 +942,30 @@ Rules:
 - Managed trades require a TradePlan.
 - TradePlan is dynamic and not fixed to a hardcoded number of trades.
 - TradePlan should store risk template references and snapshots used for scoring/risk decisions.
+- TradePlan starts in `DRAFT`.
+- Only `DRAFT` TradePlans can be activated.
+- Only `DRAFT` TradePlans can be updated in the current MVP foundation.
+- Core risk fields are locked after activation.
+- `ACTIVE` TradePlans can be paused.
+- `ACTIVE` or `PAUSED` TradePlans can be stopped or completed.
+- `DRAFT`, `STOPPED`, or `COMPLETED` TradePlans can be archived.
+- Multiple active plans are allowed only when their risk bucket does not conflict.
+- Risk bucket key is derived from `userId + marketType + tradeStyle + instrumentType`.
+
+Current API:
+
+```txt
+POST /api/trade-plans
+GET /api/trade-plans
+GET /api/trade-plans/:id
+PATCH /api/trade-plans/:id
+POST /api/trade-plans/:id/activate
+POST /api/trade-plans/:id/pause
+POST /api/trade-plans/:id/stop
+POST /api/trade-plans/:id/complete
+POST /api/trade-plans/:id/archive
+POST /api/trade-plans/:id/capital-adjustments
+```
 
 ### 7.2 CapitalAdjustmentEvent
 
@@ -939,6 +978,10 @@ Rules:
 - Must be user-scoped.
 - Must be auditable.
 - Should use idempotency keys for broker/import sync.
+- Current MVP capital adjustments create an event and update TradePlan `currentCapital`.
+- `DEPOSIT` and `TRANSFER_IN` increase capital.
+- `WITHDRAWAL` and `TRANSFER_OUT` decrease capital.
+- `MANUAL_CORRECTION` applies the signed adjustment amount.
 
 ### 7.3 ScoreCheck
 
@@ -1005,6 +1048,10 @@ Rules:
 
 - Updated by RiskStateProjectionService from TradeResult and risk events.
 - Must prefer net P&L when available.
+- Current Phase 2 behavior initializes this state on TradePlan activation.
+- Initialization is idempotent using unique `{ userId, tradePlanId }`.
+- Initial risk mode is `NORMAL_RISK`.
+- Initial counters and P&L values are zero.
 
 ### 7.7 UserDailyRiskState
 
@@ -1017,6 +1064,8 @@ Rules:
 - Can place user into STOP_TRADING.
 - Must be idempotently projected.
 - Must not be updated by AI or journal code.
+- Current Phase 2 behavior adds the persistence model and unique `{ userId, riskBucketKey, dateKey }` index.
+- Daily projection updates are still future work.
 
 ### 7.8 ActiveTrade
 

@@ -41,6 +41,7 @@ Current automated tests:
 - `src/services/analyzer.service.test.ts`
 - `src/services/audit-sanitizer.service.test.ts`
 - `src/services/symbol-resolver.service.test.ts`
+- `src/services/trade-plan.service.test.ts`
 - `src/integrations/market-data/angel/angel-symbol.mapper.test.ts`
 - `src/integrations/market-data/angel/angel-symbol-sync.service.test.ts`
 - `src/integrations/market-data/angel/angel-tick.normalizer.test.ts`
@@ -565,7 +566,25 @@ Current Phase 1 foundation tests:
 - SymbolResolverService blocks ambiguous provider-symbol mappings.
 - SymbolResolverService detects requested instrument-type mismatch.
 
-These tests cover the foundation only. They do not yet prove TradePlan, ScoreCheck, TradeSetup, RiskGovernor, ActiveTrade, TradeResult, Journal, AI review, or order-flow behavior because those modules are intentionally not implemented yet.
+Current Phase 2 foundation tests:
+
+- TradePlanService creates TradePlans in `DRAFT`.
+- Invalid starting capital is rejected.
+- `FIXED_TRADE_COUNT` plans require `maxTrades`.
+- `DATE_RANGE` plans require a valid `endDate`.
+- `DRAFT` plans can be activated.
+- Activation initializes `TradePlanRiskState`.
+- Activation is rejected from non-`DRAFT` statuses.
+- Core fields cannot be updated after activation because updates are currently DRAFT-only.
+- Active plans can be paused.
+- Active or paused plans can be stopped.
+- Active or paused plans can be completed.
+- Draft, stopped, or completed plans can be archived.
+- Capital adjustments create event records and update current capital.
+- AuditLogService is called for lifecycle changes.
+- Risk bucket key generation is deterministic.
+
+These tests cover the Phase 1/2 foundation only. They do not yet prove ScoreCheck, TradeSetup, RiskGovernor, ActiveTrade, TradeResult, Journal, AI review, or order-flow behavior because those modules are intentionally not implemented yet.
 
 ### Geometry And Direction Tests
 
