@@ -18,6 +18,7 @@ Related detailed docs:
 - `../docs/ANGEL_PHASE_4_TO_10_DESIGN.md`: Legacy design note for the foundation now treated as Angel Phase 1.
 - `../docs/TESTING_STRATEGY.md`: testing strategy.
 - `../docs/RISK_REGISTER.md`: risk register.
+- `../docs/YUJIDI_MVP_IMPLEMENTATION_BLUEPRINT.md`: future risk-first trade lifecycle implementation blueprint.
 - `BACKEND_ARCHITECTURE.md`: backend architecture reference.
 
 ## 0. Current Implementation Truth vs Future Direction
@@ -2407,6 +2408,141 @@ docs/DOMAIN_MODEL.md
 docs/ANALYZER_ENGINE.md
 docs/TESTING_STRATEGY.md
 docs/RISK_REGISTER.md
+docs/YUJIDI_MVP_IMPLEMENTATION_BLUEPRINT.md
 ```
+
+## Trade/Risk MVP Lifecycle Baseline
+
+This section defines the accepted future direction for the risk-first trade lifecycle. It is a blueprint and ADR baseline, not implemented runtime code yet.
+
+Current YuJiDi flow remains operational:
+
+```txt
+User creates Monitor/Tripwire
+  -> backend watches live market data
+  -> Analyzer detects drop/spike threshold breach
+  -> AI explains event
+  -> user receives real-time alert/report
+```
+
+The new MVP trade/risk lifecycle will be added beside the existing monitor system:
+
+```txt
+TradePlan
+  -> ScoreCheck
+  -> TradeSetup
+  -> RiskGovernor
+  -> ActiveTrade
+  -> TradeEvent
+  -> TradeResult
+  -> RiskState update
+  -> Structured Journal
+  -> AI Review
+```
+
+Product positioning:
+
+- YuJiDi is risk-first trade management, not a signal-selling app.
+- AI is an explanation and coaching layer only.
+- Deterministic services decide scoring, permission, risk, monitoring events, and risk-state updates.
+- Order placement, modification, and cancellation are deferred in MVP.
+- Existing `Symbol` records are the canonical symbol identity.
+- Broker credentials and provider session tokens must never enter trade-domain models.
+
+Permission vocabulary:
+
+```txt
+TAKE_TRADE
+TAKE_SMALL_RISK
+WAIT
+REJECT
+STOP_TRADING
+```
+
+Do not use `BUY`, `SELL`, `STRONG_BUY`, or `STRONG_SELL` as final product permission language.
+
+### Accepted ADRs
+
+- ADR-001: Risk-first trade management, not signal generator.
+- ADR-002: Separate scoring models for intraday, swing, and crypto.
+- ADR-003: Direction-aware scoring and monitoring.
+- ADR-004: Providers give raw data; YuJiDi owns scoring logic.
+- ADR-005: Platform scoring data and user-authorized live monitoring are separate.
+- ADR-006: Global and symbol snapshots are precomputed.
+- ADR-007: Hybrid sync + async scoring flow.
+- ADR-008: Provider Capability Layer.
+- ADR-009: TradePlan is dynamic, not fixed to 10 trades.
+- ADR-010: Template-driven scoring, risk, and monitoring.
+- ADR-011: Standalone ScoreCheck allowed; managed trade requires TradePlan.
+- ADR-012: Planned trade and actual trade must be stored separately.
+- ADR-013: Risk Governor has final authority.
+- ADR-014: Active trade monitoring uses rule engine, not AI.
+- ADR-015: MonitoringRuleService is shared and template-driven.
+- ADR-016: Market-specific monitoring templates for India equity, crypto spot, and crypto perpetual.
+- ADR-017: AI is explanation and coaching layer only.
+- ADR-018: Single AI Orchestrator for V1.
+- ADR-019: RAG stores verified knowledge, not raw market ticks.
+- ADR-020: Trade Journal is structured first, AI-summarized second.
+- ADR-021: TradeResult updates RiskState and Journal, not the other way around.
+- ADR-022: Capital, P&L, and risk calculations use net values where available.
+- ADR-023: Broker/exchange sync is adapter-based and never leaks raw payloads into domain.
+- ADR-024: Provider account security.
+- ADR-025: Order placement deferred.
+- ADR-026: Existing Symbol Master is canonical symbol identity.
+- ADR-027: Audit Log.
+- ADR-028: MVP Scope Freeze.
+
+### MVP Included Scope
+
+- TradePlan creation and management.
+- Standalone ScoreCheck.
+- Managed ScoreCheck conversion into TradeSetup.
+- TradeSetup planned trade values.
+- RiskGovernor final permission.
+- ActiveTrade actual/current trade values.
+- Rule-engine-driven ActiveTrade monitoring.
+- TradeEvent capture.
+- TradeResult closeout/projection.
+- UserDailyRiskState and TradePlanRiskState updates.
+- Structured TradeJournal.
+- AI explanations and post-trade review summaries.
+- AuditLog for critical trade/risk/provider/symbol/AI/RAG events.
+- Provider Capability Layer for broker/live-data capability checks.
+
+### MVP Excluded Scope
+
+- Order placement.
+- Order modification.
+- Order cancellation.
+- AI-generated final permission.
+- AI mutation of trade, risk, journal, or audit records.
+- Raw tick/candle/order-book storage in RAG.
+- Provider credentials/tokens in trade-domain models.
+- Replacing the existing monitor/analyzer/WebSocket flow.
+- Rewriting existing Binance or Angel live-data integrations.
+
+### Relationship To Existing Monitor/Alert Flow
+
+Existing monitors remain market-condition alerts:
+
+```txt
+Monitor/Tripwire
+  -> AnalyzerEngine
+  -> Alert
+  -> AI explanation
+```
+
+New trade/risk flow will manage an intended or active trade:
+
+```txt
+TradePlan
+  -> ScoreCheck
+  -> RiskGovernor
+  -> ActiveTrade
+  -> MonitoringRuleEngine
+  -> TradeEvent/TradeResult/RiskState/Journal
+```
+
+The AnalyzerEngine should not become the trade lifecycle engine. Future ActiveTrade monitoring should use a separate `MonitoringRuleEngine` that can reuse market data but remains domain-separate from market alert tripwires.
 
 End of master context.

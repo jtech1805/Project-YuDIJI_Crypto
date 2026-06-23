@@ -85,6 +85,17 @@ Highest-priority current risks:
 | R-063 | Stale frontend symbol search responses override newer searches | Medium | Medium | Mitigating |
 | R-064 | Symbol search ranking returns option contracts before intended futures/spot matches | Medium | Medium | Mitigating |
 | R-065 | High symbol search request volume overloads backend | Medium | Medium | Mitigating |
+| R-066 | AI overrides deterministic trade/risk decisions | Critical | Medium | Open |
+| R-067 | Accidental order placement in MVP | Critical | Low | Open |
+| R-068 | Broker token leakage into trade domain or logs | Critical | Medium | Open |
+| R-069 | Raw provider payload leakage into domain, AI, RAG, or audit records | High | Medium | Open |
+| R-070 | Wrong symbol mapping in trade lifecycle | Critical | Medium | Open |
+| R-071 | Duplicate broker sync creates duplicate trade/risk events | High | Medium | Open |
+| R-072 | Duplicate risk projection corrupts RiskState | Critical | Medium | Open |
+| R-073 | Gross/net P&L mismatch corrupts risk calculations | High | Medium | Open |
+| R-074 | Stale monitoring feed drives wrong ActiveTrade event | High | Medium | Open |
+| R-075 | Audit gaps hide critical trade/risk/provider decisions | High | Medium | Open |
+| R-076 | RAG contamination with raw market data or secrets | High | Medium | Open |
 | R-033 | Angel Scrip Master URL availability failure | Medium | Medium | Mitigating |
 | R-034 | Huge Angel symbol sync load | Medium | Medium | Mitigating |
 | R-035 | Reference sync confused with market-data permission | High | Medium | Mitigating |
@@ -1526,6 +1537,252 @@ Mitigation:
 - Frontend search is debounced.
 - Backend search uses a short LRU cache.
 - `/api/symbols/search` has route-level rate limiting.
+
+### R-066: AI Overrides Deterministic Trade/Risk Decisions
+
+Severity: Critical
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+The future trade lifecycle uses AI for explanation and coaching only. If AI output is allowed to decide permission, override RiskGovernor, mutate ActiveTrade, or update RiskState, YuJiDi would violate its risk-first architecture.
+
+Impact:
+
+Users may take trades based on non-deterministic AI decisions, and risk controls could become unreliable.
+
+Mitigation:
+
+- RiskGovernor has final authority.
+- AI output must be schema-validated.
+- AI services must return explanation fields only.
+- Tests must prove AI cannot mutate trade/risk state.
+
+### R-067: Accidental Order Placement In MVP
+
+Severity: Critical
+
+Likelihood: Low
+
+Status: Open
+
+Description:
+
+Broker login and live data are allowed, but order placement, modification, and cancellation are deferred in MVP.
+
+Impact:
+
+Accidental live orders would create severe financial and trust risk.
+
+Mitigation:
+
+- Do not add order placement routes/services in MVP.
+- Provider adapters must expose read-only capabilities unless explicitly approved later.
+- Tests must verify order placement is disabled.
+
+### R-068: Broker Token Leakage Into Trade Domain Or Logs
+
+Severity: Critical
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Broker credentials/session tokens could leak if copied from BrokerConnection into trade-domain models, audit logs, AI prompts, or debug logs.
+
+Impact:
+
+User account compromise and regulatory/security exposure.
+
+Mitigation:
+
+- BrokerConnection remains the provider security boundary.
+- Trade-domain models store no provider credentials/tokens.
+- Audit and logs must sanitize provider auth fields.
+- Tests must assert secrets do not appear in API responses or persisted trade records.
+
+### R-069: Raw Provider Payload Leakage Into Domain, AI, RAG, Or Audit Records
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Raw broker/exchange payloads can be large, unstable, provider-specific, and may include sensitive fields.
+
+Impact:
+
+Domain logic becomes coupled to providers, storage grows unnecessarily, and sensitive/provider-specific fields may leak into AI/RAG.
+
+Mitigation:
+
+- Provider adapters normalize payloads.
+- Store references to heavy/raw data when needed.
+- RAG stores verified summaries only.
+- Audit entries must be sanitized.
+
+### R-070: Wrong Symbol Mapping In Trade Lifecycle
+
+Severity: Critical
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Trade lifecycle must reference canonical `Symbol` identity. Using provider token or display text as domain identity can map trades to the wrong instrument.
+
+Impact:
+
+Risk checks, monitoring, P&L, and journal records could apply to the wrong symbol.
+
+Mitigation:
+
+- Use `symbolId` as canonical identity.
+- Provider token is mapping only.
+- Store symbol snapshots for audit.
+- Add symbol resolver guard tests.
+
+### R-071: Duplicate Broker Sync Creates Duplicate Trade/Risk Events
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Broker sync jobs or listeners may retry and emit the same trade event more than once.
+
+Impact:
+
+Duplicate TradeEvents, TradeResults, journal entries, or risk projections.
+
+Mitigation:
+
+- Use idempotency keys.
+- Unique indexes on user/provider/event identity.
+- Retry-safe worker design.
+
+### R-072: Duplicate Risk Projection Corrupts RiskState
+
+Severity: Critical
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+TradeResult projection may run multiple times due to retries or duplicate events.
+
+Impact:
+
+Daily loss, remaining risk, and STOP_TRADING state can become wrong.
+
+Mitigation:
+
+- RiskStateProjectionService must be idempotent.
+- Store projection idempotency keys.
+- Tests must run duplicate projection and assert unchanged final state.
+
+### R-073: Gross/Net P&L Mismatch Corrupts Risk Calculations
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Risk calculations must prefer net P&L where available. Using gross P&L can overstate performance and understate loss after fees/slippage.
+
+Impact:
+
+RiskGovernor and RiskState may allow trades after limits should have stopped the user.
+
+Mitigation:
+
+- ADR-022 requires net values where available.
+- TradeResult must store gross/net distinction.
+- Projection tests must cover fee/slippage cases.
+
+### R-074: Stale Monitoring Feed Drives Wrong ActiveTrade Event
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+ActiveTrade monitoring depends on live/authorized market data. Stale ticks or missing broker authorization can produce wrong lifecycle events.
+
+Impact:
+
+Incorrect stop/target/invalidation events and misleading journal/risk updates.
+
+Mitigation:
+
+- Track feed freshness.
+- Require user-authorized broker/live data where market requires it.
+- MonitoringRuleEngine should reject stale feed input.
+
+### R-075: Audit Gaps Hide Critical Trade/Risk/Provider Decisions
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Critical decisions without audit records are hard to review or debug.
+
+Impact:
+
+Loss of trust, poor incident response, and weak compliance posture.
+
+Mitigation:
+
+- AuditLog is mandatory for critical risk/trade/provider/symbol/AI/RAG events.
+- AuditLogService should be called from decision boundaries.
+- Tests should assert audit entries are created and sanitized.
+
+### R-076: RAG Contamination With Raw Market Data Or Secrets
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+RAG should store verified knowledge/summaries only. Raw ticks, candles, order book snapshots, provider payloads, or secrets can contaminate AI context.
+
+Impact:
+
+Large storage growth, privacy/security leakage, and lower-quality AI context.
+
+Mitigation:
+
+- RAG ingestion restrictions.
+- Explicit validators for document type/source.
+- Tests reject raw market/provider payloads and secrets.
 
 ## 4. Review Cadence
 

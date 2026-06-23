@@ -969,3 +969,84 @@ This makes later debugging harder.
 Because analyzer state is local memory, multiple backend instances can produce inconsistent behavior.
 
 Scaling safely would require shared state or a separate ingestion/analyzer service.
+
+## 9. Future Trade Monitoring Boundary
+
+The existing AnalyzerEngine is a market-monitor alert engine. It detects threshold breaches for user-created Monitor/Tripwire records.
+
+Current responsibility:
+
+```txt
+Market data tick
+  -> AnalyzerEngine
+  -> drop/spike monitor evaluation
+  -> Alert
+  -> AI explanation
+```
+
+Future ActiveTrade monitoring is a separate lifecycle concern and should not be folded directly into `analyzer.service.ts`.
+
+Future responsibility:
+
+```txt
+Normalized market data
+  -> MonitoringRuleEngine
+  -> ActiveTrade rule evaluation
+  -> TradeEvent
+  -> TradeResult when closed
+  -> RiskState projection
+  -> Structured Journal
+  -> AI review/explanation
+```
+
+### 9.1 AnalyzerEngine vs MonitoringRuleEngine
+
+AnalyzerEngine:
+
+- evaluates market monitors/tripwires
+- works with `TripwireConfig`
+- creates `Alert`
+- uses drop/spike threshold logic
+- may use CVD/order-book/news context for alert explanation
+
+MonitoringRuleEngine:
+
+- evaluates ActiveTrade lifecycle rules
+- works with `TradeSetup`, `ActiveTrade`, and monitoring templates
+- creates `TradeEvent`
+- may trigger `TradeResult` closeout/projection workflows
+- must be template-driven and market-specific
+- must not use AI for final lifecycle decisions
+
+### 9.2 AI Boundary
+
+AI may explain both analyzer alerts and future trade lifecycle events.
+
+AI must not:
+
+- decide whether a monitor threshold breached
+- decide trade permission
+- override RiskGovernor
+- mutate ActiveTrade
+- mutate TradeResult
+- mutate RiskState
+- mutate Journal
+
+Deterministic services own decisions:
+
+- AnalyzerEngine owns market monitor threshold detection.
+- ScoringEngine owns ScoreCheck calculations.
+- RiskGovernor owns managed-trade permission.
+- MonitoringRuleEngine owns ActiveTrade lifecycle event detection.
+- RiskStateProjectionService owns risk-state updates.
+
+### 9.3 Shared Market Data
+
+The future MonitoringRuleEngine can consume the same normalized market data stream as the analyzer where practical.
+
+Rules:
+
+- Do not duplicate provider WebSocket connections only for trade monitoring if existing normalized streams can be reused safely.
+- Do not put provider credentials or raw provider tokens in trade-domain models.
+- Do not store raw ticks/candles/order book snapshots in RAG.
+- Keep AnalyzerEngine in-memory state untouched unless a future task explicitly changes analyzer architecture.

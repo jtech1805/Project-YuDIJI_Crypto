@@ -39,6 +39,8 @@ Current automated tests:
 
 - `src/services/analyzer.rules.test.ts`
 - `src/services/analyzer.service.test.ts`
+- `src/services/audit-sanitizer.service.test.ts`
+- `src/services/symbol-resolver.service.test.ts`
 - `src/integrations/market-data/angel/angel-symbol.mapper.test.ts`
 - `src/integrations/market-data/angel/angel-symbol-sync.service.test.ts`
 - `src/integrations/market-data/angel/angel-tick.normalizer.test.ts`
@@ -547,6 +549,105 @@ Current and future test coverage should include:
 - frontend debounce and request cancellation behavior
 
 Real provider APIs should not be called in symbol search tests. Tests should use fake repositories or local fixtures.
+
+## 10.2 Future Trade/Risk Lifecycle Tests
+
+The risk-first trade lifecycle must be tested before implementation is considered safe.
+
+Current Phase 1 foundation tests:
+
+- Audit sanitizer redacts sensitive root-level keys.
+- Audit sanitizer redacts nested sensitive keys.
+- Audit sanitizer handles arrays.
+- AuditLogService sanitizes metadata before persistence.
+- SymbolResolverService returns unresolved when no mapping exists.
+- SymbolResolverService resolves by provider/exchange/instrument token.
+- SymbolResolverService blocks ambiguous provider-symbol mappings.
+- SymbolResolverService detects requested instrument-type mismatch.
+
+These tests cover the foundation only. They do not yet prove TradePlan, ScoreCheck, TradeSetup, RiskGovernor, ActiveTrade, TradeResult, Journal, AI review, or order-flow behavior because those modules are intentionally not implemented yet.
+
+### Geometry And Direction Tests
+
+Must cover:
+
+- long setup where entry, stop, and target geometry is valid
+- long setup where stop is above entry and must be rejected
+- short setup where entry, stop, and target geometry is valid
+- short setup where stop is below entry and must be rejected
+- risk/reward calculation for long and short
+- planned values preserved in TradeSetup
+- actual/current values stored separately in ActiveTrade
+
+### RiskGovernor Tests
+
+Must cover:
+
+- final permission values: `TAKE_TRADE`, `TAKE_SMALL_RISK`, `WAIT`, `REJECT`, `STOP_TRADING`
+- RiskGovernor can downgrade scoring output
+- RiskGovernor can reject a high-scoring trade
+- RiskGovernor can force `STOP_TRADING`
+- AI cannot override RiskGovernor
+- daily loss limit breach
+- plan risk limit breach
+- max open trades breach
+- loss streak or cooldown rule
+
+### ScoreCheck Tests
+
+Must cover:
+
+- standalone ScoreCheck allowed without TradePlan
+- managed trade conversion requires TradePlan
+- direction-aware scoring
+- separate scoring templates for intraday, swing, crypto spot, and crypto perpetual
+- provider raw data does not decide score directly
+- score snapshot is stored for audit/replay
+
+### TradeSetup And ActiveTrade Tests
+
+Must cover:
+
+- TradeSetup stores planned entry, stop, target, size, and invalidation
+- ActiveTrade stores actual entry, actual quantity, current stop, and current state
+- planned values are not overwritten by actual values
+- activation requires RiskGovernor permission
+- order placement remains disabled
+
+### TradeResult And Risk Projection Tests
+
+Must cover:
+
+- TradeResult projection updates TradePlanRiskState
+- TradeResult projection updates UserDailyRiskState
+- duplicate projection is idempotent
+- net P&L is preferred over gross P&L where available
+- fees/slippage are handled in net calculations
+- Journal cannot update RiskState
+- AI cannot update RiskState
+
+### Symbol And Provider Guard Tests
+
+Must cover:
+
+- new trade lifecycle references canonical `Symbol` by `symbolId`
+- provider token is mapping only, not domain identity
+- wrong provider/exchange/token mapping is rejected
+- India equity live monitoring requires user-authorized broker/live data
+- provider credentials/tokens never appear in trade-domain records
+- raw provider payloads are not copied into domain docs
+
+### Audit, AI, And RAG Tests
+
+Must cover:
+
+- audit log created for critical TradePlan, ScoreCheck, RiskGovernor, ActiveTrade, TradeResult, provider, symbol, AI, and RAG events
+- audit entries are sanitized
+- provider credentials and session tokens are redacted
+- AI output schema validation
+- AI explanations cannot mutate trade/risk state
+- RAG ingestion rejects raw ticks, candles, order book, provider payloads, and secrets
+- RAG stores verified knowledge/summaries only
 
 ## 11. Suggested Test Script
 

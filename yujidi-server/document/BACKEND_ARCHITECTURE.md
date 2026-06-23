@@ -593,32 +593,30 @@ Optional or environment-dependent:
 
 These are not criticisms of the idea. They are simply implementation notes from the current code.
 
-1. Spike monitors are not fully implemented in the analyzer.
-   - The monitor schema supports `spike` and `drop`.
-   - The analyzer currently triggers only on downward movement.
-
-2. Engine state is in memory.
+1. Engine state is in memory.
    - This is simple and fast.
    - It does not survive restarts.
    - It does not automatically scale across multiple backend instances.
 
-3. Some route/controller user-id handling is inconsistent.
+2. Some route/controller user-id handling is inconsistent.
    - Most code uses `req.user.id`.
    - A few places use `req.user`, `req.userId`, or `sub`.
 
-4. Alert detail lookup may need correction.
+3. Alert detail lookup may need correction.
    - `getUserAlerts` uses `userId.id`.
    - `getAlertById` uses `user: userId`, which may not match the same shape.
 
-5. The `/engine` frontend page describes future architecture pieces that are not currently implemented.
+4. The `/engine` frontend page describes future architecture pieces that are not currently implemented.
    - Examples: Redis, Kafka, pgvector, LangChain, SSE, OAuth, encryption.
    - Current backend uses MongoDB, in-memory Maps, Binance WebSocket, CryptoCompare, and Groq.
 
-6. CORS and secure cookie settings need environment-specific care.
+5. CORS and secure cookie settings need environment-specific care.
    - Cookies are configured with `secure: true` and `sameSite: "none"` for auth attachment.
    - Local HTTP development may need matching browser/server setup.
 
-7. There is no automated test suite visible in the backend package scripts.
+6. Automated test coverage exists but is still incomplete.
+   - Analyzer, Angel, monitor, market subscription, broker connection, symbol search, and utility tests exist.
+   - Auth, alert route ownership, and broader API contract coverage still need expansion.
 
 ## 18. Suggested Next Architecture Improvements
 
@@ -646,3 +644,206 @@ Security improvements:
 - Avoid logging full LLM prompts if they may contain sensitive user data.
 - Add strict cookie config for local vs production environments.
 - Add API key permission restrictions at provider level.
+
+## 19. Future Trade/Risk Module Architecture
+
+This section describes the accepted blueprint for the new risk-first trade lifecycle. It is not implemented yet and must be added beside the existing monitor/analyzer system.
+
+Architecture style remains the existing Express structure:
+
+```txt
+routes
+  -> controllers
+  -> services
+  -> models / integrations
+```
+
+Do not introduce NestJS modules, decorators, repositories, or dependency injection containers for this work unless the project later adopts NestJS globally.
+
+### 19.1 Module Boundaries
+
+Future trade/risk modules should be separated by responsibility:
+
+- TradePlan module: manages user risk budget, plan scope, strategy template, allowed markets, daily/session constraints, and plan lifecycle.
+- ScoreCheck module: evaluates a proposed trade idea using deterministic scoring templates.
+- TradeSetup module: stores planned trade values before execution or active tracking.
+- RiskGovernor module: gives final deterministic permission for managed trades.
+- ActiveTrade module: stores actual/current trade values after trade activation.
+- MonitoringRule module: evaluates rule-based lifecycle events for active trades.
+- TradeResult module: projects closeout values and risk impact.
+- RiskState module: maintains user/day and plan-level risk state.
+- Journal module: stores structured journal facts first, then optional AI summaries.
+- AuditLog module: records critical state changes and sanitized decisions.
+- AI Orchestrator module: explains and reviews, but never decides or mutates domain state.
+- RAG module: stores verified knowledge/summaries only, not raw market ticks or provider payloads.
+
+### 19.2 Proposed File Layout
+
+Routes:
+
+```txt
+src/routes/trade-plan.routes.ts
+src/routes/score-check.routes.ts
+src/routes/trade-setup.routes.ts
+src/routes/active-trade.routes.ts
+src/routes/trade-result.routes.ts
+src/routes/journal.routes.ts
+src/routes/audit.routes.ts
+```
+
+Controllers:
+
+```txt
+src/controllers/trade-plan.controller.ts
+src/controllers/score-check.controller.ts
+src/controllers/trade-setup.controller.ts
+src/controllers/active-trade.controller.ts
+src/controllers/trade-result.controller.ts
+src/controllers/journal.controller.ts
+```
+
+Services:
+
+```txt
+src/services/trade-plan.service.ts
+src/services/score-check.service.ts
+src/services/trade-setup.service.ts
+src/services/scoring-engine.service.ts
+src/services/risk-governor.service.ts
+src/services/active-trade.service.ts
+src/services/trade-monitoring.service.ts
+src/services/trade-result.service.ts
+src/services/risk-state-projection.service.ts
+src/services/trade-journal.service.ts
+src/services/audit-log.service.ts
+```
+
+Models:
+
+```txt
+src/models/trade-plan.model.ts
+src/models/score-check.model.ts
+src/models/trade-setup.model.ts
+src/models/trade-score-snapshot.model.ts
+src/models/active-trade.model.ts
+src/models/trade-event.model.ts
+src/models/trade-result.model.ts
+src/models/trade-journal.model.ts
+src/models/risk-state.model.ts
+src/models/audit-log.model.ts
+```
+
+Types:
+
+```txt
+src/types/trade.types.ts
+src/types/risk.types.ts
+src/types/scoring.types.ts
+src/types/monitoring.types.ts
+src/types/audit.types.ts
+```
+
+### 19.3 Route Draft
+
+Draft route surface:
+
+```txt
+POST   /api/trade-plans
+GET    /api/trade-plans
+GET    /api/trade-plans/:id
+PATCH  /api/trade-plans/:id
+POST   /api/score-checks
+GET    /api/score-checks
+GET    /api/score-checks/:id
+POST   /api/trade-setups
+GET    /api/trade-setups/:id
+POST   /api/trade-setups/:id/activate
+GET    /api/active-trades
+GET    /api/active-trades/:id
+POST   /api/active-trades/:id/events
+POST   /api/trade-results
+GET    /api/trade-results/:id
+GET    /api/journal
+GET    /api/journal/:id
+GET    /api/audit
+```
+
+Controllers must remain thin:
+
+- parse and validate request data
+- pass authenticated user id into service
+- return service response
+- avoid scoring/risk logic
+
+### 19.4 Service Interaction Flow
+
+Managed trade flow:
+
+```txt
+TradePlanService
+  -> ScoreCheckService
+  -> ScoringEngineService
+  -> TradeSetupService
+  -> RiskGovernorService
+  -> ActiveTradeService
+  -> TradeMonitoringService
+  -> TradeResultService
+  -> RiskStateProjectionService
+  -> TradeJournalService
+  -> AiOrchestratorService
+  -> AuditLogService
+```
+
+Standalone score flow:
+
+```txt
+ScoreCheckService
+  -> ScoringEngineService
+  -> AiOrchestratorService for explanation
+  -> AuditLogService
+```
+
+Standalone ScoreCheck is allowed. Managed trade activation requires a TradePlan and RiskGovernor permission.
+
+### 19.5 Integration With Existing Systems
+
+Existing systems remain authoritative for their current jobs:
+
+- `SymbolModel` remains canonical symbol identity.
+- `BrokerConnection` remains the secure user-provider login/session boundary.
+- Existing monitor/tripwire flow remains operational.
+- Existing AnalyzerEngine keeps market threshold alerts.
+- Existing WebSocket manager can provide normalized live ticks to future monitoring rules.
+
+Future `MonitoringRuleEngine` should consume normalized market data and ActiveTrade state, but should not replace `AnalyzerEngine`.
+
+### 19.6 Required Design Patterns
+
+- Service pattern for focused domain operations.
+- Adapter pattern for provider sync/live-data integrations.
+- Port/interface pattern for scoring, risk, monitoring, AI, provider capability, and broker sync boundaries.
+- Strategy pattern for market-specific scoring and monitoring evaluators.
+- Registry pattern to look up evaluator templates by market/trade type.
+- Snapshot pattern for symbol, score, plan, and setup context.
+- Idempotency pattern for broker sync, trade result projection, alerts, audit, and journal updates.
+- Audit trail pattern for critical state transitions.
+
+### 19.7 Indexing And Data Rules
+
+Future models should include indexes for:
+
+- `user`
+- `symbolId`
+- `tradePlanId`
+- `activeTradeId`
+- `status`
+- `createdAt`
+- `idempotencyKey`
+
+Data rules:
+
+- Do not store provider credentials/tokens in trade-domain models.
+- Do not store large raw provider payloads in domain docs.
+- Store references to heavy/raw data when needed.
+- Use lean queries and projections where safe.
+- Workers/listeners must be retry-safe and idempotent.

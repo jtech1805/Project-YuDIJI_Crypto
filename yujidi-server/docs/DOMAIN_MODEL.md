@@ -820,7 +820,338 @@ Untracked
 - LLM explains, approves, or vetoes.
 - Deterministic veto conditions should not be overridden by the LLM in future hardening.
 
-## 7. Domain Gaps
+## 7. Future Trade/Risk Domain Model
+
+This section defines the accepted MVP trade/risk lifecycle domain. These entities are planned and should be implemented beside the existing Monitor/Tripwire system.
+
+### 7.0 Phase 1 Foundation Status
+
+Implemented foundation files:
+
+- `src/types/trade.types.ts`
+- `src/types/risk.types.ts`
+- `src/types/scoring.types.ts`
+- `src/types/monitoring.types.ts`
+- `src/types/audit.types.ts`
+- `src/models/audit-log.model.ts`
+- `src/services/audit-sanitizer.service.ts`
+- `src/services/audit-log.service.ts`
+- `src/services/symbol-resolver.service.ts`
+
+Implemented behavior:
+
+- Shared domain vocabularies exist for trade permission, direction, risk mode, P&L basis, score mode, monitoring severity, and audit actors/entities.
+- `AuditLog` exists as the append-oriented persistence foundation for future critical trade/risk/provider/symbol/AI/RAG events.
+- Audit payloads are sanitized before persistence.
+- Canonical symbol resolution exists for provider/exchange/instrument data.
+
+Not implemented yet:
+
+- TradePlan.
+- ScoreCheck.
+- TradeSetup.
+- RiskGovernor.
+- ActiveTrade.
+- TradeEvent.
+- TradeResult.
+- TradeJournal.
+- AI trade/risk review.
+- RAG ingestion.
+- Order placement/modification/cancellation.
+
+Boundary:
+
+The Phase 1 foundation is additive. It does not change existing monitor, analyzer, WebSocket, auth, Binance, or Angel live-data behavior.
+
+New lifecycle:
+
+```txt
+TradePlan
+  -> ScoreCheck
+  -> TradeSetup
+  -> RiskGovernor
+  -> ActiveTrade
+  -> TradeEvent
+  -> TradeResult
+  -> RiskState update
+  -> Structured Journal
+  -> AI Review
+```
+
+Authority rules:
+
+- RiskGovernor has final authority for managed trade permission.
+- AI cannot decide, calculate, override, or mutate risk/trade decisions.
+- Journal and AI cannot update risk state.
+- TradeResult updates RiskState and Journal.
+- Order placement is deferred in MVP.
+- Existing `Symbol` is canonical market identity.
+- Provider tokens are mapping fields only.
+- Provider credentials/tokens never enter trade-domain models.
+
+Permission values:
+
+```txt
+TAKE_TRADE
+TAKE_SMALL_RISK
+WAIT
+REJECT
+STOP_TRADING
+```
+
+Do not use final product permission labels such as `BUY`, `SELL`, `STRONG_BUY`, or `STRONG_SELL`.
+
+### 7.1 TradePlan
+
+Purpose:
+
+A user-owned risk plan that defines the allowed trade lifecycle scope.
+
+Key fields:
+
+- `user`
+- `name`
+- `marketType`
+- `strategyTemplate`
+- `capitalBase`
+- `maxDailyLoss`
+- `maxTradeRisk`
+- `maxOpenTrades`
+- `allowedSymbols`
+- `status`
+- `createdAt`
+- `updatedAt`
+
+Rules:
+
+- Managed trades require a TradePlan.
+- TradePlan is dynamic and not fixed to a hardcoded number of trades.
+- TradePlan should store risk template references and snapshots used for scoring/risk decisions.
+
+### 7.2 CapitalAdjustmentEvent
+
+Purpose:
+
+Represents deposits, withdrawals, manual corrections, fees, and other capital changes that affect risk base.
+
+Rules:
+
+- Must be user-scoped.
+- Must be auditable.
+- Should use idempotency keys for broker/import sync.
+
+### 7.3 ScoreCheck
+
+Purpose:
+
+A deterministic evaluation of a trade idea.
+
+Rules:
+
+- Standalone ScoreCheck is allowed.
+- Managed trade conversion requires a TradePlan.
+- Scoring must be direction-aware.
+- Separate scoring strategies should exist for intraday, swing, crypto spot, and crypto perpetual contexts.
+- Providers supply raw data; YuJiDi owns scoring logic.
+
+### 7.4 TradeSetup
+
+Purpose:
+
+Stores planned trade values before activation.
+
+Examples:
+
+- planned direction
+- planned entry
+- planned stop
+- planned targets
+- planned quantity/risk
+- planned invalidation
+
+Rules:
+
+- TradeSetup is not the same as ActiveTrade.
+- TradeSetup values are planned values and must be preserved for review.
+
+### 7.5 TradeScoreSnapshot
+
+Purpose:
+
+Immutable snapshot of scoring context used for a ScoreCheck or TradeSetup.
+
+Rules:
+
+- Store score inputs/outputs needed for audit and replay.
+- Do not store large raw provider payloads.
+- Store references to heavy data when needed.
+
+### 7.6 TradePlanRiskState
+
+Purpose:
+
+Current risk state for one TradePlan.
+
+Examples:
+
+- realized net P&L
+- open risk
+- remaining daily risk
+- number of active trades
+- loss streak
+- STOP_TRADING state
+
+Rules:
+
+- Updated by RiskStateProjectionService from TradeResult and risk events.
+- Must prefer net P&L when available.
+
+### 7.7 UserDailyRiskState
+
+Purpose:
+
+Aggregated per-user, per-day risk state across plans and markets.
+
+Rules:
+
+- Can place user into STOP_TRADING.
+- Must be idempotently projected.
+- Must not be updated by AI or journal code.
+
+### 7.8 ActiveTrade
+
+Purpose:
+
+Stores actual/current trade values after activation.
+
+Examples:
+
+- actual entry
+- actual quantity
+- current stop
+- current targets
+- current mark price
+- current risk
+- status
+
+Rules:
+
+- ActiveTrade stores actual/current values, separate from planned TradeSetup values.
+- ActiveTrade monitoring uses rules, not AI.
+- Order placement is not part of MVP.
+
+### 7.9 TradeEvent
+
+Purpose:
+
+Structured lifecycle event for an ActiveTrade.
+
+Examples:
+
+- activated
+- stop moved
+- target reached
+- risk reduced
+- invalidation warning
+- manual note
+- closed
+
+Rules:
+
+- Must be append-oriented.
+- Must be auditable.
+- Should use idempotency keys where events come from broker/provider sync.
+
+### 7.10 TradeResult
+
+Purpose:
+
+Represents the outcome of a trade or partial close.
+
+Rules:
+
+- Updates RiskState through projection.
+- Feeds structured Journal creation/update.
+- Must prefer net P&L when broker provides it.
+- Must be idempotent.
+
+### 7.11 TradeJournal
+
+Purpose:
+
+Structured journal record for trade review.
+
+Rules:
+
+- Store structured facts first.
+- AI summary is derived second.
+- Journal cannot mutate RiskState.
+
+### 7.12 AiExplanation
+
+Purpose:
+
+Stores AI explanations, coaching notes, and reviews.
+
+Rules:
+
+- AI can explain ScoreCheck, RiskGovernor output, TradeEvent, TradeResult, and Journal.
+- AI cannot decide permission.
+- AI cannot mutate trade/risk state.
+- AI output must be validated before storage.
+
+### 7.13 RagDocument
+
+Purpose:
+
+Verified knowledge/summaries used for AI context.
+
+Rules:
+
+- Store verified knowledge, playbook summaries, and curated lessons.
+- Do not store raw ticks, candles, order book snapshots, provider payloads, or secrets.
+
+### 7.14 AuditLog
+
+Purpose:
+
+Append-only record of critical system decisions and state changes.
+
+Must cover:
+
+- risk permission decisions
+- STOP_TRADING transitions
+- TradePlan changes
+- TradeSetup activation
+- ActiveTrade lifecycle events
+- TradeResult projection
+- Broker/provider sync
+- symbol resolution
+- AI/RAG events
+
+Rules:
+
+- Must sanitize secrets and provider tokens.
+- Must be idempotent where triggered from retryable workers.
+- Must include actor/source where possible.
+
+### 7.15 Symbol And BrokerConnection Notes
+
+Symbol:
+
+- Existing `Symbol` collection is canonical market identity.
+- New trade/risk models should reference `symbolId`.
+- Provider token/symbol fields are mapping fields only.
+- Do not use provider token as domain identity.
+
+BrokerConnection:
+
+- User-owned BrokerConnection remains the provider login/session boundary.
+- Broker login is allowed.
+- Order placement/modification/cancellation remains disabled in MVP.
+- Provider credentials/tokens must not be copied into trade-domain records.
+
+## 8. Domain Gaps
 
 High-priority gaps:
 
@@ -832,7 +1163,7 @@ High-priority gaps:
 6. Monitor lifecycle is currently reduced to `isActive`.
 7. Refresh token is stored directly instead of hashed.
 
-## 8. Glossary
+## 9. Glossary
 
 ### Monitor / Tripwire
 
