@@ -22,12 +22,18 @@ Implemented:
 - TradePlan service/controller/routes for create, list, read, draft update, lifecycle transitions, and capital adjustments.
 - Idempotent `TradePlanRiskState` initialization on TradePlan activation.
 - Audit logging for TradePlan lifecycle and capital mutations.
+- `ScoreCheck` Mongoose model.
+- `TradeScoreSnapshot` Mongoose model.
+- ScoreCheck service/controller/routes for standalone pre-trade scoring.
+- Direction-aware LONG/SHORT geometry validation.
+- Baseline deterministic scoring engine with template registry foundation.
+- Audit logging for ScoreCheck creation and score calculation.
 - Unit tests for audit sanitization and symbol resolution.
 - Unit tests for TradePlan lifecycle and risk-state initialization.
+- Unit tests for ScoreCheck geometry, RR calculation, score bands, snapshots, and audit calls.
 
 Not implemented yet:
 
-- ScoreCheck.
 - TradeSetup.
 - RiskGovernor.
 - ActiveTrade.
@@ -40,7 +46,7 @@ Not implemented yet:
 
 Boundary:
 
-The implemented Phase 1/2 foundation does not alter existing analyzer, WebSocket, monitor, auth, Angel login, or Binance behavior.
+The implemented Phase 1/2/3 foundation does not alter existing analyzer, WebSocket, monitor, auth, Angel login, or Binance behavior.
 
 ## 1. Current System Summary
 
@@ -442,6 +448,22 @@ ScoreCheck and downstream trade lifecycle modules are still pending.
 - Add score snapshot.
 - Add AI explanation only after deterministic scoring.
 
+Current status:
+
+```txt
+Implemented without AI decisioning.
+ScoreCheck is standalone, uses canonical Symbol by symbolId, stores symbol snapshot, validates trade geometry, calculates risk/reward/RR, creates TradeScoreSnapshot, and returns score-level permission.
+TradeSetup conversion and RiskGovernor final permission are still pending.
+```
+
+Implemented API:
+
+```txt
+POST /api/score-checks
+GET /api/score-checks
+GET /api/score-checks/:id
+```
+
 ### Phase 4: TradeSetup And RiskGovernor
 
 - Implement TradeSetup planned values.
@@ -553,8 +575,9 @@ Next recommended coding task:
 
 ```txt
 Phase 3:
-  add standalone ScoreCheck model/service/controller/routes
-  add scoring strategy interfaces
-  add score snapshot persistence
-  keep RiskGovernor and TradeSetup out until later phases
+Phase 4:
+  add TradeSetup planned values
+  add long/short setup validation using ScoreCheck output
+  add RiskGovernor final permission output
+  keep ActiveTrade and order placement out until later phases
 ```

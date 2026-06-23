@@ -838,12 +838,18 @@ Implemented foundation files:
 - `src/models/capital-adjustment-event.model.ts`
 - `src/models/trade-plan-risk-state.model.ts`
 - `src/models/user-daily-risk-state.model.ts`
+- `src/models/score-check.model.ts`
+- `src/models/trade-score-snapshot.model.ts`
 - `src/services/audit-sanitizer.service.ts`
 - `src/services/audit-log.service.ts`
 - `src/services/symbol-resolver.service.ts`
 - `src/services/trade-plan.service.ts`
+- `src/services/scoring-engine.service.ts`
+- `src/services/score-check.service.ts`
 - `src/controllers/trade-plan.controller.ts`
+- `src/controllers/score-check.controller.ts`
 - `src/routes/trade-plan.routes.ts`
+- `src/routes/score-check.routes.ts`
 
 Implemented behavior:
 
@@ -854,10 +860,14 @@ Implemented behavior:
 - TradePlan lifecycle foundation exists for DRAFT creation, DRAFT-only updates, activation, pause, stop, complete, archive, and capital adjustment.
 - TradePlan activation initializes `TradePlanRiskState` idempotently.
 - UserDailyRiskState persistence model exists, but daily projection behavior is still future work.
+- Standalone ScoreCheck foundation exists for pre-trade scoring without a TradePlan.
+- ScoreCheck uses canonical `Symbol` by `symbolId` and stores a symbol snapshot.
+- ScoreCheck validates LONG/SHORT geometry and stores risk/reward/RR math.
+- Baseline scoring maps reward/risk bands to score-level permission.
+- TradeScoreSnapshot stores deterministic scoring output for replay/audit.
 
 Not implemented yet:
 
-- ScoreCheck.
 - TradeSetup.
 - RiskGovernor.
 - ActiveTrade.
@@ -996,6 +1006,52 @@ Rules:
 - Scoring must be direction-aware.
 - Separate scoring strategies should exist for intraday, swing, crypto spot, and crypto perpetual contexts.
 - Providers supply raw data; YuJiDi owns scoring logic.
+- Current Phase 3 ScoreCheck is standalone and does not require TradePlan.
+- ScoreCheck cannot start monitoring.
+- ScoreCheck cannot update `TradePlanRiskState` or `UserDailyRiskState`.
+- ScoreCheck cannot create ActiveTrade.
+- ScoreCheck does not call AI for decisions.
+- ScoreCheck uses score-level permission only; RiskGovernor final permission comes later.
+- Output permission language is `TAKE_TRADE`, `TAKE_SMALL_RISK`, `WAIT`, `REJECT`, or `STOP_TRADING`.
+- Do not use `BUY`, `SELL`, `STRONG_BUY`, or `STRONG_SELL`.
+
+Current geometry rules:
+
+```txt
+LONG:  stopLoss < entry < target1
+SHORT: target1 < entry < stopLoss
+```
+
+Current trade math:
+
+```txt
+LONG:
+  riskPerUnit = entry - stopLoss
+  rewardPerUnit = target1 - entry
+
+SHORT:
+  riskPerUnit = stopLoss - entry
+  rewardPerUnit = entry - target1
+
+rewardRiskRatio = rewardPerUnit / riskPerUnit
+```
+
+Current baseline scoring:
+
+```txt
+RR < 1        -> score 30, permission REJECT
+RR >= 1 <1.5 -> score 50, permission WAIT
+RR >= 1.5 <2 -> score 70, permission TAKE_SMALL_RISK
+RR >= 2      -> score 80, permission TAKE_TRADE
+```
+
+Current API:
+
+```txt
+POST /api/score-checks
+GET /api/score-checks
+GET /api/score-checks/:id
+```
 
 ### 7.4 TradeSetup
 
@@ -1028,6 +1084,8 @@ Rules:
 - Store score inputs/outputs needed for audit and replay.
 - Do not store large raw provider payloads.
 - Store references to heavy data when needed.
+- Current Phase 3 snapshots are created from standalone ScoreCheck.
+- Snapshot stores score, permission, score status, data confidence, breakdown, reason codes, warnings, input hash, calculated time, and validity time.
 
 ### 7.6 TradePlanRiskState
 

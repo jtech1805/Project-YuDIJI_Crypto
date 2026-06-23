@@ -12,6 +12,7 @@ import chatRouter from "./routes/chat.routes.js";
 import { brokerConnectionRouter } from "./routes/broker-connection.routes.js";
 import { marketQuoteRouter } from "./routes/market-quote.routes.js";
 import { marketStreamRouter } from "./routes/market-stream.routes.js";
+import { scoreCheckRouter } from "./routes/score-check.routes.js";
 import { symbolRouter } from "./routes/symbol.routes.js";
 import { tradePlanRouter } from "./routes/trade-plan.routes.js";
 
@@ -96,6 +97,7 @@ app.use('/api/chat', chatRouter)
 app.use("/api/broker-connections", brokerConnectionRouter);
 app.use("/api/market-quotes", marketQuoteRouter);
 app.use("/api/market-streams", marketStreamRouter);
+app.use("/api/score-checks", scoreCheckRouter);
 app.use("/api/symbols", symbolRouter);
 app.use("/api/trade-plans", tradePlanRouter);
 

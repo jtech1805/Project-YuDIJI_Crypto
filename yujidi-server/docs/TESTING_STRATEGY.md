@@ -42,6 +42,7 @@ Current automated tests:
 - `src/services/audit-sanitizer.service.test.ts`
 - `src/services/symbol-resolver.service.test.ts`
 - `src/services/trade-plan.service.test.ts`
+- `src/services/score-check.service.test.ts`
 - `src/integrations/market-data/angel/angel-symbol.mapper.test.ts`
 - `src/integrations/market-data/angel/angel-symbol-sync.service.test.ts`
 - `src/integrations/market-data/angel/angel-tick.normalizer.test.ts`
@@ -584,7 +585,25 @@ Current Phase 2 foundation tests:
 - AuditLogService is called for lifecycle changes.
 - Risk bucket key generation is deterministic.
 
-These tests cover the Phase 1/2 foundation only. They do not yet prove ScoreCheck, TradeSetup, RiskGovernor, ActiveTrade, TradeResult, Journal, AI review, or order-flow behavior because those modules are intentionally not implemented yet.
+Current Phase 3 foundation tests:
+
+- LONG valid geometry passes.
+- LONG invalid geometry rejects.
+- SHORT valid geometry passes.
+- SHORT invalid geometry rejects.
+- Risk/reward/RR calculation works for LONG.
+- Risk/reward/RR calculation works for SHORT.
+- RR below 1 returns `REJECT`.
+- RR from 1 to below 1.5 returns `WAIT`.
+- RR from 1.5 to below 2 returns `TAKE_SMALL_RISK`.
+- RR 2 or above returns `TAKE_TRADE`.
+- ScoreCheck does not mutate risk state.
+- ScoreCheck creates `TradeScoreSnapshot`.
+- AuditLogService is called for `SCORE_CHECK_CREATED` and `SCORE_CALCULATED`.
+- Missing symbol rejects safely.
+- Inactive symbol rejects safely.
+
+These tests cover the Phase 1/2/3 foundation only. They do not yet prove TradeSetup, RiskGovernor, ActiveTrade, TradeResult, Journal, AI review, or order-flow behavior because those modules are intentionally not implemented yet.
 
 ### Geometry And Direction Tests
 
@@ -614,14 +633,20 @@ Must cover:
 
 ### ScoreCheck Tests
 
-Must cover:
+Currently covered:
 
 - standalone ScoreCheck allowed without TradePlan
-- managed trade conversion requires TradePlan
 - direction-aware scoring
-- separate scoring templates for intraday, swing, crypto spot, and crypto perpetual
 - provider raw data does not decide score directly
 - score snapshot is stored for audit/replay
+- geometry validation for LONG and SHORT
+- score-level permission bands for RR thresholds
+
+Must cover in later phases:
+
+- managed trade conversion requires TradePlan
+- separate scoring templates for intraday, swing, crypto spot, and crypto perpetual beyond the baseline RR-only evaluator
+- AI explanation after deterministic scoring without AI decision authority
 
 ### TradeSetup And ActiveTrade Tests
 

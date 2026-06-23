@@ -22,6 +22,10 @@ src/models/Alert.ts
 
 The analyzer engine converts live market data into user-facing AI alerts.
 
+Boundary:
+
+`AnalyzerEngine` is separate from the new trade lifecycle `ScoreCheck` and `ScoringEngine` foundation. Analyzer evaluates live Monitor/Tripwire threshold breaches and can create alerts. ScoreCheck is a standalone pre-trade scoring workflow that validates planned trade geometry and creates score snapshots; it does not start monitoring, update risk state, create alerts, or create ActiveTrade records.
+
 Its responsibility is to:
 
 1. Receive live trade ticks from Binance.
