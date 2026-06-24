@@ -44,16 +44,22 @@ Implemented:
 - Manual/synthetic ActiveTrade price evaluation endpoint.
 - Event idempotency using one `activeTradeId:eventType` key per event type.
 - Audit logging for monitoring evaluation, event creation, and dedupe.
+- `TradeResult` Mongoose model and manual ActiveTrade close APIs.
+- Direction-aware gross P&L, net P&L basis, result type, and realized-R calculation.
+- Idempotent `RiskStateProjectionService`.
+- Finalized TradeResult projection into TradePlanRiskState and UserDailyRiskState.
+- Consecutive-loss and daily-loss STOP_TRADING enforcement.
+- Audit logging for TradeResult finalization and risk projection.
 - Unit tests for audit sanitization and symbol resolution.
 - Unit tests for TradePlan lifecycle and risk-state initialization.
 - Unit tests for ScoreCheck geometry, RR calculation, score bands, snapshots, and audit calls.
 - Unit tests for TradeSetup conversion and RiskGovernor behavior.
 - Unit tests for ActiveTrade confirmation, geometry, execution quality, setup execution, audit calls, and cancellation.
 - Unit tests for ActiveTrade monitoring rules, event ownership, idempotency, and non-mutation boundaries.
+- Unit tests for TradeResult calculations, close lifecycle, risk projection, and projection idempotency.
 
 Not implemented yet:
 
-- TradeResult.
 - TradeJournal.
 - Live market-tick wiring for MonitoringRuleEngine.
 - AI trade/risk review.
@@ -62,7 +68,7 @@ Not implemented yet:
 
 Boundary:
 
-The implemented Phase 1/2/3/4/5/6 foundation does not alter existing analyzer, WebSocket, monitor, auth, Angel login, or Binance behavior.
+The implemented Phase 1/2/3/4/5/6/7 foundation does not alter existing analyzer, WebSocket, monitor, auth, Angel login, or Binance behavior.
 
 ## 1. Current System Summary
 
@@ -534,7 +540,8 @@ Only APPROVED TradeSetup records with TAKE_TRADE or TAKE_SMALL_RISK can execute.
 Expired scores, invalid geometry, actual RR below 1, and repeated execution are rejected.
 ActiveTrade starts as ACTIVE and can be manually cancelled only while ACTIVE.
 Risk state is not mutated.
-Live MonitoringRuleEngine wiring, broker fill linking, TradeResult, and order placement are not implemented.
+Live MonitoringRuleEngine wiring, broker fill linking, and order placement are not implemented.
+TradeResult and risk projection are implemented in Phase 7.
 ```
 
 Implemented API:
@@ -575,13 +582,37 @@ GET /api/trade-events/:id
 GET /api/active-trades/:id/events
 ```
 
-### Phase 7: TradeResult, Risk Projection, Journal
+### Phase 7: TradeResult And Risk Projection
 
-- Implement TradeResult.
-- Implement idempotent RiskState projection.
-- Prefer net P&L.
-- Create structured Journal facts.
-- Add AI review summary.
+- Implement manual full close from ActiveTrade.
+- Calculate direction-aware gross P&L and realized R.
+- Prefer confirmed net P&L, then estimated net, then gross fallback.
+- Finalize one TradeResult per ActiveTrade.
+- Mark ActiveTrade `CLOSED` or `STOPPED_OUT`.
+- Project finalized results into plan and daily risk state.
+- Enforce consecutive-loss and daily-loss STOP_TRADING rules.
+- Make duplicate projection calls idempotent.
+
+Current status:
+
+```txt
+Implemented.
+Only ACTIVE or PARTIALLY_EXITED trades can be manually closed.
+Phase 7 supports full close only.
+Risk state changes only from FINALIZED TradeResult projection.
+TradeEvent, Journal, and AI cannot mutate risk state.
+Journal, AI review, RAG, broker fill linking, and order actions remain unimplemented.
+```
+
+Implemented API:
+
+```txt
+POST /api/active-trades/:id/close
+GET /api/trade-results
+GET /api/trade-results/:id
+GET /api/active-trades/:id/result
+GET /api/trade-plans/:id/trade-results
+```
 
 ### Phase 8: Audit, RAG Restrictions, Hardening
 
@@ -670,9 +701,9 @@ POST /api/trade-plans/:id/capital-adjustments
 Next recommended coding task:
 
 ```txt
-Phase 7:
-  add TradeResult finalization without broker order placement
-  project finalized results idempotently into risk state
-  keep journal and AI review downstream of deterministic result facts
-  evaluate live MonitoringRuleEngine wiring separately from result projection
+Phase 8:
+  add structured TradeJournal facts from immutable lifecycle records
+  keep journal unable to mutate risk state
+  add AI review only after deterministic journal facts exist
+  keep RAG and broker/order automation out until separately approved
 ```

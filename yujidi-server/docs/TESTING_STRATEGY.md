@@ -661,7 +661,25 @@ Current Phase 6 foundation tests:
 - TradeEvent listing is scoped by user ownership.
 - Manual evaluation returns created events and current R.
 
-These tests cover the Phase 1/2/3/4/5/6 foundation. They do not yet prove live market-tick wiring, TradeResult, risk projection, Journal, AI review, broker-fill linking, or order-flow behavior because those modules are intentionally not implemented yet.
+Current Phase 7 foundation tests:
+
+- User ownership and ActiveTrade status gates.
+- Exit price and quantity validation.
+- LONG and SHORT gross P&L calculation.
+- Confirmed net, estimated net, and gross fallback behavior.
+- Gross fallback warning.
+- Realized-R calculation.
+- WIN, LOSS, and BREAKEVEN classification.
+- STOPLOSS produces `STOPPED_OUT`; other exits produce `CLOSED`.
+- TradeResult is finalized and projection becomes applied.
+- Plan and daily risk counts/P&L/R are projected.
+- Loss increments and win resets consecutive losses.
+- Duplicate projection does not double-count.
+- Consecutive-loss and daily-loss limits trigger STOP_TRADING.
+- Result finalization and risk projection are audited.
+- Result listing and ActiveTrade lookup are user-scoped.
+
+These tests cover the Phase 1/2/3/4/5/6/7 foundation. They do not yet prove live market-tick wiring, Journal, AI review, RAG, broker-fill linking, partial close, reversal, or order-flow behavior because those modules are intentionally not implemented yet.
 
 ### Geometry And Direction Tests
 
@@ -756,13 +774,22 @@ Must cover in later phases:
 
 ### TradeResult And Risk Projection Tests
 
-Must cover:
+Currently covered:
 
 - TradeResult projection updates TradePlanRiskState
 - TradeResult projection updates UserDailyRiskState
 - duplicate projection is idempotent
 - net P&L is preferred over gross P&L where available
-- fees/slippage are handled in net calculations
+- charges are handled in estimated net calculations
+- realized R and result type are deterministic
+- consecutive-loss and daily-loss STOP_TRADING behavior
+- TradeResult is the only implemented risk-state mutation source
+
+Must cover in later phases:
+
+- projection reversal and adjusted results
+- partial closes and multi-result aggregation
+- broker-confirmed fees and slippage reconciliation
 - Journal cannot update RiskState
 - AI cannot update RiskState
 

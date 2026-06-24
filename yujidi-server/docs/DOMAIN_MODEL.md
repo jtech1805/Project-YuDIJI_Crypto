@@ -854,17 +854,22 @@ Implemented foundation files:
 - `src/models/trade-event.model.ts`
 - `src/services/trade-event.service.ts`
 - `src/services/trade-monitoring.service.ts`
+- `src/models/trade-result.model.ts`
+- `src/services/trade-result.service.ts`
+- `src/services/risk-state-projection.service.ts`
 - `src/controllers/trade-plan.controller.ts`
 - `src/controllers/score-check.controller.ts`
 - `src/controllers/trade-setup.controller.ts`
 - `src/controllers/active-trade.controller.ts`
 - `src/controllers/trade-event.controller.ts`
 - `src/controllers/trade-monitoring.controller.ts`
+- `src/controllers/trade-result.controller.ts`
 - `src/routes/trade-plan.routes.ts`
 - `src/routes/score-check.routes.ts`
 - `src/routes/trade-setup.routes.ts`
 - `src/routes/active-trade.routes.ts`
 - `src/routes/trade-event.routes.ts`
+- `src/routes/trade-result.routes.ts`
 
 Implemented behavior:
 
@@ -892,11 +897,14 @@ Implemented behavior:
 - Manual/synthetic prices can evaluate current stoploss, targets, +1R, and near-stop conditions.
 - Event creation is idempotent per ActiveTrade and event type.
 - Monitoring evaluations and event creation/dedupe are audited.
+- TradeResult is the official finalized close outcome.
+- Manual close calculates P&L, realized R, and result type from ActiveTrade actual values.
+- Finalized TradeResult is the only Phase 7 input allowed to mutate risk state.
+- Risk projection updates TradePlanRiskState and UserDailyRiskState idempotently.
 
 Not implemented yet:
 
 - Live market-tick integration for TradeEvent monitoring.
-- TradeResult.
 - TradeJournal.
 - AI trade/risk review.
 - RAG ingestion.
@@ -904,7 +912,7 @@ Not implemented yet:
 
 Boundary:
 
-The Phase 1/2/3/4/5/6 foundation is additive. It does not change existing monitor, analyzer, WebSocket, auth, Binance, or Angel live-data behavior.
+The Phase 1/2/3/4/5/6/7 foundation is additive. It does not change existing monitor, analyzer, WebSocket, auth, Binance, or Angel live-data behavior.
 
 New lifecycle:
 
@@ -1316,10 +1324,30 @@ Represents the outcome of a trade or partial close.
 
 Rules:
 
-- Updates RiskState through projection.
-- Feeds structured Journal creation/update.
-- Must prefer net P&L when broker provides it.
-- Must be idempotent.
+- Is the official source of closed trade outcome.
+- Is finalized only through manual confirmation in Phase 7.
+- Uses ActiveTrade actual entry, remaining quantity, and actual risk amount.
+- Supports full close only in Phase 7.
+- Uses `CONFIRMED_NET` when net P&L is supplied.
+- Uses `ESTIMATED_NET` when charges can be deducted from gross P&L.
+- Uses `GROSS_FALLBACK` with a warning when net P&L and charges are unavailable.
+- Marks STOPLOSS exits `STOPPED_OUT`; other exits become `CLOSED`.
+- Updates RiskState only through RiskStateProjectionService.
+- Projection increments trade/result counts, P&L, realized R, and consecutive losses.
+- Projection can trigger plan STOP_TRADING from consecutive losses.
+- Projection can trigger daily STOP_TRADING from daily loss limit.
+- Duplicate projection does not double-count.
+- Does not create TradeJournal or call AI.
+
+Current API:
+
+```txt
+POST /api/active-trades/:id/close
+GET /api/trade-results
+GET /api/trade-results/:id
+GET /api/active-trades/:id/result
+GET /api/trade-plans/:id/trade-results
+```
 
 ### 7.11 TradeJournal
 
