@@ -679,7 +679,21 @@ Current Phase 7 foundation tests:
 - Result finalization and risk projection are audited.
 - Result listing and ActiveTrade lookup are user-scoped.
 
-These tests cover the Phase 1/2/3/4/5/6/7 foundation. They do not yet prove live market-tick wiring, Journal, AI review, RAG, broker-fill linking, partial close, reversal, or order-flow behavior because those modules are intentionally not implemented yet.
+Current Phase 8 foundation tests:
+
+- Journal requires an owned finalized TradeResult.
+- Deterministic TradeResult, ActiveTrade, TradeSetup, ScoreCheck, score snapshot, and TradeEvent links are copied.
+- Duplicate creation returns the existing journal.
+- Only reflection fields can be updated.
+- System-owned fields are rejected by strict validation.
+- Finalization requires all minimum reflection fields.
+- Finalization and archive set lifecycle timestamps.
+- Journal does not mutate TradeResult or risk state.
+- List/read operations enforce ownership.
+- Create/update/finalize/archive are audited.
+- AI fields remain ungenerated.
+
+These tests cover the Phase 1/2/3/4/5/6/7/8 foundation. They do not yet prove live market-tick wiring, AI review, RAG, broker-fill linking, partial close, reversal, analytics, sharing, or order-flow behavior because those modules are intentionally not implemented yet.
 
 ### Geometry And Direction Tests
 
@@ -793,6 +807,40 @@ Must cover in later phases:
 - Journal cannot update RiskState
 - AI cannot update RiskState
 
+### TradeJournal Tests
+
+Currently covered:
+
+- finalized TradeResult is the official journal outcome source
+- deterministic system facts are copied and remain non-editable
+- user reflection fields have a strict update allowlist
+- one journal per TradeResult is idempotently enforced
+- finalization requires minimum reflection completeness
+- journal lifecycle is user-owned and audited
+- journal cannot mutate TradeResult or risk state
+- Phase 8 journal creation does not generate AI fields
+
+Phase 9 AI review coverage:
+
+- non-owned and non-finalized journals are rejected
+- context projection excludes secret-shaped and raw provider fields
+- valid output creates `COMPLETED` AiExplanation
+- valid output updates only journal AI reference fields
+- malformed or schema-invalid output uses deterministic fallback
+- provider failure uses deterministic fallback
+- recommendation and order-placement language is rejected
+- risk-state mutation and AI P&L calculation claims are rejected
+- TradeResult and risk state remain unchanged
+- AI request, validation/rejection, fallback, and storage are audited
+- explanation reads enforce user ownership
+- provider receives only the backend-built context
+
+Must cover in later phases:
+
+- journal pattern analytics
+- screenshot storage ownership and malware/content controls
+- archive restoration policy if introduced
+
 ### Symbol And Provider Guard Tests
 
 Must cover:
@@ -806,13 +854,17 @@ Must cover:
 
 ### Audit, AI, And RAG Tests
 
-Must cover:
+Currently covered for Phase 9:
 
-- audit log created for critical TradePlan, ScoreCheck, RiskGovernor, ActiveTrade, TradeResult, provider, symbol, AI, and RAG events
 - audit entries are sanitized
 - provider credentials and session tokens are redacted
 - AI output schema validation
 - AI explanations cannot mutate trade/risk state
+- AI fallbacks are deterministic and audited
+
+Must cover in later phases:
+
+- audit log created for future RAG events
 - RAG ingestion rejects raw ticks, candles, order book, provider payloads, and secrets
 - RAG stores verified knowledge/summaries only
 

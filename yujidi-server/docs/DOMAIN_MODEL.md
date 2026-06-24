@@ -901,18 +901,21 @@ Implemented behavior:
 - Manual close calculates P&L, realized R, and result type from ActiveTrade actual values.
 - Finalized TradeResult is the only Phase 7 input allowed to mutate risk state.
 - Risk projection updates TradePlanRiskState and UserDailyRiskState idempotently.
+- TradeJournal stores deterministic lifecycle facts separately from user reflection.
+- Journal creation is idempotent per finalized TradeResult.
+- Reflection updates are explicitly whitelisted.
+- Journal finalization and archive are audited.
 
 Not implemented yet:
 
 - Live market-tick integration for TradeEvent monitoring.
-- TradeJournal.
 - AI trade/risk review.
 - RAG ingestion.
 - Order placement/modification/cancellation.
 
 Boundary:
 
-The Phase 1/2/3/4/5/6/7 foundation is additive. It does not change existing monitor, analyzer, WebSocket, auth, Binance, or Angel live-data behavior.
+The Phase 1/2/3/4/5/6/7/8 foundation is additive. It does not change existing monitor, analyzer, WebSocket, auth, Binance, or Angel live-data behavior.
 
 New lifecycle:
 
@@ -1360,6 +1363,28 @@ Rules:
 - Store structured facts first.
 - AI summary is derived second.
 - Journal cannot mutate RiskState.
+- One journal exists per finalized TradeResult.
+- System facts are copied from TradeResult, ActiveTrade, TradeSetup, and TradeEvents.
+- System facts and linked IDs are not user-editable.
+- User reflection fields are updated through a strict allowlist.
+- Finalization requires entry quality, exit quality, outcome quality, followed-plan choice, and mistake tags.
+- Phase 9 may populate only `aiSummary`, `aiReviewId`, and `aiGeneratedAt`.
+- Journal cannot mutate TradeResult.
+
+Current API:
+
+```txt
+POST /api/trade-results/:id/journal
+GET /api/trade-journals
+GET /api/trade-journals/:id
+GET /api/trade-results/:id/journal
+GET /api/active-trades/:id/journal
+PATCH /api/trade-journals/:id
+POST /api/trade-journals/:id/finalize
+POST /api/trade-journals/:id/archive
+POST /api/trade-journals/:id/ai-review
+GET /api/trade-journals/:id/ai-review
+```
 
 ### 7.12 AiExplanation
 
@@ -1369,10 +1394,24 @@ Stores AI explanations, coaching notes, and reviews.
 
 Rules:
 
-- AI can explain ScoreCheck, RiskGovernor output, TradeEvent, TradeResult, and Journal.
+- Phase 9 implements `POST_TRADE_REVIEW` for finalized TradeJournal records.
+- AiExplanation is user-owned and linked to its source.
+- The exact backend-prepared context is SHA-256 hashed.
+- Prompt and schema versions are persisted.
+- Context is an explicit allowlist of journal facts; it excludes credentials, tokens, raw provider payloads, raw ticks, candles, and order books.
+- AI output is stored only after structural and semantic validation.
+- Invalid or unavailable model output produces a deterministic fallback explanation.
+- TradeJournal receives only the explanation reference, summary, and generated timestamp.
 - AI cannot decide permission.
-- AI cannot mutate trade/risk state.
-- AI output must be validated before storage.
+- AI cannot score a trade or change deterministic P&L.
+- AI cannot mutate TradeResult, journal facts, or risk state.
+- Recommendation terms and order instructions are rejected.
+
+Current API:
+
+```txt
+GET /api/ai-explanations/:id
+```
 
 ### 7.13 RagDocument
 

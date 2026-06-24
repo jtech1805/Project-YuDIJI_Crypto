@@ -50,6 +50,11 @@ Implemented:
 - Finalized TradeResult projection into TradePlanRiskState and UserDailyRiskState.
 - Consecutive-loss and daily-loss STOP_TRADING enforcement.
 - Audit logging for TradeResult finalization and risk projection.
+- `TradeJournal` Mongoose model and journal lifecycle APIs.
+- Idempotent journal creation from finalized TradeResult.
+- Immutable system facts copied from TradeResult, ActiveTrade, TradeSetup, ScoreCheck links, and TradeEvents.
+- Whitelisted user reflection updates, completeness validation, finalization, and archive.
+- Audit logging for journal creation, update, finalization, and archive.
 - Unit tests for audit sanitization and symbol resolution.
 - Unit tests for TradePlan lifecycle and risk-state initialization.
 - Unit tests for ScoreCheck geometry, RR calculation, score bands, snapshots, and audit calls.
@@ -57,10 +62,10 @@ Implemented:
 - Unit tests for ActiveTrade confirmation, geometry, execution quality, setup execution, audit calls, and cancellation.
 - Unit tests for ActiveTrade monitoring rules, event ownership, idempotency, and non-mutation boundaries.
 - Unit tests for TradeResult calculations, close lifecycle, risk projection, and projection idempotency.
+- Unit tests for structured journal copying, reflection-only updates, lifecycle, ownership, and non-mutation boundaries.
 
 Not implemented yet:
 
-- TradeJournal.
 - Live market-tick wiring for MonitoringRuleEngine.
 - AI trade/risk review.
 - RAG ingestion.
@@ -68,7 +73,7 @@ Not implemented yet:
 
 Boundary:
 
-The implemented Phase 1/2/3/4/5/6/7 foundation does not alter existing analyzer, WebSocket, monitor, auth, Angel login, or Binance behavior.
+The implemented Phase 1/2/3/4/5/6/7/8 foundation does not alter existing analyzer, WebSocket, monitor, auth, Angel login, or Binance behavior.
 
 ## 1. Current System Summary
 
@@ -614,13 +619,67 @@ GET /api/active-trades/:id/result
 GET /api/trade-plans/:id/trade-results
 ```
 
-### Phase 8: Audit, RAG Restrictions, Hardening
+### Phase 8: Structured TradeJournal
 
-- Add AuditLogService.
-- Add audit routes if needed.
-- Add RAG document restrictions.
-- Add provider/security leak tests.
-- Add idempotency tests.
+- Create one journal per finalized TradeResult.
+- Copy deterministic lifecycle facts without mutating their sources.
+- Keep user reflection fields separately editable.
+- Require minimum reflection completeness before finalization.
+- Support journal archive.
+- Keep deterministic journal facts immutable after finalization.
+
+Current status:
+
+```txt
+Implemented.
+Journal creation is idempotent per TradeResult.
+Only whitelisted reflection fields can be updated.
+Finalized and archived journals cannot be edited.
+Journal never mutates TradeResult or risk state.
+AI review is implemented separately in Phase 9.
+No RAG ingestion, analytics, or sharing exists.
+```
+
+Implemented API:
+
+```txt
+POST /api/trade-results/:id/journal
+GET /api/trade-journals
+GET /api/trade-journals/:id
+GET /api/trade-results/:id/journal
+GET /api/active-trades/:id/journal
+PATCH /api/trade-journals/:id
+POST /api/trade-journals/:id/finalize
+POST /api/trade-journals/:id/archive
+```
+
+### Phase 9: Schema-Validated Post-Trade AI Review
+
+- Generate AI review only for a user-owned `FINALIZED` TradeJournal.
+- Build an explicit, backend-owned context projection from journal facts.
+- Hash the exact context and version the prompt and output schema.
+- Validate structure and reject recommendation, order, risk-mutation, and P&L-authority language.
+- Persist a user-owned `AiExplanation`.
+- Update only `TradeJournal.aiSummary`, `aiReviewId`, and `aiGeneratedAt`.
+- Use a deterministic fallback if the provider fails or output is rejected.
+- Audit request, validation/rejection, fallback, and storage.
+
+Current status:
+
+```txt
+Implemented.
+AI explains finalized facts only.
+AI cannot score, grant permission, mutate TradeResult, or mutate risk state.
+No RAG, live AI monitoring, order placement, or plan-level review exists.
+```
+
+Implemented API:
+
+```txt
+POST /api/trade-journals/:id/ai-review
+GET /api/trade-journals/:id/ai-review
+GET /api/ai-explanations/:id
+```
 
 ## 10. Verification Gates
 
@@ -701,9 +760,8 @@ POST /api/trade-plans/:id/capital-adjustments
 Next recommended coding task:
 
 ```txt
-Phase 8:
-  add structured TradeJournal facts from immutable lifecycle records
-  keep journal unable to mutate risk state
-  add AI review only after deterministic journal facts exist
-  keep RAG and broker/order automation out until separately approved
+Phase 10:
+  define a separately scoped verified-knowledge/RAG foundation
+  reject raw ticks, candles, order books, provider payloads, and secrets
+  keep retrieval unable to mutate trade or risk decisions
 ```

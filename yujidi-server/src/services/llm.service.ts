@@ -7,6 +7,7 @@ import {
   type AlertReportOutput,
   type CopilotOutput,
   type LLMProvider,
+  type PostTradeReviewInput,
 } from "../ports/llm-provider.port.js";
 
 const logger = pino({ name: "llm-service" });
@@ -70,6 +71,17 @@ export class LlmService {
       userPrompt,
     });
   }
+
+  public async generatePostTradeReview(input: PostTradeReviewInput): Promise<unknown> {
+    return this.provider.generatePostTradeReview(input);
+  }
+
+  public getProviderMetadata(): { name: string; modelName?: string } {
+    return {
+      name: this.provider.name,
+      ...(this.provider.modelName ? { modelName: this.provider.modelName } : {}),
+    };
+  }
 }
 
 let sharedLlmServiceInstance: LlmService | null = null;
@@ -79,11 +91,18 @@ export const getSharedLlmService = (): LlmService => {
   return sharedLlmServiceInstance;
 };
 
-export const sharedLlmService: Pick<LlmService, "generateAlertReport" | "generateCopilotResponse"> = {
+export const sharedLlmService: Pick<
+  LlmService,
+  "generateAlertReport" | "generateCopilotResponse" | "generatePostTradeReview" | "getProviderMetadata"
+> = {
   generateAlertReport: (...args: Parameters<LlmService["generateAlertReport"]>) => {
     return getSharedLlmService().generateAlertReport(...args);
   },
   generateCopilotResponse: (...args: Parameters<LlmService["generateCopilotResponse"]>) => {
     return getSharedLlmService().generateCopilotResponse(...args);
   },
+  generatePostTradeReview: (...args: Parameters<LlmService["generatePostTradeReview"]>) => {
+    return getSharedLlmService().generatePostTradeReview(...args);
+  },
+  getProviderMetadata: () => getSharedLlmService().getProviderMetadata(),
 };

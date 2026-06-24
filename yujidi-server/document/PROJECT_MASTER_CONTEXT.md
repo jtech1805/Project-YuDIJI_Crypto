@@ -2072,6 +2072,10 @@ Implemented:
 - User-specific Angel WebSocket LTP debug streaming for Angel MCX monitors.
 - Provider-aware frontend WebSocket subscription routing for Binance and Angel MCX.
 - Angel normalized tick analyzer alert generation for Angel MCX monitors.
+- Risk-first lifecycle through finalized structured TradeJournal.
+- Schema-validated post-trade AI review with deterministic fallback.
+- User-owned AiExplanation persistence with context hash and prompt/schema versions.
+- AI review audit lifecycle and immutable TradeResult/risk-state boundary.
 
 Partially implemented:
 
@@ -2079,7 +2083,7 @@ Partially implemented:
   - New fields exist.
   - Legacy `dropPercentage` remains.
 - Testing strategy.
-  - Documented but not implemented.
+  - Automated backend coverage exists for the risk-first lifecycle and Phase 9 AI safety boundaries.
 - Risk register.
   - Documented and should be maintained.
 
@@ -2097,6 +2101,7 @@ High priority:
 8. Add failed alert tracking or adjust cooldown placement.
 9. Normalize `req.user.id` usage everywhere.
 10. Complete alert movement migration later.
+11. Define Phase 10 verified-knowledge/RAG boundaries without ingesting raw market/provider data.
 
 Medium priority:
 

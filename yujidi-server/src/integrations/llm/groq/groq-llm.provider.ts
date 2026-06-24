@@ -10,15 +10,16 @@ import {
   type CopilotInput,
   type CopilotOutput,
   type LLMProvider,
+  type PostTradeReviewInput,
 } from "../../../ports/llm-provider.port.js";
 
 const logger = pino({ name: "groq-llm-provider" });
 
 export class GroqLLMProvider implements LLMProvider {
   public readonly name = "groq";
+  public readonly modelName: string;
 
   private readonly client: Groq;
-  private readonly model: string;
 
   public constructor(apiKey: string, model = "llama-3.3-70b-versatile") {
     if (!apiKey) {
@@ -26,7 +27,7 @@ export class GroqLLMProvider implements LLMProvider {
     }
 
     this.client = new Groq({ apiKey });
-    this.model = model;
+    this.modelName = model;
   }
 
   public async generateAlertReport(input: AlertReportInput): Promise<AlertReportOutput> {
@@ -51,7 +52,7 @@ export class GroqLLMProvider implements LLMProvider {
         direction: input.direction,
         timeWindowMinutes,
         newsContextLength: newsContext.length,
-        model: this.model,
+        model: this.modelName,
         timestamp: new Date().toISOString(),
       },
       "Initiating Groq LLM inference",
@@ -60,7 +61,7 @@ export class GroqLLMProvider implements LLMProvider {
     let completion;
     try {
       completion = await this.client.chat.completions.create({
-        model: this.model,
+        model: this.modelName,
         response_format: { type: "json_object" },
         messages: [
           {
@@ -179,7 +180,7 @@ export class GroqLLMProvider implements LLMProvider {
         event: "GROQ_COPILOT_CALL",
         symbol: input.symbol,
         historyCount: input.chatHistory.length,
-        model: this.model,
+        model: this.modelName,
       },
       "Initiating Groq inference for Copilot Chat",
     );
@@ -193,7 +194,7 @@ export class GroqLLMProvider implements LLMProvider {
     let completion;
     try {
       completion = await this.client.chat.completions.create({
-        model: this.model,
+        model: this.modelName,
         temperature: 0.1,
         response_format: { type: "json_object" },
         messages,
@@ -238,5 +239,57 @@ export class GroqLLMProvider implements LLMProvider {
     logger.info({ event: "GROQ_COPILOT_SUCCESS" }, "Copilot inference completed safely");
 
     return parsedReport.data;
+  }
+
+  public async generatePostTradeReview(input: PostTradeReviewInput): Promise<unknown> {
+    let completion;
+    try {
+      completion = await this.client.chat.completions.create({
+        model: this.modelName,
+        temperature: 0.1,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: `You are YuJiDi's post-trade review assistant.
+You explain process quality from finalized backend facts only.
+You do not recommend buying or selling, place orders, calculate or revise P&L, change risk state, score trades, or grant trade permission.
+Return strict JSON matching exactly:
+{
+  "summary": "string",
+  "processQuality": "GOOD_PROCESS | MIXED_PROCESS | BAD_PROCESS",
+  "strengths": ["string"],
+  "keyMistakes": ["string"],
+  "riskNotes": ["string"],
+  "improvementSuggestions": ["string"],
+  "nextTradeFocus": "string",
+  "confidence": "LOW | MEDIUM | HIGH"
+}`,
+          },
+          {
+            role: "user",
+            content: `Prompt version: ${input.promptVersion}
+Schema version: ${input.schemaVersion}
+Review this finalized trade journal context without changing or recalculating any fact:
+${JSON.stringify(input.context)}`,
+          },
+        ],
+      });
+    } catch (error: unknown) {
+      logger.error(
+        { event: "GROQ_POST_TRADE_REVIEW_ERROR", error },
+        "Groq post-trade review request failed",
+      );
+      throw new AppError("Groq post-trade review request failed", 502);
+    }
+
+    const rawContent = completion.choices[0]?.message?.content;
+    if (!rawContent) throw new AppError("Groq post-trade review returned empty response", 502);
+
+    try {
+      return JSON.parse(rawContent) as unknown;
+    } catch {
+      throw new AppError("Groq post-trade review returned malformed JSON", 502);
+    }
   }
 }

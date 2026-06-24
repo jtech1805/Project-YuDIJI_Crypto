@@ -43,10 +43,19 @@ export const copilotOutputSchema = z.object({
 
 export type CopilotOutput = z.infer<typeof copilotOutputSchema>;
 
+export type PostTradeReviewInput = {
+  context: Record<string, unknown>;
+  promptVersion: string;
+  schemaVersion: string;
+};
+
 export interface LLMProvider {
   name: string;
+  modelName?: string;
 
   generateAlertReport(input: AlertReportInput): Promise<AlertReportOutput>;
 
   generateCopilotResponse(input: CopilotInput): Promise<CopilotOutput>;
+
+  generatePostTradeReview(input: PostTradeReviewInput): Promise<unknown>;
 }

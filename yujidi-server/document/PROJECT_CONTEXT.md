@@ -1071,6 +1071,12 @@ High-priority edge cases:
 - Copilot chat endpoint.
 - Chat history persistence.
 - Deterministic trade math in copilot.
+- Risk-first lifecycle from TradePlan through finalized TradeJournal.
+- Post-trade AI review for finalized journals.
+- Explicit AI context allowlist with SHA-256 context hashing.
+- Strict AI output schema and semantic safety validation.
+- Deterministic fallback review for invalid or unavailable LLM output.
+- AiExplanation persistence and AI lifecycle audit events.
 - Frontend landing/auth flow.
 - Frontend protected dashboard.
 - Frontend add monitor modal.

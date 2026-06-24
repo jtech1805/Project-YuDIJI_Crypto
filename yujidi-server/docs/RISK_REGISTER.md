@@ -1784,6 +1784,32 @@ Mitigation:
 - Explicit validators for document type/source.
 - Tests reject raw market/provider payloads and secrets.
 
+### R-077: Unsafe Or Overreaching Post-Trade AI Output
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigated for Phase 9 post-trade review
+
+Description:
+
+An LLM may return malformed output, recommendation language, order instructions, or claims that it changed risk state or calculated authoritative P&L.
+
+Impact:
+
+Users could mistake non-deterministic narrative for a trade instruction or authoritative domain decision.
+
+Mitigation:
+
+- AI context is built from an explicit TradeJournal allowlist.
+- Context is hashed and prompt/schema versions are stored.
+- Output is validated with a strict schema and semantic safety rules.
+- Unsafe or failed output is replaced by deterministic fallback review.
+- AI updates only TradeJournal AI reference fields.
+- Tests prove TradeResult and risk state remain unchanged.
+- AI request, rejection, fallback, validation, and storage are audited.
+
 ## 4. Review Cadence
 
 This risk register should be reviewed:

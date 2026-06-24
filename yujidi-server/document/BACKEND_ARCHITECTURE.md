@@ -794,6 +794,24 @@ TradePlanService
   -> AuditLogService
 ```
 
+Current Phase 9 post-trade review flow:
+
+```txt
+POST /api/trade-journals/:id/ai-review
+  -> AiTradeReviewService verifies user ownership and FINALIZED status
+  -> AiTradeReviewContextService projects an explicit safe context
+  -> context is SHA-256 hashed and prompt/schema versions are recorded
+  -> selected LLMProvider returns JSON
+  -> strict schema and semantic safety validation
+  -> valid output: AiExplanation COMPLETED
+  -> invalid/provider failure: deterministic AiExplanation FALLBACK_USED
+  -> update only TradeJournal.aiSummary/aiReviewId/aiGeneratedAt
+  -> audit request, validation/rejection, fallback, and storage
+```
+
+AI review is a read/explanation boundary over finalized facts. It does not call
+RiskGovernor, RiskState projection, TradeResult mutation, monitoring, or order APIs.
+
 Standalone score flow:
 
 ```txt
