@@ -1,4 +1,5 @@
 import { Types, isValidObjectId } from "mongoose";
+import pino from "pino";
 import { z } from "zod";
 
 import { AppError } from "../errors/AppError.js";
@@ -17,6 +18,12 @@ import {
   type TradeSetupStatus,
 } from "../types/trade.types.js";
 import { auditLogService, type AuditLogService } from "./audit-log.service.js";
+import {
+  sharedActiveTradeSubscriptionService,
+  type ActiveTradeSubscriptionService,
+} from "./active-trade-subscription.service.js";
+
+const logger = pino({ name: "active-trade-service" });
 
 const positiveNumber = z.number().positive();
 
@@ -73,6 +80,10 @@ type ActiveTradeServiceDependencies = {
   tradeSetupRepository: TradeSetupRepository;
   activeTradeRepository: ActiveTradeRepository;
   auditLogService: Pick<AuditLogService, "record">;
+  subscriptionService: Pick<
+    ActiveTradeSubscriptionService,
+    "registerActiveTrade" | "unregisterActiveTrade"
+  >;
   now: () => Date;
 };
 
@@ -394,6 +405,7 @@ export class ActiveTradeService {
         activeTradeId: String(activeTrade._id),
       },
     });
+    await this.registerMonitoringSafely(activeTrade);
 
     return activeTrade;
   }
@@ -456,6 +468,7 @@ export class ActiveTradeService {
       before: this.toAuditActiveTradeSnapshot(activeTrade),
       after: this.toAuditActiveTradeSnapshot(cancelled),
     });
+    await this.unregisterMonitoringSafely(cancelled);
 
     return cancelled;
   }
@@ -574,6 +587,45 @@ export class ActiveTradeService {
 
   private getAuditLogService(): Pick<AuditLogService, "record"> {
     return this.dependencies.auditLogService ?? auditLogService;
+  }
+
+  private getSubscriptionService(): Pick<
+    ActiveTradeSubscriptionService,
+    "registerActiveTrade" | "unregisterActiveTrade"
+  > {
+    return this.dependencies.subscriptionService ?? sharedActiveTradeSubscriptionService;
+  }
+
+  private async registerMonitoringSafely(activeTrade: ActiveTradeRecord): Promise<void> {
+    try {
+      await this.getSubscriptionService().registerActiveTrade(activeTrade);
+    } catch (error: unknown) {
+      logger.warn(
+        {
+          event: "ACTIVE_TRADE_MONITORING_REGISTRATION_FAILED",
+          activeTradeId: String(activeTrade._id),
+          userId: String(activeTrade.userId),
+          error: error instanceof Error ? error.message : "Unknown registration error",
+        },
+        "ActiveTrade created but live monitoring registration failed",
+      );
+    }
+  }
+
+  private async unregisterMonitoringSafely(activeTrade: ActiveTradeRecord): Promise<void> {
+    try {
+      await this.getSubscriptionService().unregisterActiveTrade(activeTrade);
+    } catch (error: unknown) {
+      logger.warn(
+        {
+          event: "ACTIVE_TRADE_MONITORING_UNREGISTRATION_FAILED",
+          activeTradeId: String(activeTrade._id),
+          userId: String(activeTrade.userId),
+          error: error instanceof Error ? error.message : "Unknown unregistration error",
+        },
+        "ActiveTrade cancelled but live monitoring unregistration failed",
+      );
+    }
   }
 
   private getNow(): Date {

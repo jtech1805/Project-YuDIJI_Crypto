@@ -1,4 +1,5 @@
 import { Types, isValidObjectId } from "mongoose";
+import pino from "pino";
 import { z } from "zod";
 
 import { AppError } from "../errors/AppError.js";
@@ -19,10 +20,16 @@ import {
 } from "../types/trade.types.js";
 import { auditLogService, type AuditLogService } from "./audit-log.service.js";
 import {
+  sharedActiveTradeSubscriptionService,
+  type ActiveTradeSubscriptionService,
+} from "./active-trade-subscription.service.js";
+import {
   getDateKeyInTimezone,
   RiskStateProjectionService,
   type RiskProjectionResult,
 } from "./risk-state-projection.service.js";
+
+const logger = pino({ name: "trade-result-service" });
 
 const costComponentSchema = z.object({
   type: z.enum(COST_COMPONENT_TYPES),
@@ -85,6 +92,7 @@ type TradeResultServiceDependencies = {
   tradeResultRepository: TradeResultRepository;
   riskStateProjectionService: Pick<RiskStateProjectionService, "applyFinalizedTradeResult">;
   auditLogService: Pick<AuditLogService, "record">;
+  subscriptionService: Pick<ActiveTradeSubscriptionService, "unregisterActiveTrade">;
   now: () => Date;
 };
 
@@ -345,6 +353,19 @@ export class TradeResultService {
       await this.getTradeResultRepository().deleteOne({ _id: tradeResult._id }).exec();
       throw new AppError("ActiveTrade can no longer be closed", 409);
     }
+    try {
+      await this.getSubscriptionService().unregisterActiveTrade(activeTradeId);
+    } catch (error: unknown) {
+      logger.warn(
+        {
+          event: "ACTIVE_TRADE_MONITORING_UNREGISTRATION_FAILED",
+          activeTradeId,
+          userId,
+          error: error instanceof Error ? error.message : "Unknown unregistration error",
+        },
+        "ActiveTrade closed but live monitoring unregistration failed",
+      );
+    }
 
     await this.getAuditLogService().record({
       userId,
@@ -439,6 +460,10 @@ export class TradeResultService {
 
   private getAuditLogService(): Pick<AuditLogService, "record"> {
     return this.dependencies.auditLogService ?? auditLogService;
+  }
+
+  private getSubscriptionService(): Pick<ActiveTradeSubscriptionService, "unregisterActiveTrade"> {
+    return this.dependencies.subscriptionService ?? sharedActiveTradeSubscriptionService;
   }
 
   private getNow(): Date {

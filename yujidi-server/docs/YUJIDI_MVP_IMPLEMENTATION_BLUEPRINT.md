@@ -575,7 +575,9 @@ Implemented.
 Monitoring uses actual/current ActiveTrade values, not TradeSetup planned values.
 The manual endpoint creates deterministic TradeEvents without AI.
 MONITORING_EVALUATED is audited but not persisted for every evaluation.
-No live WebSocket hook, automatic close, TradeResult, risk-state projection, or order action exists.
+New non-deduplicated TradeEvents are delivered to the owning user's YuJiDi WebSocket in Phase 10.
+Live market ticks are not yet wired to automatic ActiveTrade evaluation.
+No automatic close, TradeResult creation, risk-state mutation, or order action occurs from delivery.
 ```
 
 Implemented API:
@@ -681,6 +683,108 @@ GET /api/trade-journals/:id/ai-review
 GET /api/ai-explanations/:id
 ```
 
+### Phase 10: Real-Time TradeEvent Delivery
+
+- Add a second user-scoped real-time lane beside existing market monitor alerts.
+- Build a safe `TRADE_EVENT_CREATED` payload from persisted TradeEvent fields.
+- Deliver only newly created, non-deduplicated events to the owning user.
+- Reuse the existing authenticated YuJiDi WebSocket connection and user socket registry.
+- Audit delivery attempts, successful dispatch, and failures.
+- Keep persistence authoritative when delivery fails.
+
+Real-time lanes:
+
+```txt
+Lane 1:
+Monitor/Tripwire
+  -> AnalyzerEngine
+  -> Alert
+  -> NEW_ALERT
+
+Lane 2:
+ActiveTrade
+  -> TradeMonitoringService
+  -> TradeEvent
+  -> TRADE_EVENT_CREATED
+```
+
+Current status:
+
+```txt
+Implemented.
+TradeEvent delivery is additive and user-scoped.
+Existing NEW_ALERT, ticker, market tick, authentication, and subscription behavior is unchanged.
+Delivery does not close trades, create TradeResult, mutate risk state, call AI, or execute orders.
+Live normalized tick wiring into TradeMonitoringService remains future work.
+```
+
+### Phase 11: Live ActiveTrade Monitoring
+
+- Route Binance ticker and normalized Angel user-session ticks into a dedicated `ActiveTradeLiveMonitorService`.
+- Resolve canonical Symbol identity before matching ActiveTrades whenever possible.
+- Restrict Angel matching by the tick's authenticated user-session id.
+- Match only `ACTIVE` and `PARTIALLY_EXITED` trades.
+- Reuse deterministic `TradeMonitoringService`, `TradeEventService`, and `TradeEventDeliveryService`.
+- Reject stale ticks older than 10 seconds by default.
+- Limit each ActiveTrade to one evaluation per second by default.
+- Limit evaluation workload to 100 matching trades per tick.
+- Bound the in-memory cooldown map with cleanup and a maximum entry count.
+
+Current status:
+
+```txt
+Implemented.
+Binance public ticker events can evaluate matching active crypto trades.
+Angel ticks evaluate only the owning user's matching active trades.
+Live ticks may create and deliver deterministic TradeEvents.
+Live ticks cannot close trades, create TradeResult, update RiskState, call AI, or execute orders.
+AnalyzerEngine and NEW_ALERT behavior remain unchanged.
+```
+
+Live trade lane:
+
+```txt
+Normalized market tick
+  -> ActiveTradeLiveMonitorService
+  -> canonical symbol / safe snapshot matching
+  -> freshness, cooldown, and workload controls
+  -> TradeMonitoringService
+  -> TradeEventService
+  -> TradeEventDeliveryService
+  -> TRADE_EVENT_CREATED
+```
+
+### Phase 12: Live Monitoring Reliability And Subscription Orchestration
+
+- Register provider stream interest when an ActiveTrade becomes active.
+- Remove stream interest when a trade is cancelled, closed, or stopped out.
+- Warm existing active-trade subscriptions in a bounded non-blocking startup task.
+- Resolve live ticks through a process-local provider-aware route cache before querying MongoDB.
+- Cache only the projected ActiveTrade fields required for monitoring.
+- Use a five-second cache TTL, bounded key count, and deterministic eviction.
+- Track lightweight in-memory monitoring health counters per subscription key.
+
+Subscription keys:
+
+```txt
+Binance:
+BINANCE:BINANCE:BTCUSDT
+
+Angel:
+ANGEL_ONE:<userId>:MCX:<instrumentToken>
+```
+
+Current status:
+
+```txt
+Implemented for single-instance MVP.
+ActiveTrade creation attempts monitoring registration without making trade creation depend on provider availability.
+Cancellation and close invalidate monitoring cache/subscription interest.
+Cache misses and expiry lazily refresh from MongoDB.
+Startup warm-up is bounded and does not block server startup.
+No Redis, AI, RAG, automatic close, risk mutation, or order execution is included.
+```
+
 ## 10. Verification Gates
 
 Backend gates:
@@ -760,8 +864,8 @@ POST /api/trade-plans/:id/capital-adjustments
 Next recommended coding task:
 
 ```txt
-Phase 10:
-  define a separately scoped verified-knowledge/RAG foundation
-  reject raw ticks, candles, order books, provider payloads, and secrets
-  keep retrieval unable to mutate trade or risk decisions
+Next phase:
+  define previous-price crossing semantics and repeating-event windows
+  design shared subscription/cache ownership before multi-instance scale
+  keep automatic close, risk mutation, AI, and orders separately scoped
 ```

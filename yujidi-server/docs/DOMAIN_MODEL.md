@@ -1296,6 +1296,10 @@ Rules:
 - Evaluates LONG and SHORT rules direction-aware.
 - Uses `${activeTradeId}:${eventType}` idempotency for the Phase 6 baseline.
 - Audits `MONITORING_EVALUATED` rather than persisting it for every price.
+- A newly persisted event is delivered as `TRADE_EVENT_CREATED` to the owning user's authenticated YuJiDi WebSocket.
+- Deduplicated events are not delivered again.
+- Delivery payloads use an explicit field allowlist and exclude metadata, credentials, provider tokens, and raw payloads.
+- Delivery failure does not roll back TradeEvent persistence.
 - Does not close ActiveTrade.
 - Does not create TradeResult or mutate risk state.
 - Does not use AI for event detection.
@@ -1318,6 +1322,68 @@ GET /api/trade-events
 GET /api/trade-events/:id
 GET /api/active-trades/:id/events
 ```
+
+Real-time event:
+
+```txt
+TRADE_EVENT_CREATED
+```
+
+The trade lifecycle event lane is separate from the market monitor `NEW_ALERT`
+lane. Both use the same authenticated frontend WebSocket connection, but only
+the owning user's sockets receive a TradeEvent.
+
+Current boundary:
+
+- Phase 10 delivers created events in real time.
+- Phase 11 routes Binance and Angel live ticks into deterministic ActiveTrade evaluation.
+- Canonical `symbolId` matching is preferred.
+- Safe fallback matching requires provider, exchange, and symbol/providerSymbol.
+- Angel matching always includes the tick's user-session owner.
+- Only `ACTIVE` and `PARTIALLY_EXITED` trades are eligible.
+- Stale ticks, cooldown-active trades, and workload overflow are skipped.
+- Delivery does not auto-close ActiveTrade.
+- Delivery does not create TradeResult or update RiskState.
+- Delivery does not call AI or broker order APIs.
+
+Phase 11 controls:
+
+```txt
+maxTickAgeMs = 10000
+minEvaluationIntervalMs = 1000 per ActiveTrade
+maxTradesPerTick = 100
+```
+
+The cooldown state is in memory and process-local for the MVP.
+
+### 7.9.1 ActiveTrade Subscription And Route Cache
+
+`ActiveTradeSubscriptionService` connects lifecycle ownership to market-stream
+interest without making ActiveTrade persistence depend on WebSocket success.
+
+Rules:
+
+- ActiveTrade creation registers provider-aware stream interest.
+- Cancellation, close, and stopped-out completion unregister interest.
+- Binance keys are public by provider/exchange/instrument identity.
+- Angel keys always include the owning user id.
+- Cache entries contain bounded monitoring projections only.
+- Credentials, sessions, provider payloads, and raw ticks are never cached.
+- Cache TTL is five seconds by default.
+- Cache is bounded to 5,000 subscription keys by default.
+- Existing active trades are warmed in a bounded background startup task.
+- Cache and interest state are rebuilt after process restart.
+
+`TradeMonitoringHealthService` tracks:
+
+- last tick time
+- last evaluation time
+- evaluated and skipped counts
+- stale ticks
+- cooldown skips
+- workload cap hits
+
+Health state is internal and in memory; Phase 12 adds no public endpoint.
 
 ### 7.10 TradeResult
 

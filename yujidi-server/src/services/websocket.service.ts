@@ -7,6 +7,11 @@ import WebSocket, { WebSocketServer } from "ws";
 
 import { AppError } from "../errors/AppError.js";
 import { AnalyzerEngine } from "./analyzer.service.js";
+import { ActiveTradeLiveMonitorService } from "./active-trade-live-monitor.service.js";
+import {
+  sharedActiveTradeSubscriptionService,
+  type ActiveTradeStreamSubscription,
+} from "./active-trade-subscription.service.js";
 import { AngelUserMarketDataSessionService } from "./angel-user-market-data-session.service.js";
 import { MarketSubscriptionResolver, type ResolvedMarketSubscription } from "./market-subscription-resolver.service.js";
 import { MarketSubscriptionRouter } from "./market-subscription-router.service.js";
@@ -86,6 +91,11 @@ interface OutboundAlertPayload {
   type: "NEW_ALERT";
   payload: unknown;
 }
+interface OutboundTradeEventPayload {
+  type: "TRADE_EVENT_CREATED";
+  payload: unknown;
+}
+type UserScopedOutboundPayload = OutboundAlertPayload | OutboundTradeEventPayload;
 export interface BinanceDepthMessage {
   lastUpdateId: number;
   bids: string[][];
@@ -104,6 +114,7 @@ const logger = pino({ name: "websocket-manager" });
 export class WebSocketManager {
   private readonly wsServer: WebSocketServer;
   private readonly analyzerEngine: AnalyzerEngine;
+  private readonly activeTradeLiveMonitorService: ActiveTradeLiveMonitorService;
   private readonly subscriptionResolver: MarketSubscriptionResolver;
   private readonly subscriptionRouter: MarketSubscriptionRouter;
   private binanceSocket: WebSocket | null;
@@ -146,9 +157,14 @@ export class WebSocketManager {
     this.subscriptionRouter = new MarketSubscriptionRouter({
       angelSessionService,
     });
+    sharedActiveTradeSubscriptionService.configureStreamOrchestrator({
+      subscribe: (userId, subscription) => this.subscribeActiveTradeStream(userId, subscription),
+      unsubscribe: (userId, subscription) => this.unsubscribeActiveTradeStream(userId, subscription),
+    });
     this.analyzerEngine = new AnalyzerEngine((userId, payload): void => {
       this.emitToUser(userId, payload);
     });
+    this.activeTradeLiveMonitorService = new ActiveTradeLiveMonitorService();
   }
 
   public initialize(server: HttpServer): void {
@@ -221,7 +237,7 @@ export class WebSocketManager {
     });
   }
 
-  public emitToUser(userId: string, payload: OutboundAlertPayload): void {
+  public emitToUser(userId: string, payload: UserScopedOutboundPayload): number {
     const sockets = this.userSockets.get(userId);
     if (!sockets || sockets.size === 0) {
       logger.warn(
@@ -232,7 +248,7 @@ export class WebSocketManager {
         },
         "Alert emission skipped because user has no active sockets",
       );
-      return;
+      return 0;
     }
 
     logger.warn(
@@ -244,9 +260,13 @@ export class WebSocketManager {
       },
       "Emitting alert payload to user sockets",
     );
+    let deliveredSocketCount = 0;
     for (const socket of sockets) {
-      this.sendToClient(socket, payload);
+      if (this.sendToClient(socket, payload)) {
+        deliveredSocketCount += 1;
+      }
     }
+    return deliveredSocketCount;
   }
 
   public async handleClientMessage(ws: WebSocket, message: WebSocket.RawData): Promise<void> {
@@ -447,6 +467,34 @@ export class WebSocketManager {
         this.activeBinanceSymbols.delete(symbol);
       }
     }
+  }
+
+  public async subscribeActiveTradeStream(
+    userId: string,
+    subscription: ActiveTradeStreamSubscription,
+  ): Promise<void> {
+    const shouldRouteSubscribe = this.incrementGlobalCount(subscription.subscriptionKey);
+    this.subscriptionMetadata.set(subscription.subscriptionKey, subscription);
+    try {
+      if (shouldRouteSubscribe) {
+        await this.subscriptionRouter.subscribe(userId, subscription);
+      }
+      if (subscription.provider === "BINANCE") this.updateBinanceSubscriptions();
+    } catch (error: unknown) {
+      this.decrementGlobalCount(subscription.subscriptionKey);
+      throw error;
+    }
+  }
+
+  public async unsubscribeActiveTradeStream(
+    userId: string,
+    subscription: ActiveTradeStreamSubscription,
+  ): Promise<void> {
+    const shouldRouteUnsubscribe = this.decrementGlobalCount(subscription.subscriptionKey);
+    if (shouldRouteUnsubscribe) {
+      await this.subscriptionRouter.unsubscribe(userId, subscription);
+    }
+    if (subscription.provider === "BINANCE") this.updateBinanceSubscriptions();
   }
 
   private authenticateUpgradeRequest(request: IncomingMessage): string {
@@ -670,6 +718,22 @@ export class WebSocketManager {
           this.sendToClient(client, outboundPayload);
         }
       }
+      void this.activeTradeLiveMonitorService.handleTick({
+        provider: "BINANCE",
+        exchange: "BINANCE",
+        symbol,
+        providerSymbol: symbol,
+        instrumentToken: symbol,
+        price: Number(parsedPayload.c),
+        occurredAt: new Date(parsedPayload.E),
+        receivedAt: new Date(),
+        source: "BINANCE_WS",
+      }).catch((error: unknown): void => {
+        logger.warn(
+          { event: "WS_ACTIVE_TRADE_BINANCE_TICK_FAILED", symbol, error },
+          "Failed to route Binance tick to ActiveTrade monitoring",
+        );
+      });
       return; // Message handled, exit function
     }
 
@@ -856,6 +920,29 @@ export class WebSocketManager {
         "Analyzer failed while processing normalized market tick",
       );
     });
+    void this.activeTradeLiveMonitorService.handleTick({
+      provider: tick.provider,
+      exchange: tick.exchange,
+      symbol: tick.symbol,
+      ...(tick.providerSymbol ? { providerSymbol: tick.providerSymbol } : {}),
+      instrumentToken: tick.instrumentToken,
+      userId: tick.userId,
+      price: tick.price,
+      occurredAt: new Date(tick.timestamp),
+      receivedAt: new Date(),
+      source: "ANGEL_WS",
+    }).catch((error: unknown): void => {
+      logger.warn(
+        {
+          event: "WS_ACTIVE_TRADE_ANGEL_TICK_FAILED",
+          userId: tick.userId,
+          exchange: tick.exchange,
+          symbol: tick.symbol,
+          error,
+        },
+        "Failed to route Angel tick to ActiveTrade monitoring",
+      );
+    });
   }
 
   private errorReason(error: unknown): string {
@@ -888,17 +975,20 @@ export class WebSocketManager {
       | OutboundAckPayload
       | OutboundErrorPayload
       | OutboundAlertPayload
+      | OutboundTradeEventPayload
       | OutboundSubscriptionUpdateResultPayload
       | OutboundMarketTickPayload,
-  ): void {
+  ): boolean {
     if (ws.readyState !== WebSocket.OPEN) {
-      return;
+      return false;
     }
 
     try {
       ws.send(JSON.stringify(payload));
+      return true;
     } catch (error: unknown) {
       logger.warn({ error }, "Failed to send payload to websocket client");
+      return false;
     }
   }
   public getEngineSnapshot() {

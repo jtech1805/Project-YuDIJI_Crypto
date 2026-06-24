@@ -8,6 +8,7 @@ import { z } from "zod";
 import { app, logger } from "./app.js";
 import { syncAngelMcxSymbols } from "./integrations/market-data/angel/angel-symbol-sync.service.js";
 import { syncBinanceSymbols } from "./services/binance.service.js";
+import { sharedActiveTradeSubscriptionService } from "./services/active-trade-subscription.service.js";
 // import { WebSocketManager } from "./services/websocket.service.js";
 import { sharedWebsocketManager } from "./services/websocket.service.js";
 const envSchema = z.object({
@@ -136,6 +137,20 @@ const runAngelSymbolSyncOnceIfEnabled = (): void => {
   void syncOnce();
 };
 
+const warmActiveTradeMonitoring = (): void => {
+  void sharedActiveTradeSubscriptionService
+    .warmActiveTradeSubscriptions()
+    .then((result): void => {
+      logger.info(result, "ActiveTrade monitoring subscriptions warmed");
+    })
+    .catch((error: unknown): void => {
+      logger.warn(
+        { error },
+        "ActiveTrade monitoring warm-up failed; startup will continue",
+      );
+    });
+};
+
 const startServer = async (): Promise<void> => {
   await connectMongoWithRetry();
 
@@ -147,6 +162,7 @@ const startServer = async (): Promise<void> => {
   // 3. USE THE SHARED INSTANCE HERE
   sharedWebsocketManager.initialize(server);
   logger.info("WebSocket manager initialized");
+  warmActiveTradeMonitoring();
   runBinanceSymbolSyncLoop();
   runAngelSymbolSyncOnceIfEnabled();
 };

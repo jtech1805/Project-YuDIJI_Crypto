@@ -777,14 +777,67 @@ Currently covered:
 - evaluation does not close the trade
 - evaluation does not create TradeResult
 - evaluation does not mutate risk state
+- safe `TRADE_EVENT_CREATED` payload includes required frontend fields
+- secret-shaped snapshot fields, provider tokens, metadata, and raw payloads are excluded
+- delivery targets only the owning user
+- newly created events are delivered once
+- deduplicated events do not produce duplicate delivery
+- delivery failure does not roll back event creation
+- delivery attempt/success/failure audit behavior
+- existing analyzer market alert event remains `NEW_ALERT`
 
 Must cover in later phases:
 
-- normalized live market-tick integration
 - repeating event windows and cooldown policy
 - previous-price crossing semantics
 - degraded/stale market-feed events
 - partial-exit and current-stop updates
+
+### Phase 11 Live ActiveTrade Monitoring Tests
+
+Currently covered:
+
+- Binance tick matching by canonical `symbolId`
+- canonical Symbol resolution when a tick has no `symbolId`
+- strict provider/exchange/symbol fallback matching
+- Angel tick rejection without a valid user id
+- Angel evaluation limited to the owning user's ActiveTrades
+- inactive trade statuses are excluded
+- stale ticks are skipped
+- per-ActiveTrade evaluation cooldown is enforced
+- deterministic workload cap limits evaluations
+- matching trades delegate to `TradeMonitoringService` with `MARKET_TICK`
+- the existing TradeEvent persistence and WebSocket delivery path is reused
+- live tick handling does not create TradeResult or mutate risk state
+- full analyzer and existing WebSocket alert regressions remain green
+
+### Phase 12 Subscription, Cache, And Health Tests
+
+Currently covered:
+
+- Binance and Angel provider-aware subscription key generation
+- Angel key rejection without user id
+- registration stores bounded projected monitoring data only
+- registration drives one provider subscription per shared key
+- cache hits avoid repeated MongoDB lookup
+- cache expiry refreshes from MongoDB
+- inactive trades are excluded from cache results
+- cache key count is bounded with deterministic eviction
+- unregister removes trade interest and provider subscription
+- bounded startup warm-up registers existing active trades
+- Angel cache lookup remains user-scoped
+- Binance public cache can route matching trades across owners
+- health counters track evaluated, stale, cooldown, and workload conditions
+- ActiveTrade creation survives registration failure
+- cancellation and close invalidate monitoring registration
+- full analyzer, NEW_ALERT, TradeEvent delivery, risk, journal, and AI regressions remain green
+
+Still required before multi-instance deployment:
+
+- distributed stream-interest ownership
+- shared cache/cooldown state
+- leader election or partition ownership
+- reconnect reconciliation across instances
 
 ### TradeResult And Risk Projection Tests
 

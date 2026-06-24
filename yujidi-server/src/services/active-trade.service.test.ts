@@ -116,10 +116,13 @@ const validShortInput = (overrides: Partial<ConfirmActualTradeInput> = {}): Conf
 const createHarness = (overrides: {
   tradeSetups?: Record<string, any>[];
   activeTrades?: Record<string, any>[];
+  registrationError?: Error;
 } = {}) => {
   const tradeSetups: Record<string, any>[] = overrides.tradeSetups ?? [makeTradeSetup()];
   const activeTrades: Record<string, any>[] = overrides.activeTrades ?? [];
   const auditEvents: Record<string, any>[] = [];
+  const registeredTrades: Record<string, any>[] = [];
+  const unregisteredTrades: Array<Record<string, any> | string> = [];
 
   const service = new ActiveTradeService({
     tradeSetupRepository: {
@@ -171,14 +174,26 @@ const createHarness = (overrides: {
         auditEvents.push(event);
       },
     },
+    subscriptionService: {
+      registerActiveTrade: async (activeTrade) => {
+        if (overrides.registrationError) throw overrides.registrationError;
+        registeredTrades.push(activeTrade);
+        return "ANGEL_ONE:user:MCX:token";
+      },
+      unregisterActiveTrade: async (activeTrade) => {
+        unregisteredTrades.push(activeTrade);
+      },
+    },
     now: () => fixedNow,
   });
 
   return {
     activeTrades,
     auditEvents,
+    registeredTrades,
     service,
     tradeSetups,
+    unregisteredTrades,
   };
 };
 
@@ -398,14 +413,31 @@ test("ActiveTradeService audits confirmation, creation, and TradeSetup execution
   ]);
 });
 
+test("ActiveTradeService registers new trade for live monitoring", async () => {
+  const { registeredTrades, service } = createHarness();
+  const activeTrade = await service.confirmActualTrade(userId, tradeSetupId, validLongInput());
+  assert.equal(registeredTrades.length, 1);
+  assert.equal(String(registeredTrades[0]?._id), String(activeTrade._id));
+});
+
+test("ActiveTradeService creation survives monitoring registration failure", async () => {
+  const { activeTrades, service } = createHarness({
+    registrationError: new Error("stream unavailable"),
+  });
+  const activeTrade = await service.confirmActualTrade(userId, tradeSetupId, validLongInput());
+  assert.equal(activeTrades.length, 1);
+  assert.equal(activeTrade.status, "ACTIVE");
+});
+
 test("ActiveTradeService cancellation works for ACTIVE trade", async () => {
-  const { service } = createHarness();
+  const { service, unregisteredTrades } = createHarness();
   const activeTrade = await service.confirmActualTrade(userId, tradeSetupId, validLongInput());
 
   const cancelled = await service.cancelActiveTrade(userId, String(activeTrade._id));
 
   assert.equal(cancelled.status, "CANCELLED");
   assert.equal(cancelled.cancelledAt, fixedNow);
+  assert.equal(unregisteredTrades.length, 1);
 });
 
 test("ActiveTradeService cancellation rejects CLOSED trade", async () => {

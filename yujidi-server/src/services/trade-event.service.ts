@@ -1,4 +1,5 @@
 import { Types, isValidObjectId } from "mongoose";
+import pino from "pino";
 
 import { AppError } from "../errors/AppError.js";
 import { TradeEventModel } from "../models/trade-event.model.js";
@@ -9,6 +10,9 @@ import type {
 } from "../types/monitoring.types.js";
 import type { TradeDirection } from "../types/trade.types.js";
 import { auditLogService, type AuditLogService } from "./audit-log.service.js";
+import { TradeEventDeliveryService } from "./trade-event-delivery.service.js";
+
+const logger = pino({ name: "trade-event-service" });
 
 type QueryExec<T> = {
   exec: () => Promise<T>;
@@ -31,6 +35,7 @@ type TradeEventRepository = {
 type TradeEventServiceDependencies = {
   tradeEventRepository: TradeEventRepository;
   auditLogService: Pick<AuditLogService, "record">;
+  deliveryService: Pick<TradeEventDeliveryService, "deliver">;
 };
 
 export type CreateTradeEventInput = {
@@ -140,6 +145,19 @@ export class TradeEventService {
           occurredAt: input.occurredAt,
         },
       });
+      try {
+        await this.getDeliveryService().deliver(event);
+      } catch (error: unknown) {
+        logger.warn(
+          {
+            event: "TRADE_EVENT_DELIVERY_UNEXPECTED_FAILURE",
+            tradeEventId: String(event._id),
+            userId: input.userId,
+            error: error instanceof Error ? error.message : "Unknown delivery error",
+          },
+          "TradeEvent persisted but delivery service unexpectedly failed",
+        );
+      }
 
       return { event, created: true };
     } catch (error: unknown) {
@@ -217,5 +235,8 @@ export class TradeEventService {
   private getAuditLogService(): Pick<AuditLogService, "record"> {
     return this.dependencies.auditLogService ?? auditLogService;
   }
-}
 
+  private getDeliveryService(): Pick<TradeEventDeliveryService, "deliver"> {
+    return this.dependencies.deliveryService ?? new TradeEventDeliveryService();
+  }
+}

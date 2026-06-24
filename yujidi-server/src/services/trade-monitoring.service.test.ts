@@ -86,6 +86,7 @@ const createHarness = (overrides: {
   const activeTrades: Record<string, any>[] = overrides.activeTrades ?? [makeLongTrade()];
   const tradeEvents: Record<string, any>[] = overrides.tradeEvents ?? [];
   const auditEvents: Record<string, any>[] = [];
+  const deliveredEvents: Record<string, any>[] = [];
   let tradeResultCreateCount = 0;
   let riskMutationCount = 0;
 
@@ -123,6 +124,11 @@ const createHarness = (overrides: {
   const tradeEventService = new TradeEventService({
     tradeEventRepository: tradeEventRepository as never,
     auditLogService,
+    deliveryService: {
+      deliver: async (event) => {
+        deliveredEvents.push(event);
+      },
+    },
   });
   const service = new TradeMonitoringService({
     activeTradeRepository: {
@@ -139,6 +145,7 @@ const createHarness = (overrides: {
   return {
     activeTrades,
     auditEvents,
+    deliveredEvents,
     get riskMutationCount() {
       return riskMutationCount;
     },
@@ -253,13 +260,14 @@ test("TradeMonitoringService detects SHORT PRICE_NEAR_SL", async () => {
 });
 
 test("TradeMonitoringService dedupes repeated SL_HIT for same ActiveTrade", async () => {
-  const { service, tradeEvents } = createHarness();
+  const { deliveredEvents, service, tradeEvents } = createHarness();
 
   await service.evaluateActiveTrade(userId, activeTradeId, { price: 95 });
   const second = await service.evaluateActiveTrade(userId, activeTradeId, { price: 94 });
 
   assert.equal(tradeEvents.filter((event) => event.eventType === "SL_HIT").length, 1);
   assert.equal(second.dedupedEventTypes.includes("SL_HIT"), true);
+  assert.equal(deliveredEvents.filter((event) => event.eventType === "SL_HIT").length, 1);
 });
 
 test("TradeMonitoringService does not mutate ActiveTrade status on SL_HIT", async () => {

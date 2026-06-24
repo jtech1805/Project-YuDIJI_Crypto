@@ -1810,6 +1810,78 @@ Mitigation:
 - Tests prove TradeResult and risk state remain unchanged.
 - AI request, rejection, fallback, validation, and storage are audited.
 
+### R-078: Live ActiveTrade Monitoring Load Or Cross-User Tick Leakage
+
+Severity: Critical
+
+Likelihood: Medium
+
+Status: Mitigated for single-instance Phase 11
+
+Description:
+
+High-frequency ticks can cause excessive ActiveTrade queries/evaluations, while
+user-scoped Angel ticks could expose one user's market session to another user's
+trades if ownership is not included in matching.
+
+Impact:
+
+Database and CPU pressure, duplicated lifecycle events, or cross-user monitoring
+of broker-authorized instruments.
+
+Mitigation:
+
+- Angel ticks require a valid user id and ActiveTrade queries include that owner.
+- Canonical symbol id is preferred over provider-token identity.
+- Fallback matching requires provider, exchange, and symbol/providerSymbol.
+- Only ACTIVE/PARTIALLY_EXITED trades are queried.
+- Ticks older than 10 seconds are skipped by default.
+- Each ActiveTrade has a one-second minimum evaluation interval by default.
+- Evaluations are capped at 100 trades per tick with deterministic ordering.
+- Cooldown state has bounded in-memory cleanup.
+- Raw tick payloads are not persisted or passed into TradeMonitoringService.
+
+Residual risk:
+
+- Cooldown state is process-local and not multi-instance safe.
+- ActiveTrade lookup still queries MongoDB for eligible live ticks.
+- Provider subscription failures can still delay ticks until retry/reconciliation is implemented.
+
+### R-079: Process-Local ActiveTrade Subscription And Cache Drift
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigated for single-instance Phase 12
+
+Description:
+
+ActiveTrade stream interest, route cache, evaluation cooldown, and monitoring
+health are held in process memory. Restart or multiple backend instances can
+temporarily lose or duplicate ownership.
+
+Impact:
+
+Missed monitoring ticks after restart, duplicate provider subscriptions,
+inconsistent cache results, or duplicated evaluation across instances.
+
+Mitigation:
+
+- ActiveTrade creation registers stream interest immediately.
+- cancellation and close unregister interest.
+- startup runs a bounded non-blocking warm-up for existing active trades.
+- cache misses and five-second expiry refresh from MongoDB.
+- provider stream counts are shared with existing WebSocket subscription counts inside one process.
+- cache and health maps are bounded.
+- registration failures are logged without corrupting ActiveTrade persistence.
+
+Residual risk:
+
+- No Redis/shared state or distributed ownership exists.
+- Warm-up has a bounded limit and may not cover unusually large active-trade populations.
+- Provider subscription failure requires a later retry/reconciliation mechanism.
+
 ## 4. Review Cadence
 
 This risk register should be reviewed:

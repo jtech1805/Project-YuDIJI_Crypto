@@ -124,6 +124,7 @@ const createHarness = (overrides: {
   const riskStates = overrides.riskStates ?? [makeRiskState()];
   const dailyRiskStates = overrides.dailyRiskStates ?? [];
   const auditEvents: Record<string, any>[] = [];
+  const unregisteredTradeIds: string[] = [];
 
   const activeTradeRepository = {
     findOne: (filter: Record<string, unknown>) =>
@@ -220,6 +221,11 @@ const createHarness = (overrides: {
     tradeResultRepository: tradeResultRepository as never,
     riskStateProjectionService: projectionService,
     auditLogService,
+    subscriptionService: {
+      unregisterActiveTrade: async (activeTrade: string | Record<string, unknown>) => {
+        unregisteredTradeIds.push(String(activeTrade));
+      },
+    },
     now: () => fixedNow,
   });
 
@@ -231,6 +237,7 @@ const createHarness = (overrides: {
     riskStates,
     service,
     tradeResults,
+    unregisteredTradeIds,
   };
 };
 
@@ -342,6 +349,15 @@ test("non-stoploss exit marks ActiveTrade CLOSED", async () => {
   const { activeTrades, service } = createHarness();
   await service.closeActiveTrade(userId, activeTradeId, { exitPrice: 110, exitReason: "TARGET_1" });
   assert.equal(activeTrades[0]!.status, "CLOSED");
+});
+
+test("closing ActiveTrade invalidates live monitoring registration", async () => {
+  const { service, unregisteredTradeIds } = createHarness();
+  await service.closeActiveTrade(userId, activeTradeId, {
+    exitPrice: 110,
+    exitReason: "TARGET_1",
+  });
+  assert.deepEqual(unregisteredTradeIds, [activeTradeId]);
 });
 
 test("TradeResult is created FINALIZED and projected APPLIED", async () => {

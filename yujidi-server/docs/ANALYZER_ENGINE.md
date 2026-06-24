@@ -45,6 +45,28 @@ Its responsibility is to:
 
 The analyzer is the heart of YuJiDi's backend because it turns raw Binance data into explainable market intelligence.
 
+### 1.1 Two Real-Time Alert Lanes
+
+Phase 10 keeps two domain-separated WebSocket lanes:
+
+```txt
+Market monitoring lane:
+Monitor/Tripwire
+  -> AnalyzerEngine
+  -> Alert
+  -> NEW_ALERT
+
+Trade lifecycle lane:
+ActiveTrade
+  -> TradeMonitoringService
+  -> TradeEvent
+  -> TRADE_EVENT_CREATED
+```
+
+The second lane does not change AnalyzerEngine logic. It reuses the existing
+authenticated user socket registry only for delivery. TradeEvent payloads are
+sent to the owning user and are not broadcast by symbol subscription.
+
 ## 2. Inputs
 
 The analyzer receives three main categories of input.
@@ -1046,11 +1068,60 @@ Deterministic services own decisions:
 
 ### 9.3 Shared Market Data
 
-The Phase 6 MonitoringRuleEngine is not wired to live WebSocket ticks. A future phase can consume the same normalized market data stream as the analyzer where practical.
+Phase 11 wires existing Binance ticker events and normalized Angel ticks into
+`ActiveTradeLiveMonitorService`. The service resolves canonical symbol identity,
+finds eligible ActiveTrades, and delegates event detection to the existing
+deterministic `TradeMonitoringService`.
 
 Rules:
 
 - Do not duplicate provider WebSocket connections only for trade monitoring if existing normalized streams can be reused safely.
+- Preserve Angel user isolation when routing normalized ticks into future ActiveTrade evaluation.
+- Persist and deduplicate TradeEvent before attempting frontend delivery.
+- Delivery failure must not close a trade, create a result, or mutate risk state.
+- Skip ticks older than the configured freshness window.
+- Apply an in-memory per-trade evaluation interval.
+- Cap matching trades evaluated per tick.
+- Angel ticks require user id and can evaluate only that user's ActiveTrades.
+- Binance ticks are public but still require canonical provider/exchange/symbol matching.
 - Do not put provider credentials or raw provider tokens in trade-domain models.
 - Do not store raw ticks/candles/order book snapshots in RAG.
 - Keep AnalyzerEngine in-memory state untouched unless a future task explicitly changes analyzer architecture.
+
+Phase 11 does not send raw provider tick payloads into TradeMonitoringService.
+Only normalized identity, price, source, and timestamps cross into the trade
+lifecycle lane.
+
+### 9.4 Phase 12 Subscription And Cache Reliability
+
+Phase 12 keeps AnalyzerEngine untouched while making the trade lifecycle lane
+self-sufficient:
+
+```txt
+ActiveTrade created
+  -> ActiveTradeSubscriptionService
+  -> provider-aware stream interest
+  -> projected route cache
+
+Live tick
+  -> route cache hit
+  -> TradeMonitoringService
+
+Cache miss/expiry
+  -> bounded MongoDB projection query
+  -> refresh five-second cache
+```
+
+The WebSocket manager still owns provider stream mechanics. The subscription
+service calls it through a small orchestration port and shares existing global
+subscription reference counts, so frontend and ActiveTrade interests can coexist.
+
+Process restart behavior:
+
+- WebSocket/auth behavior is unchanged.
+- cache and interest maps start empty.
+- a bounded background warm-up re-registers existing active trades.
+- lazy tick lookup refreshes expired/missing route cache entries.
+
+This remains single-instance state. Redis or distributed coordination is not
+implemented in Phase 12.

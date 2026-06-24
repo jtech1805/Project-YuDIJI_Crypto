@@ -267,6 +267,20 @@ activeTradeSchema.index({ userId: 1, tradePlanId: 1, status: 1, createdAt: -1 })
 activeTradeSchema.index({ tradeSetupId: 1 }, { unique: true });
 activeTradeSchema.index({ symbolId: 1, status: 1, createdAt: -1 });
 activeTradeSchema.index({ userId: 1, openedAt: -1 });
+activeTradeSchema.index({
+  "symbolSnapshot.provider": 1,
+  "symbolSnapshot.exchange": 1,
+  "symbolSnapshot.symbol": 1,
+  status: 1,
+  _id: 1,
+});
+activeTradeSchema.index({
+  "symbolSnapshot.provider": 1,
+  "symbolSnapshot.exchange": 1,
+  "symbolSnapshot.providerSymbol": 1,
+  status: 1,
+  _id: 1,
+});
 
 export type ActiveTrade = InferSchemaType<typeof activeTradeSchema>;
 
