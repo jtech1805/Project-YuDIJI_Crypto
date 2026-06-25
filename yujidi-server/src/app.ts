@@ -21,6 +21,7 @@ import { tradeEventRouter } from "./routes/trade-event.routes.js";
 import { tradeResultRouter } from "./routes/trade-result.routes.js";
 import { tradeJournalRouter } from "./routes/trade-journal.routes.js";
 import { aiExplanationRouter } from "./routes/ai-explanation.routes.js";
+import { scoringContextRouter } from "./routes/scoring-context.routes.js";
 
 const loggerOptions: LoggerOptions = {
   level: process.env.NODE_ENV === "production" ? "info" : "debug",
@@ -112,6 +113,7 @@ app.use("/api/trade-events", tradeEventRouter);
 app.use("/api/trade-results", tradeResultRouter);
 app.use("/api/trade-journals", tradeJournalRouter);
 app.use("/api/ai-explanations", aiExplanationRouter);
+app.use("/api/scoring", scoringContextRouter);
 
 app.use((_req: Request, _res: Response, next: NextFunction): void => {
   next(new AppError("Route not found", 404));

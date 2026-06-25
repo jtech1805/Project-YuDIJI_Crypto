@@ -27,6 +27,8 @@ Implemented:
 - ScoreCheck service/controller/routes for standalone pre-trade scoring.
 - Direction-aware LONG/SHORT geometry validation.
 - Baseline deterministic scoring engine with template registry foundation.
+- Deterministic `COMMODITY_MCX_INTRADAY_V1` baseline scoring for active MCX futures.
+- MCX contract sanity checks for lot size, tick size, expiry, and Angel live-monitoring login requirements.
 - Audit logging for ScoreCheck creation and score calculation.
 - `TradeSetup` Mongoose model.
 - TradeSetup service/controller/routes for list, read, cancel, and ScoreCheck conversion.
@@ -74,6 +76,24 @@ Not implemented yet:
 Boundary:
 
 The implemented Phase 1/2/3/4/5/6/7/8 foundation does not alter existing analyzer, WebSocket, monitor, auth, Angel login, or Binance behavior.
+
+### Phase 14: MCX Commodity Baseline Scoring
+
+The commodity template preserves the existing direction-aware geometry and RR permission
+bands while validating `COMMODITY` + `MCX` + `FUTURE` + `INTRADAY` scope.
+
+It snapshots contract metadata and adds deterministic reason codes or warnings for:
+
+- available or missing lot size
+- available or missing tick size
+- expiry within three calendar days
+- Angel broker login required for live monitoring
+- baseline-only commodity context
+
+Advanced inventory, COT, international news, dollar-index, and other professional commodity
+analytics remain deferred. RiskGovernor remains the final managed permission authority and
+no broker execution was added. A commodity swing template is deferred until swing-specific
+rules and trade-style contracts are defined.
 
 ## 1. Current System Summary
 
@@ -869,3 +889,17 @@ Next phase:
   design shared subscription/cache ownership before multi-instance scale
   keep automatic close, risk mutation, AI, and orders separately scoped
 ```
+
+## 13. Phase 15 Template-Driven Scoring Foundation
+
+ADR-010 scoring-side foundations are implemented with versioned template and evaluator
+registries, weighted sections, explicit missing-data policies, evaluator execution statuses,
+and detailed TradeScoreSnapshot breakdowns.
+
+Current deterministic evaluators cover reward/risk, symbol metadata sanity, and MCX contract
+sanity. Price-buffer, CVD, and order-book evaluators expose safe availability context but do
+not yet invent directional scores. Index, sector, VWAP, volume, funding, and open-interest
+evaluators remain honest stubs.
+
+`GET /api/scoring/realtime-context` is authenticated, read-only, sanitized, and bounded.
+Buffer items are omitted by default and capped at 100 when explicitly requested.

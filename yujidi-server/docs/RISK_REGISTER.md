@@ -1898,3 +1898,30 @@ When a risk is fixed:
 2. Link or describe the fix.
 3. Add regression tests.
 4. Update `PROJECT_CONTEXT.md` if the fix changes project direction or architecture.
+
+## R-080: Process-Local Scoring Context Differs Across Instances
+
+Severity: Medium
+
+The realtime scoring-context endpoint reads in-memory state from the current backend process.
+Another process may own different buffers or subscriptions.
+
+Mitigation:
+
+- Treat the endpoint as diagnostic only.
+- Keep output authenticated, bounded, read-only, and sanitized.
+- Never use debug output as risk or execution authority.
+- Add shared state only in a separately approved scaling phase.
+
+## R-081: Partial Evaluators May Be Misread As Complete Analysis
+
+Severity: Medium
+
+Advanced market-context evaluators are currently stubs or availability checks.
+
+Mitigation:
+
+- Persist execution status and missing-data summary.
+- Return explicit reason codes and warnings.
+- Normalize only over executed sections.
+- Keep AI and broker execution outside deterministic scoring.

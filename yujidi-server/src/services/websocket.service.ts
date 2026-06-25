@@ -8,6 +8,7 @@ import WebSocket, { WebSocketServer } from "ws";
 import { AppError } from "../errors/AppError.js";
 import { AnalyzerEngine } from "./analyzer.service.js";
 import { ActiveTradeLiveMonitorService } from "./active-trade-live-monitor.service.js";
+import { sharedTradeMonitoringHealthService } from "./trade-monitoring-health.service.js";
 import {
   sharedActiveTradeSubscriptionService,
   type ActiveTradeStreamSubscription,
@@ -993,6 +994,15 @@ export class WebSocketManager {
   }
   public getEngineSnapshot() {
     return this.analyzerEngine.getEngineStateSnapshot();
+  }
+  public getAnalyzerRuntimeSnapshot(input: Parameters<AnalyzerEngine["getRuntimeSnapshot"]>[0]) {
+    return this.analyzerEngine.getRuntimeSnapshot(input);
+  }
+  public getTradeMonitoringHealthSnapshot() {
+    return sharedTradeMonitoringHealthService.getSnapshot();
+  }
+  public getActiveTradeSubscriptionSnapshot() {
+    return sharedActiveTradeSubscriptionService.getSnapshot();
   }
   public getSupportResistance(symbol: string) {
     const orderBookData = this.analyzerEngine.findStructuralSupportResistance(symbol);

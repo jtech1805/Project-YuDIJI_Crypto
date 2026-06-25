@@ -430,3 +430,33 @@ test("processNormalizedTick cache key includes Angel user id", async () => {
   assert.ok(activeMonitorCache[cacheKey]);
   assert.ok(priceBuffer[cacheKey]);
 });
+
+test("getRuntimeSnapshot summarizes and bounds analyzer buffers safely", () => {
+  const harness = createHarness([]);
+  harness.engine.priceBuffer.set(
+    SYMBOL,
+    Array.from({ length: 150 }, (_, index) => ({ price: 100 + index, timestamp: index })),
+  );
+  harness.engine.cvdBuffer.set(
+    SYMBOL,
+    Array.from({ length: 120 }, (_, index) => ({ volumeDelta: 1, timestamp: index })),
+  );
+  harness.engine.currentCVD.set(SYMBOL, 120);
+  harness.engine.updateOrderBook(SYMBOL, [["249", "2"]], [["250", "3"]]);
+
+  const summary = harness.engine.getRuntimeSnapshot({
+    streamKeys: [SYMBOL],
+    includeBuffers: true,
+    bufferLimit: 500,
+  });
+
+  assert.equal(summary.priceBuffer.count, 150);
+  assert.equal(summary.priceBuffer.items?.length, 100);
+  assert.equal(summary.cvd.currentCVD, 120);
+  assert.equal(summary.cvd.items?.length, 100);
+  assert.equal(summary.orderBook.bestBid, 249);
+  assert.equal(summary.orderBook.bestAsk, 250);
+
+  summary.priceBuffer.items?.push({ price: 1, timestamp: 1 });
+  assert.equal(harness.engine.priceBuffer.get(SYMBOL)?.length, 150);
+});

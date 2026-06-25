@@ -55,6 +55,17 @@ const symbolSnapshotSchema = new Schema(
       type: String,
       trim: true,
     },
+    lotSize: {
+      type: Number,
+      min: 0,
+    },
+    tickSize: {
+      type: Number,
+      min: 0,
+    },
+    expiry: {
+      type: Date,
+    },
     requiresBrokerLogin: {
       type: Boolean,
     },
@@ -192,6 +203,9 @@ const scoreCheckSchema = new Schema(
       type: [String],
       default: [],
     },
+    breakdown: {
+      type: Schema.Types.Mixed,
+    },
     tradeScoreSnapshotId: {
       type: Schema.Types.ObjectId,
       ref: "TradeScoreSnapshot",
@@ -218,7 +232,6 @@ const scoreCheckSchema = new Schema(
 scoreCheckSchema.index({ userId: 1, createdAt: -1 });
 scoreCheckSchema.index({ userId: 1, symbolId: 1, createdAt: -1 });
 scoreCheckSchema.index({ userId: 1, scoreStatus: 1, createdAt: -1 });
-scoreCheckSchema.index({ convertedToTradeSetupId: 1 });
 
 export type ScoreCheck = InferSchemaType<typeof scoreCheckSchema>;
 

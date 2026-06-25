@@ -110,6 +110,9 @@ type SymbolRecord = {
   exchange: Exchange;
   instrumentType: InstrumentType;
   providerSymbol?: string;
+  lotSize?: number;
+  tickSize?: number;
+  expiry?: Date;
   requiresBrokerLogin?: boolean;
   status: string;
 };
@@ -139,6 +142,7 @@ type ScoreCheckRecord = {
   dataConfidence: DataConfidence;
   reasonCodes: string[];
   warnings: string[];
+  breakdown?: Record<string, unknown>;
   tradeScoreSnapshotId?: Types.ObjectId | string;
   scoreCalculatedAt?: Date;
   scoreValidUntil?: Date;
@@ -152,6 +156,9 @@ const symbolProjection = {
   exchange: 1,
   instrumentType: 1,
   providerSymbol: 1,
+  lotSize: 1,
+  tickSize: 1,
+  expiry: 1,
   requiresBrokerLogin: 1,
   status: 1,
 } as const;
@@ -202,16 +209,33 @@ export class ScoreCheckService {
     const parsedInput = this.parseCreateInput(input);
     const symbol = await this.getActiveSymbol(parsedInput.symbolId);
     this.assertSymbolMatchesInput(symbol, parsedInput);
+    this.assertTemplateMatchesSymbol(symbol, parsedInput);
 
     const symbolSnapshot = this.buildSymbolSnapshot(symbol);
     const geometry = calculateTradeGeometry(parsedInput);
+    const calculatedAt = this.getNow();
     const scoringResult = this.getScoringEngine().score({
       scoringTemplateKey: parsedInput.scoringTemplateKey,
       scoringTemplateVersion: parsedInput.scoringTemplateVersion,
+      marketType: parsedInput.marketType,
+      tradeStyle: parsedInput.tradeStyle,
+      instrumentType: parsedInput.instrumentType,
       rewardRiskRatio: geometry.rewardRiskRatio,
       ...(parsedInput.dataConfidence ? { dataConfidence: parsedInput.dataConfidence } : {}),
+      symbol: {
+        status: symbol.status,
+        marketType: symbol.marketType,
+        exchange: symbol.exchange,
+        instrumentType: symbol.instrumentType,
+        ...(symbol.lotSize !== undefined ? { lotSize: symbol.lotSize } : {}),
+        ...(symbol.tickSize !== undefined ? { tickSize: symbol.tickSize } : {}),
+        ...(symbol.expiry ? { expiry: symbol.expiry } : {}),
+        ...(typeof symbol.requiresBrokerLogin === "boolean"
+          ? { requiresBrokerLogin: symbol.requiresBrokerLogin }
+          : {}),
+      },
+      evaluatedAt: calculatedAt,
     });
-    const calculatedAt = this.getNow();
     const validUntil = new Date(calculatedAt.getTime() + 15 * 60 * 1000);
     const reasonCodes = ["VALID_GEOMETRY", ...scoringResult.reasonCodes, "SCORE_CHECK_CREATED"];
 
@@ -237,6 +261,7 @@ export class ScoreCheckService {
       dataConfidence: scoringResult.dataConfidence,
       reasonCodes,
       warnings: scoringResult.warnings,
+      breakdown: scoringResult.breakdown,
       scoreCalculatedAt: calculatedAt,
       scoreValidUntil: validUntil,
     }));
@@ -338,6 +363,25 @@ export class ScoreCheckService {
     }
   }
 
+  private assertTemplateMatchesSymbol(symbol: SymbolRecord, input: CreateScoreCheckInput): void {
+    if (input.scoringTemplateKey !== "COMMODITY_MCX_INTRADAY_V1") return;
+    if (input.marketType !== "COMMODITY" || symbol.marketType !== "COMMODITY") {
+      throw new AppError("Commodity scoring template requires COMMODITY market type", 400);
+    }
+    if (symbol.exchange !== "MCX") {
+      throw new AppError("Commodity scoring template requires MCX exchange", 400);
+    }
+    if (input.instrumentType !== "FUTURE" || symbol.instrumentType !== "FUTURE") {
+      throw new AppError("Commodity scoring template requires FUTURE instrument", 400);
+    }
+    if (input.tradeStyle !== "INTRADAY") {
+      throw new AppError("Commodity scoring template requires INTRADAY trade style", 400);
+    }
+    if (symbol.expiry && symbol.expiry.getTime() < this.getNow().getTime()) {
+      throw new AppError("MCX contract is expired", 409);
+    }
+  }
+
   private buildSymbolSnapshot(symbol: SymbolRecord): Record<string, unknown> {
     return {
       symbolId: symbol._id,
@@ -348,6 +392,9 @@ export class ScoreCheckService {
       exchange: EXCHANGES.includes(symbol.exchange) ? symbol.exchange : "BINANCE",
       instrumentType: INSTRUMENT_TYPES.includes(symbol.instrumentType) ? symbol.instrumentType : "UNKNOWN",
       ...(symbol.providerSymbol ? { providerSymbol: symbol.providerSymbol } : {}),
+      ...(symbol.lotSize !== undefined ? { lotSize: symbol.lotSize } : {}),
+      ...(symbol.tickSize !== undefined ? { tickSize: symbol.tickSize } : {}),
+      ...(symbol.expiry ? { expiry: symbol.expiry } : {}),
       ...(typeof symbol.requiresBrokerLogin === "boolean" ? { requiresBrokerLogin: symbol.requiresBrokerLogin } : {}),
     };
   }
@@ -357,13 +404,13 @@ export class ScoreCheckService {
     geometry: ReturnType<typeof calculateTradeGeometry>,
   ): Record<string, unknown> {
     return {
-      engine: "BASELINE_RR_V1",
+      engine: "TEMPLATE_DRIVEN_SCORING_V1",
       score: scoringResult.score,
       permission: scoringResult.permission,
       riskPerUnit: geometry.riskPerUnit,
       rewardPerUnit: geometry.rewardPerUnit,
       rewardRiskRatio: geometry.rewardRiskRatio,
-      scoringRules: scoringResult.breakdown,
+      ...scoringResult.breakdown,
     };
   }
 

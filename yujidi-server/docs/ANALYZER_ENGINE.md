@@ -1125,3 +1125,25 @@ Process restart behavior:
 
 This remains single-instance state. Redis or distributed coordination is not
 implemented in Phase 12.
+
+## Safe Runtime Snapshot
+
+`AnalyzerEngine.getRuntimeSnapshot` provides copied, bounded summaries for scoring
+transparency:
+
+- latest price and price-buffer summary
+- current CVD and CVD-buffer summary
+- aggregate cooldown status
+- order-book level counts and best bid/ask
+
+No buffer items are returned by default. Explicit buffer output is capped at the latest 100
+items. Raw provider payloads, credentials, monitor identifiers, and mutable internal arrays
+are not exposed.
+
+The authenticated diagnostic endpoint is:
+
+```txt
+GET /api/scoring/realtime-context
+```
+
+Runtime state remains process-local and is not a multi-instance source of truth.

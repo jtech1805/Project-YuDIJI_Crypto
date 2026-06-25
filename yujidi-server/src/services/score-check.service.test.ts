@@ -54,6 +54,9 @@ const activeSymbol = (overrides: Record<string, unknown> = {}) => ({
   exchange: "MCX",
   instrumentType: "FUTURE",
   providerSymbol: "GOLD04DEC26FUT",
+  lotSize: 100,
+  tickSize: 1,
+  expiry: new Date("2026-12-04T00:00:00.000Z"),
   requiresBrokerLogin: true,
   status: "ACTIVE",
   ...overrides,
@@ -68,8 +71,15 @@ const baseScoreInput = (overrides: Partial<CreateScoreCheckInput> = {}): CreateS
   entry: 100,
   stopLoss: 95,
   target1: 110,
-  scoringTemplateKey: "INDIA_EQUITY_INTRADAY_V1",
+  scoringTemplateKey: "COMMODITY_MCX_INTRADAY_V1",
   scoringTemplateVersion: "1",
+  ...overrides,
+});
+
+const commodityScoreInput = (
+  overrides: Partial<CreateScoreCheckInput> = {},
+): CreateScoreCheckInput => baseScoreInput({
+  scoringTemplateKey: "COMMODITY_MCX_INTRADAY_V1",
   ...overrides,
 });
 
@@ -304,6 +314,10 @@ test("ScoreCheckService creates TradeScoreSnapshot", async () => {
 
   assert.equal(snapshots.length, 1);
   assert.equal(String(scoreCheck.tradeScoreSnapshotId), String(snapshots[0]!._id));
+  const breakdown = snapshots[0]!.breakdown as Record<string, any>;
+  assert.equal(breakdown.templateKey, "COMMODITY_MCX_INTRADAY_V1");
+  assert.equal(Array.isArray(breakdown.sectionResults), true);
+  assert.equal(Array.isArray(breakdown.evaluatorResults), true);
 });
 
 test("ScoreCheckService audits SCORE_CHECK_CREATED and SCORE_CALCULATED", async () => {
@@ -332,5 +346,135 @@ test("ScoreCheckService rejects inactive symbol safely", async () => {
   await assert.rejects(
     service.createScoreCheck(userId, baseScoreInput()),
     /SYMBOL_INACTIVE/,
+  );
+});
+
+test("commodity MCX template accepts a valid FUTURE intraday symbol", async () => {
+  const { service } = createHarness();
+
+  const scoreCheck = await service.createScoreCheck(userId, commodityScoreInput());
+
+  assert.equal(scoreCheck.scoringTemplateKey, "COMMODITY_MCX_INTRADAY_V1");
+  assert.equal(scoreCheck.reasonCodes.includes("COMMODITY_TEMPLATE_USED"), true);
+  assert.equal(scoreCheck.reasonCodes.includes("MCX_CONTRACT_VALIDATED"), true);
+  assert.equal(scoreCheck.reasonCodes.includes("LOT_SIZE_AVAILABLE"), true);
+  assert.equal(scoreCheck.reasonCodes.includes("TICK_SIZE_AVAILABLE"), true);
+  assert.equal(scoreCheck.symbolSnapshot.lotSize, 100);
+  assert.equal(scoreCheck.symbolSnapshot.tickSize, 1);
+});
+
+test("commodity MCX template supports valid LONG and SHORT geometry", async () => {
+  const longHarness = createHarness();
+  const shortHarness = createHarness();
+
+  const longScore = await longHarness.service.createScoreCheck(userId, commodityScoreInput());
+  const shortScore = await shortHarness.service.createScoreCheck(
+    userId,
+    commodityScoreInput({
+      direction: "SHORT",
+      entry: 100,
+      stopLoss: 105,
+      target1: 90,
+    }),
+  );
+
+  assert.equal(longScore.permission, "TAKE_TRADE");
+  assert.equal(shortScore.permission, "TAKE_TRADE");
+  assert.equal(shortScore.rewardRiskRatio, 2);
+});
+
+test("commodity MCX template preserves deterministic RR permission bands", async () => {
+  const cases = [
+    { stopLoss: 90, target1: 105, permission: "REJECT", score: 30 },
+    { stopLoss: 90, target1: 112, permission: "WAIT", score: 50 },
+    { stopLoss: 90, target1: 116, permission: "TAKE_SMALL_RISK", score: 70 },
+    { stopLoss: 90, target1: 120, permission: "TAKE_TRADE", score: 80 },
+  ] as const;
+
+  for (const scenario of cases) {
+    const { service } = createHarness();
+    const scoreCheck = await service.createScoreCheck(
+      userId,
+      commodityScoreInput({
+        stopLoss: scenario.stopLoss,
+        target1: scenario.target1,
+      }),
+    );
+    assert.equal(scoreCheck.permission, scenario.permission);
+    assert.equal(scoreCheck.score, scenario.score);
+  }
+});
+
+test("commodity MCX template warns when live monitoring requires broker login", async () => {
+  const { service } = createHarness();
+
+  const scoreCheck = await service.createScoreCheck(userId, commodityScoreInput());
+
+  assert.equal(
+    scoreCheck.warnings.includes("BROKER_LOGIN_REQUIRED_FOR_LIVE_MONITORING"),
+    true,
+  );
+  assert.equal(scoreCheck.warnings.includes("COMMODITY_BASELINE_ONLY"), true);
+});
+
+test("commodity MCX template warns when lot size and tick size are missing", async () => {
+  const { service } = createHarness(activeSymbol({ lotSize: undefined, tickSize: undefined }));
+
+  const scoreCheck = await service.createScoreCheck(userId, commodityScoreInput());
+
+  assert.equal(scoreCheck.reasonCodes.includes("LOT_SIZE_MISSING"), true);
+  assert.equal(scoreCheck.reasonCodes.includes("TICK_SIZE_MISSING"), true);
+  assert.equal(scoreCheck.warnings.includes("LOT_SIZE_MISSING"), true);
+  assert.equal(scoreCheck.warnings.includes("TICK_SIZE_MISSING"), true);
+});
+
+test("commodity MCX template adds a near-expiry warning within three days", async () => {
+  const { service } = createHarness(activeSymbol({
+    expiry: new Date("2026-06-25T10:00:00.000Z"),
+  }));
+
+  const scoreCheck = await service.createScoreCheck(userId, commodityScoreInput());
+
+  assert.equal(scoreCheck.warnings.includes("EXPIRY_NEAR_WARNING"), true);
+});
+
+test("commodity MCX template rejects wrong market type", async () => {
+  const { service } = createHarness(activeSymbol({ marketType: "EQUITY" }));
+
+  await assert.rejects(
+    service.createScoreCheck(userId, commodityScoreInput({ marketType: "EQUITY" })),
+    /Commodity scoring template requires COMMODITY market type/,
+  );
+});
+
+test("commodity MCX template rejects wrong exchange", async () => {
+  const { service } = createHarness(activeSymbol({ exchange: "NSE" }));
+
+  await assert.rejects(
+    service.createScoreCheck(userId, commodityScoreInput()),
+    /Commodity scoring template requires MCX exchange/,
+  );
+});
+
+test("commodity MCX template rejects wrong instrument type", async () => {
+  const { service } = createHarness(activeSymbol({ instrumentType: "OPTION" }));
+
+  await assert.rejects(
+    service.createScoreCheck(
+      userId,
+      commodityScoreInput({ instrumentType: "OPTION" }),
+    ),
+    /Commodity scoring template requires FUTURE instrument/,
+  );
+});
+
+test("commodity MCX template rejects expired contracts", async () => {
+  const { service } = createHarness(activeSymbol({
+    expiry: new Date("2026-06-22T10:00:00.000Z"),
+  }));
+
+  await assert.rejects(
+    service.createScoreCheck(userId, commodityScoreInput()),
+    /MCX contract is expired/,
   );
 });

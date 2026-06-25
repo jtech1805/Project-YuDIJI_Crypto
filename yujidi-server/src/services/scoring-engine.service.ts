@@ -1,17 +1,48 @@
 import { AppError } from "../errors/AppError.js";
-import {
-  SCORING_TEMPLATE_KEYS,
-  type DataConfidence,
-  type ScoringTemplateKey,
-  type ScoreStatus,
+import type { InstrumentType, MarketType } from "../types/market-data.types.js";
+import type {
+  DataConfidence,
+  RuleExecutionStatus,
+  ScoringRuleEvaluationResult,
+  ScoringSectionResult,
+  ScoringTemplateKey,
+  ScoreStatus,
 } from "../types/scoring.types.js";
 import type { TradePermission } from "../types/trade.types.js";
+import {
+  ScoringRuleEvaluatorRegistryService,
+  type ScoringEvaluatorInput,
+} from "./scoring-rule-evaluator-registry.service.js";
+import { ScoringTemplateRegistryService } from "./scoring-template-registry.service.js";
 
 export type ScoringEngineInput = {
   scoringTemplateKey: ScoringTemplateKey;
   scoringTemplateVersion: string;
+  marketType: MarketType;
+  tradeStyle: string;
+  instrumentType: InstrumentType;
   rewardRiskRatio: number;
   dataConfidence?: DataConfidence;
+  symbol?: ScoringEvaluatorInput["symbol"];
+  runtime?: ScoringEvaluatorInput["runtime"];
+  evaluatedAt?: Date;
+};
+
+export type ScoringEngineBreakdown = {
+  templateKey: ScoringTemplateKey;
+  templateVersion: number;
+  totalScore: number;
+  maxScore: number;
+  sectionResults: ScoringSectionResult[];
+  evaluatorResults: ScoringRuleEvaluationResult[];
+  reasonCodes: string[];
+  warnings: string[];
+  dataConfidence: DataConfidence;
+  missingDataSummary: {
+    partialSections: string[];
+    skippedEvaluators: string[];
+    blockedEvaluators: string[];
+  };
 };
 
 export type ScoringEngineResult = {
@@ -21,116 +52,145 @@ export type ScoringEngineResult = {
   dataConfidence: DataConfidence;
   reasonCodes: string[];
   warnings: string[];
-  breakdown: Record<string, unknown>;
+  breakdown: ScoringEngineBreakdown;
 };
 
-type ScoringEvaluator = {
-  evaluate: (input: ScoringEngineInput) => ScoringEngineResult;
+const unique = (values: string[]): string[] => [...new Set(values)];
+
+const sectionStatus = (
+  statuses: RuleExecutionStatus[],
+  missingDataPolicy: "BLOCK" | "PARTIAL" | "ZERO" | "IGNORE",
+): RuleExecutionStatus => {
+  if (statuses.includes("BLOCKED")) return missingDataPolicy === "BLOCK" ? "BLOCKED" : "PARTIAL";
+  if (statuses.every((status) => status === "EXECUTED")) return "EXECUTED";
+  if (statuses.every((status) => status === "SKIPPED")) return missingDataPolicy === "IGNORE" ? "SKIPPED" : "PARTIAL";
+  return "PARTIAL";
 };
 
-const supportedTemplates = new Set<string>(SCORING_TEMPLATE_KEYS);
-
-const baselineEvaluator: ScoringEvaluator = {
-  evaluate: (input: ScoringEngineInput): ScoringEngineResult => {
-    const rr = input.rewardRiskRatio;
-    const dataConfidence = input.dataConfidence ?? "MEDIUM";
-    const warnings = [
-      "Baseline RR-only score. Final production scoring will add market context in later phases.",
-    ];
-
-    if (dataConfidence === "LOW") {
-      warnings.push("Data confidence is low.");
-    }
-
-    if (rr < 1) {
-      return {
-        score: 30,
-        permission: "REJECT",
-        scoreStatus: dataConfidence === "LOW" ? "PARTIAL_DATA" : "READY",
-        dataConfidence,
-        reasonCodes: ["RR_BELOW_MINIMUM"],
-        warnings,
-        breakdown: {
-          rewardRiskRatio: rr,
-          rrBand: "BELOW_1",
-        },
-      };
-    }
-
-    if (rr < 1.5) {
-      return {
-        score: 50,
-        permission: "WAIT",
-        scoreStatus: dataConfidence === "LOW" ? "PARTIAL_DATA" : "READY",
-        dataConfidence,
-        reasonCodes: ["RR_ACCEPTABLE"],
-        warnings,
-        breakdown: {
-          rewardRiskRatio: rr,
-          rrBand: "ONE_TO_ONE_POINT_FIVE",
-        },
-      };
-    }
-
-    if (rr < 2) {
-      return {
-        score: 70,
-        permission: "TAKE_SMALL_RISK",
-        scoreStatus: dataConfidence === "LOW" ? "PARTIAL_DATA" : "READY",
-        dataConfidence,
-        reasonCodes: ["RR_ACCEPTABLE"],
-        warnings,
-        breakdown: {
-          rewardRiskRatio: rr,
-          rrBand: "ONE_POINT_FIVE_TO_TWO",
-        },
-      };
-    }
-
-    return {
-      score: 80,
-      permission: "TAKE_TRADE",
-      scoreStatus: dataConfidence === "LOW" ? "PARTIAL_DATA" : "READY",
-      dataConfidence,
-      reasonCodes: ["RR_ACCEPTABLE"],
-      warnings,
-      breakdown: {
-        rewardRiskRatio: rr,
-        rrBand: "TWO_OR_ABOVE",
-      },
-    };
-  },
+const permissionForScore = (score: number): TradePermission => {
+  if (score < 40) return "REJECT";
+  if (score < 60) return "WAIT";
+  if (score < 75) return "TAKE_SMALL_RISK";
+  return "TAKE_TRADE";
 };
-
-export class ScoringRuleRegistryService {
-  private readonly evaluators = new Map<string, ScoringEvaluator>();
-
-  public constructor() {
-    for (const templateKey of SCORING_TEMPLATE_KEYS) {
-      this.evaluators.set(templateKey, baselineEvaluator);
-    }
-  }
-
-  public getEvaluator(templateKey: ScoringTemplateKey): ScoringEvaluator {
-    const evaluator = this.evaluators.get(templateKey);
-    if (!evaluator) {
-      throw new AppError("UNSUPPORTED_TEMPLATE", 400);
-    }
-    return evaluator;
-  }
-}
 
 export class ScoringEngineService {
-  public constructor(private readonly registry = new ScoringRuleRegistryService()) {}
+  public constructor(
+    private readonly templateRegistry = new ScoringTemplateRegistryService(),
+    private readonly evaluatorRegistry = new ScoringRuleEvaluatorRegistryService(),
+  ) {}
 
   public score(input: ScoringEngineInput): ScoringEngineResult {
-    if (!supportedTemplates.has(input.scoringTemplateKey)) {
-      throw new AppError("UNSUPPORTED_TEMPLATE", 400);
-    }
     if (!Number.isFinite(input.rewardRiskRatio) || input.rewardRiskRatio <= 0) {
       throw new AppError("Invalid rewardRiskRatio", 400);
     }
+    const version = Number.parseInt(input.scoringTemplateVersion, 10);
+    const template = this.templateRegistry.get(
+      input.scoringTemplateKey,
+      Number.isFinite(version) && version > 0 ? version : 1,
+    );
+    this.templateRegistry.validateCompatibility({
+      template,
+      marketType: input.marketType,
+      tradeStyle: input.tradeStyle,
+      instrumentType: input.instrumentType,
+    });
 
-    return this.registry.getEvaluator(input.scoringTemplateKey).evaluate(input);
+    const evaluatorInput: ScoringEvaluatorInput = {
+      rewardRiskRatio: input.rewardRiskRatio,
+      ...(input.dataConfidence ? { dataConfidence: input.dataConfidence } : {}),
+      ...(input.symbol ? { symbol: input.symbol } : {}),
+      ...(input.runtime ? { runtime: input.runtime } : {}),
+      ...(input.evaluatedAt ? { evaluatedAt: input.evaluatedAt } : {}),
+    };
+    const sectionResults: ScoringSectionResult[] = [];
+
+    for (const definition of template.sections) {
+      const evaluatorResults = definition.evaluators.map((key) =>
+        this.evaluatorRegistry.evaluate(key, evaluatorInput));
+      const executed = evaluatorResults.filter((item) => item.status === "EXECUTED");
+      const average = executed.length > 0
+        ? executed.reduce((total, item) => total + (item.score / item.maxScore) * 100, 0) / executed.length
+        : 0;
+      const status = sectionStatus(
+        evaluatorResults.map((item) => item.status),
+        definition.missingDataPolicy,
+      );
+      sectionResults.push({
+        sectionKey: definition.key,
+        label: definition.label,
+        score: Number(((average / 100) * definition.weight).toFixed(4)),
+        maxScore: definition.weight,
+        weight: definition.weight,
+        status,
+        evaluatorResults,
+        reasonCodes: unique(evaluatorResults.flatMap((item) => item.reasonCodes)),
+        warnings: unique(evaluatorResults.flatMap((item) => item.warnings)),
+      });
+    }
+
+    const evaluatorResults = sectionResults.flatMap((sectionResult) => sectionResult.evaluatorResults);
+    const blockedCritical = template.sections.some((definition, index) =>
+      definition.missingDataPolicy === "BLOCK" && sectionResults[index]?.status === "BLOCKED");
+    const executedSections = sectionResults.filter((item) => item.status === "EXECUTED");
+    const executedWeight = executedSections.reduce((total, item) => total + item.weight, 0);
+    const earnedScore = executedSections.reduce((total, item) => total + item.score, 0);
+    const normalizedScore = executedWeight > 0
+      ? Number(((earnedScore / executedWeight) * template.maxScore).toFixed(2))
+      : 0;
+    const rrRejected = input.rewardRiskRatio < 1;
+    const score = rrRejected ? 30 : blockedCritical ? 0 : normalizedScore;
+    const permission = rrRejected || blockedCritical ? "REJECT" : permissionForScore(score);
+    const partialSections = sectionResults
+      .filter((item) => item.status === "PARTIAL")
+      .map((item) => item.sectionKey);
+    const skippedEvaluators = evaluatorResults
+      .filter((item) => item.status === "SKIPPED")
+      .map((item) => item.evaluatorKey);
+    const blockedEvaluators = evaluatorResults
+      .filter((item) => item.status === "BLOCKED")
+      .map((item) => item.evaluatorKey);
+    const missingCount = partialSections.length + skippedEvaluators.length;
+    const dataConfidence: DataConfidence = blockedCritical
+      ? "LOW"
+      : missingCount === 0
+        ? "HIGH"
+        : missingCount <= 2
+          ? "MEDIUM"
+          : "LOW";
+    const scoreStatus: ScoreStatus = blockedCritical
+      ? "UNAVAILABLE"
+      : missingCount > 0
+        ? "READY_WITH_STALE_DATA"
+        : "READY";
+    const reasonCodes = unique(evaluatorResults.flatMap((item) => item.reasonCodes));
+    const warnings = unique(evaluatorResults.flatMap((item) => item.warnings));
+
+    const breakdown: ScoringEngineBreakdown = {
+      templateKey: template.key,
+      templateVersion: template.version,
+      totalScore: score,
+      maxScore: template.maxScore,
+      sectionResults,
+      evaluatorResults,
+      reasonCodes,
+      warnings,
+      dataConfidence,
+      missingDataSummary: {
+        partialSections,
+        skippedEvaluators,
+        blockedEvaluators,
+      },
+    };
+
+    return {
+      score,
+      permission,
+      scoreStatus,
+      dataConfidence,
+      reasonCodes,
+      warnings,
+      breakdown,
+    };
   }
 }

@@ -55,7 +55,7 @@
 //   )
 // }
 import React, { useState } from 'react'
-import { Activity, FileText, LayoutDashboard, LogOut } from 'lucide-react'
+import { Activity, FileText, LayoutDashboard, LogOut, ShieldCheck } from 'lucide-react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 // Make sure this path matches where you saved the modal component
@@ -64,6 +64,7 @@ import { AddMonitorModal } from '../dashboard/AddMonitorModal'
 // 1. Removed 'Setup Monitor' from the standard routing array
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/trading-workflow', label: 'Trading Workflow', icon: ShieldCheck },
   { to: '/report', label: 'Detailed Report', icon: FileText },
 ]
 

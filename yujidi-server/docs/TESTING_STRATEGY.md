@@ -735,11 +735,19 @@ Currently covered:
 - score snapshot is stored for audit/replay
 - geometry validation for LONG and SHORT
 - score-level permission bands for RR thresholds
+- MCX commodity template accepts active `COMMODITY` / `MCX` / `FUTURE` scope
+- commodity LONG and SHORT geometry
+- deterministic commodity RR permission bands
+- lot-size and tick-size availability or missing warnings
+- Angel live-monitoring broker-login warning
+- near-expiry warning within three calendar days
+- wrong commodity market, exchange, and instrument scope rejection
+- expired MCX contract rejection
 
 Must cover in later phases:
 
 - managed trade conversion requires TradePlan
-- separate scoring templates for intraday, swing, crypto spot, and crypto perpetual beyond the baseline RR-only evaluator
+- richer scoring templates beyond current baseline evaluators
 - AI explanation after deterministic scoring without AI decision authority
 
 ### TradeSetup And ActiveTrade Tests
@@ -966,3 +974,20 @@ Add tests in this order:
 5. WebSocket manager tests.
 6. Chat copilot tests.
 7. Contract tests for frontend API shapes.
+
+## 14. Template Scoring And Realtime Context Coverage
+
+- all initial templates resolve and weights total 100
+- incompatible template/market scope rejects
+- RR evaluator preserves deterministic permission bands
+- RR below one hard rejects
+- aggregation normalizes over executed sections
+- unavailable index, sector, VWAP, volume, order-flow, and funding data is partial/skipped
+- commodity metadata and Phase 14 warnings remain present
+- TradeScoreSnapshot contains section and evaluator breakdowns
+- analyzer snapshots summarize price, CVD, cooldown, and order-book state
+- buffers are omitted by default and capped at 100 when requested
+- output excludes secrets, provider tokens, and raw payloads
+- template context reports evaluator availability
+- ActiveTrade monitoring health is included when available
+- scoring context route uses existing authentication middleware

@@ -1050,6 +1050,17 @@ Rules:
 - Output permission language is `TAKE_TRADE`, `TAKE_SMALL_RISK`, `WAIT`, `REJECT`, or `STOP_TRADING`.
 - Do not use `BUY`, `SELL`, `STRONG_BUY`, or `STRONG_SELL`.
 
+MCX commodity baseline:
+
+- `COMMODITY_MCX_INTRADAY_V1` supports active MCX commodity futures with `INTRADAY` trade style.
+- It uses the existing deterministic RR bands plus contract sanity checks.
+- ScoreCheck snapshots lot size, tick size, expiry, provider, exchange, instrument type,
+  provider symbol, and broker-login requirement when available.
+- Expiry within three calendar days adds a warning but does not reject an active contract.
+- `requiresBrokerLogin=true` warns that Angel login/session may be required for live monitoring.
+- Advanced commodity analytics are not part of the baseline template.
+- RiskGovernor still owns final permission when converting into a managed TradeSetup.
+
 Current geometry rules:
 
 ```txt
@@ -1571,3 +1582,20 @@ An AI-enriched record created when a monitor condition is triggered.
 ### Copilot
 
 The chat feature that combines live engine data, deterministic risk math, and LLM explanation.
+
+## Template-Driven Scoring Foundation
+
+A ScoreCheck selects a versioned scoring template compatible with market type, trade style,
+and instrument type. Templates contain weighted sections and evaluator keys.
+
+Evaluators return `EXECUTED`, `PARTIAL`, `SKIPPED`, or `BLOCKED`. Missing data follows the
+section policy: `BLOCK`, `PARTIAL`, `ZERO`, or `IGNORE`. Noncritical unavailable data is
+recorded without a fabricated score. Weighted aggregation normalizes over sections that
+actually executed.
+
+ScoreCheck retains backward-compatible top-level fields and may expose detailed breakdown.
+TradeScoreSnapshot stores template, section results, evaluator results, confidence, warnings,
+and missing-data summary for audit and replay.
+
+Realtime scoring context is a protected diagnostic projection. It cannot mutate scoring,
+risk state, monitors, ActiveTrades, or TradeResults.

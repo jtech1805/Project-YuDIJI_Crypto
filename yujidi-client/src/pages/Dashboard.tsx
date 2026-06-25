@@ -257,8 +257,8 @@ function DashboardSidebar({
               <MonitorItem
                 key={m._id}
                 monitor={m}
-                price={livePrices[m.symbol]}
-                change={livePriceschange[m.symbol]}
+                price={livePrices[m.symbol.trim().toUpperCase()]}
+                change={livePriceschange[m.symbol.trim().toUpperCase()] ?? 0}
                 onDelete={onDelete}
               />
             ))}
