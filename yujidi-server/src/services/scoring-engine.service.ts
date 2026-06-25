@@ -9,6 +9,8 @@ import type {
   ScoreStatus,
 } from "../types/scoring.types.js";
 import type { TradePermission } from "../types/trade.types.js";
+import type { TradeDirection } from "../types/trade.types.js";
+import type { MarketSnapshot } from "../types/market-snapshot.types.js";
 import {
   ScoringRuleEvaluatorRegistryService,
   type ScoringEvaluatorInput,
@@ -26,6 +28,9 @@ export type ScoringEngineInput = {
   symbol?: ScoringEvaluatorInput["symbol"];
   runtime?: ScoringEvaluatorInput["runtime"];
   evaluatedAt?: Date;
+  direction?: TradeDirection;
+  marketSnapshot?: MarketSnapshot | null;
+  indexSnapshot?: MarketSnapshot | null;
 };
 
 export type ScoringEngineBreakdown = {
@@ -102,6 +107,9 @@ export class ScoringEngineService {
       ...(input.symbol ? { symbol: input.symbol } : {}),
       ...(input.runtime ? { runtime: input.runtime } : {}),
       ...(input.evaluatedAt ? { evaluatedAt: input.evaluatedAt } : {}),
+      ...(input.direction ? { direction: input.direction } : {}),
+      ...(input.marketSnapshot !== undefined ? { marketSnapshot: input.marketSnapshot } : {}),
+      ...(input.indexSnapshot !== undefined ? { indexSnapshot: input.indexSnapshot } : {}),
     };
     const sectionResults: ScoringSectionResult[] = [];
 

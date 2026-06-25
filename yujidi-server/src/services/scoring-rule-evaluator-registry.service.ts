@@ -2,6 +2,8 @@ import type {
   DataConfidence,
   ScoringRuleEvaluationResult,
 } from "../types/scoring.types.js";
+import type { MarketSnapshot } from "../types/market-snapshot.types.js";
+import type { TradeDirection } from "../types/trade.types.js";
 
 export type ScoringEvaluatorInput = {
   rewardRiskRatio: number;
@@ -22,6 +24,9 @@ export type ScoringEvaluatorInput = {
     orderBookAvailable?: boolean;
   };
   evaluatedAt?: Date;
+  direction?: TradeDirection;
+  marketSnapshot?: MarketSnapshot | null;
+  indexSnapshot?: MarketSnapshot | null;
 };
 
 export type ScoringRuleEvaluator = {
@@ -52,6 +57,10 @@ const unavailableEvaluators: Record<string, [string, string]> = {
   VWAP_CONTEXT: ["VWAP_DATA_UNAVAILABLE", "VWAP data is unavailable."],
   VOLUME_CONTEXT: ["VOLUME_DATA_UNAVAILABLE", "Volume context is unavailable."],
   FUNDING_OPEN_INTEREST_CONTEXT: ["FUNDING_DATA_UNAVAILABLE", "Funding and open-interest data is unavailable."],
+  MARKET_BREADTH_CONTEXT: ["MARKET_BREADTH_UNAVAILABLE", "Market breadth data is unavailable."],
+  VIX_STABILITY_CONTEXT: ["VIX_DATA_UNAVAILABLE", "VIX context is unavailable."],
+  SECTOR_RELATIVE_STRENGTH: ["SECTOR_DATA_UNAVAILABLE", "Sector mapping is unavailable."],
+  SECTOR_BREADTH_CONTEXT: ["SECTOR_DATA_UNAVAILABLE", "Sector breadth data is unavailable."],
 };
 
 const rewardRiskEvaluator: ScoringRuleEvaluator = {
@@ -152,6 +161,121 @@ const runtimeContextEvaluator = (
     : skipped(evaluatorKey, "ORDER_FLOW_DATA_UNAVAILABLE", `${evaluatorKey} data is unavailable.`),
 });
 
+const priceVsVwapEvaluator: ScoringRuleEvaluator = {
+  evaluate: (input) => {
+    const position = input.marketSnapshot?.vwap.positionVsVwap;
+    if (!position || !input.direction) {
+      return skipped("PRICE_VS_VWAP_CONTEXT", "VWAP_DATA_UNAVAILABLE", "VWAP position is unavailable.");
+    }
+    const aligned = (input.direction === "LONG" && position === "ABOVE")
+      || (input.direction === "SHORT" && position === "BELOW");
+    const score = position === "NEAR" ? 60 : aligned ? 100 : 0;
+    return result("PRICE_VS_VWAP_CONTEXT", {
+      status: "EXECUTED",
+      score,
+      maxScore: 100,
+      reasonCodes: [
+        position === "NEAR"
+          ? "PRICE_NEAR_VWAP"
+          : aligned ? "PRICE_VWAP_ALIGNED" : "PRICE_VWAP_OPPOSED",
+      ],
+      warnings: aligned || position === "NEAR" ? [] : ["PRICE_OPPOSES_VWAP_CONTEXT"],
+      dataConfidence: input.marketSnapshot?.dataConfidence === "HIGH" ? "HIGH" : "MEDIUM",
+      metadata: { direction: input.direction, positionVsVwap: position },
+    });
+  },
+};
+
+const vwapDistanceEvaluator: ScoringRuleEvaluator = {
+  evaluate: (input) => {
+    const distance = input.marketSnapshot?.vwap.distanceFromVwapPercent;
+    if (distance === undefined) {
+      return skipped("VWAP_DISTANCE_CONTEXT", "VWAP_DATA_UNAVAILABLE", "VWAP distance is unavailable.");
+    }
+    const absoluteDistance = Math.abs(distance);
+    const score = absoluteDistance <= 0.3 ? 100 : absoluteDistance <= 1.5 ? 60 : 20;
+    return result("VWAP_DISTANCE_CONTEXT", {
+      status: "EXECUTED",
+      score,
+      maxScore: 100,
+      reasonCodes: [
+        absoluteDistance <= 0.3
+          ? "VWAP_DISTANCE_NEAR"
+          : absoluteDistance <= 1.5 ? "VWAP_DISTANCE_ACCEPTABLE" : "VWAP_DISTANCE_EXTENDED",
+      ],
+      warnings: absoluteDistance > 1.5 ? ["PRICE_EXTENDED_FROM_VWAP"] : [],
+      dataConfidence: "HIGH",
+      metadata: { distanceFromVwapPercent: distance, nearPercent: 0.3, extendedPercent: 1.5 },
+    });
+  },
+};
+
+const liquidityFreshnessEvaluator: ScoringRuleEvaluator = {
+  evaluate: (input) => {
+    const freshness = input.marketSnapshot?.freshness.status;
+    if (!freshness || freshness === "MISSING") {
+      return skipped("LIQUIDITY_FRESHNESS_CONTEXT", "SNAPSHOT_MISSING", "Market snapshot is missing.");
+    }
+    return result("LIQUIDITY_FRESHNESS_CONTEXT", {
+      status: freshness === "FRESH" ? "EXECUTED" : "PARTIAL",
+      score: freshness === "FRESH" ? 100 : 30,
+      maxScore: 100,
+      reasonCodes: [freshness === "FRESH" ? "SNAPSHOT_FRESH" : "SNAPSHOT_STALE"],
+      warnings: freshness === "STALE" ? ["MARKET_SNAPSHOT_STALE"] : [],
+      dataConfidence: freshness === "FRESH" ? "HIGH" : "LOW",
+      metadata: { ageMs: input.marketSnapshot?.freshness.ageMs },
+    });
+  },
+};
+
+const rvolEvaluator: ScoringRuleEvaluator = {
+  evaluate: (input) => {
+    const rvol = input.marketSnapshot?.volume.relativeVolume;
+    if (rvol === undefined) {
+      return result("RVOL_CONTEXT", {
+        status: "PARTIAL",
+        score: 0,
+        maxScore: 100,
+        reasonCodes: ["RVOL_BASELINE_UNAVAILABLE"],
+        warnings: ["RVOL baseline is unavailable."],
+        dataConfidence: "LOW",
+      });
+    }
+    return result("RVOL_CONTEXT", {
+      status: "EXECUTED",
+      score: rvol >= 1.5 ? 100 : rvol >= 1 ? 65 : 30,
+      maxScore: 100,
+      reasonCodes: [rvol >= 1.5 ? "RVOL_STRONG" : rvol >= 1 ? "RVOL_NORMAL" : "RVOL_WEAK"],
+      warnings: rvol < 1 ? ["RELATIVE_VOLUME_WEAK"] : [],
+      dataConfidence: "HIGH",
+      metadata: { relativeVolume: rvol },
+    });
+  },
+};
+
+const indexVwapAlignmentEvaluator: ScoringRuleEvaluator = {
+  evaluate: (input) => {
+    const position = input.indexSnapshot?.vwap.positionVsVwap;
+    if (!position || !input.direction) {
+      return skipped(
+        "INDEX_VWAP_TREND_ALIGNMENT",
+        "INDEX_DATA_UNAVAILABLE",
+        "Index VWAP context is unavailable.",
+      );
+    }
+    const aligned = (input.direction === "LONG" && position === "ABOVE")
+      || (input.direction === "SHORT" && position === "BELOW");
+    return result("INDEX_VWAP_TREND_ALIGNMENT", {
+      status: "EXECUTED",
+      score: position === "NEAR" ? 60 : aligned ? 100 : 0,
+      maxScore: 100,
+      reasonCodes: [aligned ? "INDEX_VWAP_ALIGNED" : position === "NEAR" ? "INDEX_NEAR_VWAP" : "INDEX_VWAP_OPPOSED"],
+      warnings: aligned || position === "NEAR" ? [] : ["INDEX_CONTEXT_OPPOSES_DIRECTION"],
+      dataConfidence: input.indexSnapshot?.dataConfidence === "HIGH" ? "HIGH" : "MEDIUM",
+    });
+  },
+};
+
 export class ScoringRuleEvaluatorRegistryService {
   private readonly evaluators = new Map<string, ScoringRuleEvaluator>();
 
@@ -163,6 +287,11 @@ export class ScoringRuleEvaluatorRegistryService {
       "PRICE_BUFFER_CONTEXT",
       runtimeContextEvaluator("PRICE_BUFFER_CONTEXT", (input) => input.runtime?.priceBufferAvailable === true),
     );
+    this.evaluators.set("PRICE_VS_VWAP_CONTEXT", priceVsVwapEvaluator);
+    this.evaluators.set("VWAP_DISTANCE_CONTEXT", vwapDistanceEvaluator);
+    this.evaluators.set("LIQUIDITY_FRESHNESS_CONTEXT", liquidityFreshnessEvaluator);
+    this.evaluators.set("RVOL_CONTEXT", rvolEvaluator);
+    this.evaluators.set("INDEX_VWAP_TREND_ALIGNMENT", indexVwapAlignmentEvaluator);
     this.evaluators.set(
       "CVD_CONTEXT",
       runtimeContextEvaluator("CVD_CONTEXT", (input) => input.runtime?.currentCvdAvailable === true),

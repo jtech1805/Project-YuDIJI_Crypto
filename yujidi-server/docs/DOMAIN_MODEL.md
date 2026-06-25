@@ -1599,3 +1599,54 @@ and missing-data summary for audit and replay.
 
 Realtime scoring context is a protected diagnostic projection. It cannot mutate scoring,
 risk state, monitors, ActiveTrades, or TradeResults.
+
+## Market Snapshot
+
+`MarketSnapshot` is bounded, derived, process-local market context for one provider-aware
+resource. It is not a database entity and is not user-editable.
+
+Identity:
+
+```txt
+Binance public:
+  BINANCE:BINANCE:BTCUSDT
+
+Angel user session:
+  ANGEL_ONE:<userId>:MCX:<instrumentToken>
+```
+
+The Angel user id is part of the resource identity because Angel live data is authorized
+through a user-owned broker session. Binance public context may be shared.
+
+A snapshot may contain:
+
+- latest and previous price
+- day open, high, low, previous close, and change percentage
+- bounded 1m, 3m, 5m, and 15m candles
+- basic cumulative VWAP and distance/position relative to VWAP
+- current volume and relative-volume context when a baseline exists
+- last tick time, freshness, and data confidence
+
+Lifecycle:
+
+```txt
+normalized tick
+  -> create or update snapshot
+  -> update candles/VWAP/volume
+  -> derive freshness and confidence
+  -> expose a defensive copy to scoring
+  -> evict least-recently-touched resources when the cap is exceeded
+```
+
+`TemplateMonitoringOrchestratorService` tracks process-local interest and readiness for
+template resources. In Phase 16 it does not replace the WebSocket manager or create a new
+provider connection. It records registration, reference count, last tick, and last
+snapshot status.
+
+Business boundaries:
+
+- snapshots do not mutate RiskState, ActiveTrade, TradeResult, Monitor, or Alert
+- snapshots never grant trade permission by themselves
+- scoring remains deterministic
+- missing market data remains explicit rather than synthesized
+- raw provider payloads are not persisted in snapshots

@@ -20,6 +20,8 @@ import { parseCookieHeader } from "../utils/cookieUtils.js";
 import { verifyAccessToken } from "../utils/jwt.js";
 import { buildMarketSubscriptionKey } from "../utils/market-subscription-key.js";
 import type { NormalizedMarketTick } from "../types/market-data.types.js";
+import { sharedMarketSnapshotService } from "./market-snapshot.service.js";
+import { sharedTemplateMonitoringOrchestrator } from "./template-monitoring-orchestrator.service.js";
 
 interface BinanceTickerMessage {
   s: string;
@@ -29,6 +31,10 @@ interface BinanceTickerMessage {
   E: number;
   m: boolean;
   q: string;
+  v?: string;
+  o?: string;
+  h?: string;
+  l?: string;
 }
 
 interface OutboundTickerPayload {
@@ -700,6 +706,31 @@ export class WebSocketManager {
     // ==========================================
     if (this.isBinanceTickerMessage(parsedPayload)) {
       const symbol = parsedPayload.s.toUpperCase();
+      try {
+        const snapshot = sharedMarketSnapshotService.recordTick({
+          provider: "BINANCE",
+          exchange: "BINANCE",
+          marketType: "CRYPTO",
+          symbol,
+          providerSymbol: symbol,
+          instrumentToken: symbol,
+          price: Number(parsedPayload.c),
+          ...(parsedPayload.v !== undefined ? { cumulativeVolume: Number(parsedPayload.v) } : {}),
+          ...(parsedPayload.o !== undefined ? { open: Number(parsedPayload.o) } : {}),
+          ...(parsedPayload.h !== undefined ? { high: Number(parsedPayload.h) } : {}),
+          ...(parsedPayload.l !== undefined ? { low: Number(parsedPayload.l) } : {}),
+          previousClose: Number(parsedPayload.x),
+          occurredAt: new Date(parsedPayload.E),
+          receivedAt: new Date(),
+          source: "BINANCE_WS",
+        });
+        sharedTemplateMonitoringOrchestrator.recordSnapshot(snapshot.resourceKey, snapshot);
+      } catch (error: unknown) {
+        logger.warn(
+          { event: "MARKET_SNAPSHOT_BINANCE_TICK_REJECTED", symbol, error },
+          "Market snapshot enrichment rejected a Binance tick",
+        );
+      }
 
       // Add the explicit type right here! 👇
       const outboundPayload: OutboundTickerPayload = {
@@ -877,6 +908,37 @@ export class WebSocketManager {
       ? ((tick.price - previousPrice) / previousPrice) * 100
       : 0;
     this.previousMarketTickPrices.set(subscriptionKey, tick.price);
+    try {
+      const marketSnapshot = sharedMarketSnapshotService.recordTick({
+        provider: tick.provider,
+        exchange: tick.exchange,
+        marketType: tick.marketType,
+        userId: tick.userId,
+        symbol: tick.symbol,
+        ...(tick.providerSymbol ? { providerSymbol: tick.providerSymbol } : {}),
+        instrumentToken: tick.instrumentToken,
+        price: tick.price,
+        ...(tick.volume !== undefined ? { volume: tick.volume } : {}),
+        occurredAt: new Date(tick.timestamp),
+        receivedAt: new Date(),
+        source: "ANGEL_WS",
+      });
+      sharedTemplateMonitoringOrchestrator.recordSnapshot(
+        marketSnapshot.resourceKey,
+        marketSnapshot,
+      );
+    } catch (error: unknown) {
+      logger.warn(
+        {
+          event: "MARKET_SNAPSHOT_ANGEL_TICK_REJECTED",
+          userId: tick.userId,
+          exchange: tick.exchange,
+          symbol: tick.symbol,
+          error,
+        },
+        "Market snapshot enrichment rejected an Angel tick",
+      );
+    }
 
     const payload: OutboundMarketTickPayload = {
       type: "MARKET_TICK",

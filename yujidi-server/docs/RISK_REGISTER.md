@@ -1925,3 +1925,81 @@ Mitigation:
 - Return explicit reason codes and warnings.
 - Normalize only over executed sections.
 - Keep AI and broker execution outside deterministic scoring.
+
+## R-082: Process-Local Market Snapshot Loss Or Divergence
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Accepted for Phase 16
+
+Description:
+
+Market snapshots, rolling candles, VWAP accumulators, volume baselines, freshness, and
+template resource readiness are held in one backend process.
+
+Impact:
+
+Restart clears context, and multiple backend instances may calculate different snapshots
+for the same instrument.
+
+Mitigation:
+
+- Treat snapshots as ephemeral scoring context, never persistence or execution authority.
+- Keep missing/stale status explicit after startup.
+- Bound resources to 5,000 and candles to 100 per timeframe by default.
+- Do not mutate RiskState, ActiveTrade, TradeResult, Monitor, or Alert from snapshot state.
+- Add shared state only in a separately approved Redis/distributed ownership phase.
+
+## R-083: Snapshot Volume Or Session Semantics May Be Incomplete
+
+Severity: Medium
+
+Likelihood: High
+
+Status: Partially mitigated
+
+Description:
+
+Provider volume fields may be tick volume or cumulative session volume. In-process VWAP and
+RVOL also begin without historical baselines and currently have no formal exchange-session
+reset calendar.
+
+Impact:
+
+VWAP/RVOL can be partial after restart, around session boundaries, or when a provider omits
+volume. Users may overread an MVP context metric as institutional historical analytics.
+
+Mitigation:
+
+- Mark unavailable/partial context honestly.
+- Calculate RVOL only after prior one-minute volume candles exist.
+- Persist evaluator status, confidence, reason codes, and warnings.
+- Document that Phase 16 is a basic context foundation.
+- Add provider/session normalization and historical baseline storage in a later phase.
+
+## R-084: Template Interest Does Not Guarantee Stream Subscription
+
+Severity: Medium
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+`TemplateMonitoringOrchestratorService` records resource interest and readiness but does not
+yet own provider WebSocket subscription reconciliation.
+
+Impact:
+
+A ScoreCheck can register a resource while no existing monitor, frontend socket, or active
+trade currently keeps that provider stream subscribed.
+
+Mitigation:
+
+- Expose readiness as `MISSING`, `FRESH`, or `STALE`.
+- Reuse existing WebSocket ownership rather than creating duplicate connections.
+- Implement explicit template-interest subscription reconciliation in a separately scoped
+  phase with reference-count and user-session tests.

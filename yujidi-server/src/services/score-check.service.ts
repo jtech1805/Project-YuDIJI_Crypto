@@ -25,6 +25,15 @@ import {
 import { TRADE_DIRECTIONS, type TradeDirection } from "../types/trade.types.js";
 import { auditLogService, type AuditLogService } from "./audit-log.service.js";
 import { ScoringEngineService, type ScoringEngineResult } from "./scoring-engine.service.js";
+import {
+  buildMarketResourceKey,
+  sharedMarketSnapshotService,
+  type MarketSnapshotService,
+} from "./market-snapshot.service.js";
+import {
+  sharedTemplateMonitoringOrchestrator,
+  type TemplateMonitoringOrchestratorService,
+} from "./template-monitoring-orchestrator.service.js";
 
 const positiveNumber = z.number().positive();
 
@@ -99,6 +108,8 @@ type ScoreCheckServiceDependencies = {
   scoringEngine: Pick<ScoringEngineService, "score">;
   auditLogService: Pick<AuditLogService, "record">;
   now: () => Date;
+  marketSnapshotService: Pick<MarketSnapshotService, "getSnapshot">;
+  templateOrchestrator: Pick<TemplateMonitoringOrchestratorService, "ensure">;
 };
 
 type SymbolRecord = {
@@ -110,6 +121,7 @@ type SymbolRecord = {
   exchange: Exchange;
   instrumentType: InstrumentType;
   providerSymbol?: string;
+  instrumentToken?: string;
   lotSize?: number;
   tickSize?: number;
   expiry?: Date;
@@ -156,6 +168,7 @@ const symbolProjection = {
   exchange: 1,
   instrumentType: 1,
   providerSymbol: 1,
+  instrumentToken: 1,
   lotSize: 1,
   tickSize: 1,
   expiry: 1,
@@ -212,6 +225,16 @@ export class ScoreCheckService {
     this.assertTemplateMatchesSymbol(symbol, parsedInput);
 
     const symbolSnapshot = this.buildSymbolSnapshot(symbol);
+    const resourceKey = buildMarketResourceKey({
+      provider: symbol.provider,
+      exchange: symbol.exchange,
+      ...(symbol.instrumentToken ? { instrumentToken: symbol.instrumentToken } : {}),
+      ...(symbol.providerSymbol ? { providerSymbol: symbol.providerSymbol } : {}),
+      symbol: symbol.symbol,
+      ...(symbol.provider === "ANGEL_ONE" ? { userId } : {}),
+    });
+    const marketSnapshot = this.getMarketSnapshotService().getSnapshot(resourceKey);
+    this.getTemplateOrchestrator().ensure(resourceKey, marketSnapshot);
     const geometry = calculateTradeGeometry(parsedInput);
     const calculatedAt = this.getNow();
     const scoringResult = this.getScoringEngine().score({
@@ -235,6 +258,8 @@ export class ScoreCheckService {
           : {}),
       },
       evaluatedAt: calculatedAt,
+      direction: parsedInput.direction,
+      marketSnapshot,
     });
     const validUntil = new Date(calculatedAt.getTime() + 15 * 60 * 1000);
     const reasonCodes = ["VALID_GEOMETRY", ...scoringResult.reasonCodes, "SCORE_CHECK_CREATED"];
@@ -516,5 +541,11 @@ export class ScoreCheckService {
 
   private getAuditLogService(): Pick<AuditLogService, "record"> {
     return this.dependencies.auditLogService ?? auditLogService;
+  }
+  private getMarketSnapshotService(): Pick<MarketSnapshotService, "getSnapshot"> {
+    return this.dependencies.marketSnapshotService ?? sharedMarketSnapshotService;
+  }
+  private getTemplateOrchestrator(): Pick<TemplateMonitoringOrchestratorService, "ensure"> {
+    return this.dependencies.templateOrchestrator ?? sharedTemplateMonitoringOrchestrator;
   }
 }

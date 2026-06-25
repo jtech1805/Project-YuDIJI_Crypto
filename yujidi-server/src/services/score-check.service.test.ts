@@ -54,6 +54,7 @@ const activeSymbol = (overrides: Record<string, unknown> = {}) => ({
   exchange: "MCX",
   instrumentType: "FUTURE",
   providerSymbol: "GOLD04DEC26FUT",
+  instrumentToken: "495213",
   lotSize: 100,
   tickSize: 1,
   expiry: new Date("2026-12-04T00:00:00.000Z"),

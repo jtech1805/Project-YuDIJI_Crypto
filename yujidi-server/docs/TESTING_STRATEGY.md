@@ -991,3 +991,36 @@ Add tests in this order:
 - template context reports evaluator availability
 - ActiveTrade monitoring health is included when available
 - scoring context route uses existing authentication middleware
+
+## 15. Market Snapshot Engine Coverage
+
+Phase 16 tests cover:
+
+- creating and updating snapshots from normalized ticks
+- latest/previous price, day high/low, and change percentage
+- 1m and 5m candle creation
+- bounded candle history
+- VWAP calculation and above/below/near classification
+- honest unavailable VWAP/volume state without volume input
+- fresh-to-stale transitions
+- bounded resource eviction
+- public Binance keys and user-scoped Angel keys
+- defensive-copy behavior
+- scoring-context candle, VWAP, volume, freshness, and readiness summaries
+- bounded analyzer buffers remaining unchanged
+- no secret/raw payload projection
+- deterministic VWAP direction and distance evaluator bands
+- freshness evaluator behavior
+- RVOL missing-baseline behavior
+- index VWAP alignment and honest missing-index behavior
+
+Provider WebSockets and external APIs are not called by snapshot unit tests. Tests feed
+normalized ticks directly into `MarketSnapshotService`.
+
+Future coverage:
+
+- subscription reconciliation for template-only resource interest
+- restart and multi-instance snapshot behavior
+- longer historical RVOL baselines
+- index/sector/VIX resource resolution
+- out-of-order provider ticks and session-boundary reset policy

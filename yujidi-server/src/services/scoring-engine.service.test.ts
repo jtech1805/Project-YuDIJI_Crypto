@@ -80,7 +80,132 @@ test("missing market context is partial or skipped without fake score", () => {
   assert.equal(marketSection?.status, "PARTIAL");
   assert.equal(marketSection?.score, 0);
   assert.equal(result.scoreStatus, "READY_WITH_STALE_DATA");
-  assert.equal(result.warnings.includes("Market-regime data is unavailable."), true);
+  assert.equal(result.warnings.includes("Index VWAP context is unavailable."), true);
+});
+
+test("snapshot-backed VWAP evaluators score direction and distance deterministically", () => {
+  const evaluators = new ScoringRuleEvaluatorRegistryService();
+  const baseSnapshot = {
+    resourceKey: "BINANCE:BINANCE:BTCUSDT",
+    provider: "BINANCE",
+    exchange: "BINANCE",
+    latestPrice: 101,
+    tickCount: 2,
+    candles: { "1m": [], "3m": [], "5m": [], "15m": [] },
+    vwap: {
+      value: 100,
+      cumulativePriceVolume: 3_000,
+      cumulativeVolume: 30,
+      positionVsVwap: "ABOVE" as const,
+      distanceFromVwapPercent: 0.2,
+      status: "READY" as const,
+    },
+    volume: { status: "PARTIAL" as const },
+    freshness: { status: "FRESH" as const, ageMs: 100 },
+    dataConfidence: "HIGH" as const,
+  };
+
+  assert.equal(evaluators.evaluate("PRICE_VS_VWAP_CONTEXT", {
+    rewardRiskRatio: 2,
+    direction: "LONG",
+    marketSnapshot: baseSnapshot,
+  }).score, 100);
+  assert.equal(evaluators.evaluate("PRICE_VS_VWAP_CONTEXT", {
+    rewardRiskRatio: 2,
+    direction: "SHORT",
+    marketSnapshot: baseSnapshot,
+  }).score, 0);
+  assert.equal(evaluators.evaluate("PRICE_VS_VWAP_CONTEXT", {
+    rewardRiskRatio: 2,
+    direction: "LONG",
+    marketSnapshot: {
+      ...baseSnapshot,
+      vwap: { ...baseSnapshot.vwap, positionVsVwap: "NEAR" },
+    },
+  }).score, 60);
+
+  assert.equal(evaluators.evaluate("VWAP_DISTANCE_CONTEXT", {
+    rewardRiskRatio: 2,
+    marketSnapshot: baseSnapshot,
+  }).score, 100);
+  assert.equal(evaluators.evaluate("VWAP_DISTANCE_CONTEXT", {
+    rewardRiskRatio: 2,
+    marketSnapshot: {
+      ...baseSnapshot,
+      vwap: { ...baseSnapshot.vwap, distanceFromVwapPercent: 1 },
+    },
+  }).score, 60);
+  const extended = evaluators.evaluate("VWAP_DISTANCE_CONTEXT", {
+    rewardRiskRatio: 2,
+    marketSnapshot: {
+      ...baseSnapshot,
+      vwap: { ...baseSnapshot.vwap, distanceFromVwapPercent: 2 },
+    },
+  });
+  assert.equal(extended.score, 20);
+  assert.equal(extended.warnings.includes("PRICE_EXTENDED_FROM_VWAP"), true);
+});
+
+test("freshness RVOL and index evaluators remain honest about missing data", () => {
+  const evaluators = new ScoringRuleEvaluatorRegistryService();
+  const snapshot = {
+    resourceKey: "BINANCE:BINANCE:BTCUSDT",
+    provider: "BINANCE",
+    exchange: "BINANCE",
+    tickCount: 2,
+    candles: { "1m": [], "3m": [], "5m": [], "15m": [] },
+    vwap: {
+      value: 100,
+      cumulativePriceVolume: 3_000,
+      cumulativeVolume: 30,
+      positionVsVwap: "ABOVE" as const,
+      status: "READY" as const,
+    },
+    volume: { relativeVolume: 1.6, status: "READY" as const },
+    freshness: { status: "FRESH" as const, ageMs: 100 },
+    dataConfidence: "HIGH" as const,
+  };
+
+  assert.equal(evaluators.evaluate("LIQUIDITY_FRESHNESS_CONTEXT", {
+    rewardRiskRatio: 2,
+    marketSnapshot: snapshot,
+  }).score, 100);
+  assert.equal(evaluators.evaluate("LIQUIDITY_FRESHNESS_CONTEXT", {
+    rewardRiskRatio: 2,
+    marketSnapshot: {
+      ...snapshot,
+      freshness: { status: "STALE", ageMs: 20_000 },
+    },
+  }).status, "PARTIAL");
+  assert.equal(evaluators.evaluate("LIQUIDITY_FRESHNESS_CONTEXT", {
+    rewardRiskRatio: 2,
+    marketSnapshot: null,
+  }).status, "SKIPPED");
+
+  assert.equal(evaluators.evaluate("RVOL_CONTEXT", {
+    rewardRiskRatio: 2,
+    marketSnapshot: snapshot,
+  }).score, 100);
+  const missingRvol = evaluators.evaluate("RVOL_CONTEXT", {
+    rewardRiskRatio: 2,
+    marketSnapshot: {
+      ...snapshot,
+      volume: { status: "PARTIAL" },
+    },
+  });
+  assert.equal(missingRvol.status, "PARTIAL");
+  assert.equal(missingRvol.reasonCodes.includes("RVOL_BASELINE_UNAVAILABLE"), true);
+
+  assert.equal(evaluators.evaluate("INDEX_VWAP_TREND_ALIGNMENT", {
+    rewardRiskRatio: 2,
+    direction: "LONG",
+    indexSnapshot: snapshot,
+  }).score, 100);
+  assert.equal(evaluators.evaluate("INDEX_VWAP_TREND_ALIGNMENT", {
+    rewardRiskRatio: 2,
+    direction: "LONG",
+    indexSnapshot: null,
+  }).status, "SKIPPED");
 });
 
 test("commodity sanity reports contract metadata and preserves baseline warnings", () => {

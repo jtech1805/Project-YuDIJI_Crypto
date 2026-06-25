@@ -6,6 +6,15 @@ import type { AnalyzerRuntimeSnapshot } from "./analyzer.service.js";
 import { ScoringTemplateRegistryService } from "./scoring-template-registry.service.js";
 import { buildMarketSubscriptionKey } from "../utils/market-subscription-key.js";
 import type { ScoringTemplateKey } from "../types/scoring.types.js";
+import type { MarketSnapshot } from "../types/market-snapshot.types.js";
+import {
+  sharedMarketSnapshotService,
+  type MarketSnapshotService,
+} from "./market-snapshot.service.js";
+import {
+  sharedTemplateMonitoringOrchestrator,
+  type TemplateMonitoringOrchestratorService,
+} from "./template-monitoring-orchestrator.service.js";
 
 type QueryExec<T> = { exec: () => Promise<T> };
 type LeanQueryExec<T> = { lean: () => QueryExec<T> };
@@ -30,6 +39,8 @@ type Dependencies = {
   symbolRepository: SymbolRepository;
   runtimeProvider: RuntimeProvider;
   templateRegistry: ScoringTemplateRegistryService;
+  marketSnapshotService: Pick<MarketSnapshotService, "getSnapshot" | "getDebugSnapshot">;
+  templateOrchestrator: Pick<TemplateMonitoringOrchestratorService, "ensure" | "get">;
 };
 
 export type ScoringContextInput = {
@@ -63,13 +74,18 @@ const projection = {
 const evaluatorAvailability = (
   evaluatorKey: string,
   runtime: AnalyzerRuntimeSnapshot,
+  marketSnapshot: MarketSnapshot | null,
 ): { evaluatorKey: string; dataAvailable: boolean; reasonCodes: string[] } => {
   const available = evaluatorKey === "REWARD_RISK_RATIO"
     || evaluatorKey === "SYMBOL_METADATA_SANITY"
     || evaluatorKey === "COMMODITY_CONTRACT_SANITY"
     || (evaluatorKey === "PRICE_BUFFER_CONTEXT" && runtime.priceBuffer.available)
     || (evaluatorKey === "CVD_CONTEXT" && runtime.cvd.available)
-    || (evaluatorKey === "ORDER_BOOK_CONTEXT" && runtime.orderBook.available);
+    || (evaluatorKey === "ORDER_BOOK_CONTEXT" && runtime.orderBook.available)
+    || (evaluatorKey === "PRICE_VS_VWAP_CONTEXT" && marketSnapshot?.vwap.value !== undefined)
+    || (evaluatorKey === "VWAP_DISTANCE_CONTEXT" && marketSnapshot?.vwap.distanceFromVwapPercent !== undefined)
+    || (evaluatorKey === "LIQUIDITY_FRESHNESS_CONTEXT" && marketSnapshot !== null)
+    || (evaluatorKey === "RVOL_CONTEXT" && marketSnapshot?.volume.relativeVolume !== undefined);
   return {
     evaluatorKey,
     dataAvailable: available,
@@ -91,7 +107,14 @@ export class ScoringContextService {
       includeBuffers,
       bufferLimit,
     });
-    const subscriptionKey = streamKeys.find((key) => key.includes(":")) ?? streamKeys[0];
+    const resourceKey = this.buildResourceKey(input.userId, symbolRecord);
+    const subscriptionKey = resourceKey;
+    const marketSnapshot = this.getMarketSnapshotService().getSnapshot(resourceKey);
+    const marketSnapshotSummary = this.getMarketSnapshotService().getDebugSnapshot(resourceKey);
+    const templateResourceHealth = this.getTemplateOrchestrator().ensure(
+      resourceKey,
+      marketSnapshot,
+    );
     const health = runtimeProvider
       .getTradeMonitoringHealthSnapshot()
       .find((entry) => entry.subscriptionKey === subscriptionKey);
@@ -133,6 +156,14 @@ export class ScoringContextService {
           available: Boolean(health || subscription),
         },
       },
+      marketSnapshot: marketSnapshotSummary ?? {
+        resourceKey,
+        freshness: { status: "MISSING" },
+        vwap: { status: "UNAVAILABLE" },
+        volume: { status: "UNAVAILABLE" },
+        candleSummary: {},
+        dataConfidence: "UNAVAILABLE",
+      },
       ...(template ? {
         templateContext: {
           templateKey: template.key,
@@ -142,8 +173,16 @@ export class ScoringContextService {
             label: section.label,
             weight: section.weight,
             missingDataPolicy: section.missingDataPolicy,
-            evaluators: section.evaluators.map((key) => evaluatorAvailability(key, runtime)),
+            evaluators: section.evaluators.map((key) =>
+              evaluatorAvailability(key, runtime, marketSnapshot)),
           })),
+          resources: [{
+            resourceKey,
+            readiness: templateResourceHealth.lastSnapshotStatus,
+            registeredAt: templateResourceHealth.registeredAt,
+            lastTickAt: templateResourceHealth.lastTickAt,
+            refCount: templateResourceHealth.refCount,
+          }],
         },
       } : {}),
       warnings: runtime.priceBuffer.available ? [] : ["PRICE_BUFFER_UNAVAILABLE"],
@@ -172,17 +211,21 @@ export class ScoringContextService {
   private buildStreamKeys(userId: string, symbol: Record<string, any>): string[] {
     const keys = [String(symbol.symbol).toUpperCase()];
     if (symbol.providerSymbol) keys.push(String(symbol.providerSymbol).toUpperCase());
-    if (symbol.instrumentToken) {
-      keys.push(
-        buildMarketSubscriptionKey({
-          provider: symbol.provider,
-          ...(symbol.provider === "ANGEL_ONE" ? { userId } : {}),
-          exchange: symbol.exchange,
-          instrumentToken: String(symbol.instrumentToken),
-        }),
-      );
-    }
+    if (symbol.instrumentToken) keys.push(this.buildResourceKey(userId, symbol));
     return [...new Set(keys)];
+  }
+
+  private buildResourceKey(userId: string, symbol: Record<string, any>): string {
+    return buildMarketSubscriptionKey({
+      provider: String(symbol.provider),
+      ...(symbol.provider === "ANGEL_ONE" ? { userId } : {}),
+      exchange: String(symbol.exchange),
+      instrumentToken: String(
+        symbol.instrumentToken
+        ?? symbol.providerSymbol
+        ?? symbol.symbol,
+      ).trim(),
+    });
   }
 
   private getSymbolRepository(): SymbolRepository {
@@ -195,5 +238,17 @@ export class ScoringContextService {
   }
   private getTemplateRegistry(): ScoringTemplateRegistryService {
     return this.dependencies.templateRegistry ?? new ScoringTemplateRegistryService();
+  }
+  private getMarketSnapshotService(): Pick<
+    MarketSnapshotService,
+    "getSnapshot" | "getDebugSnapshot"
+  > {
+    return this.dependencies.marketSnapshotService ?? sharedMarketSnapshotService;
+  }
+  private getTemplateOrchestrator(): Pick<
+    TemplateMonitoringOrchestratorService,
+    "ensure" | "get"
+  > {
+    return this.dependencies.templateOrchestrator ?? sharedTemplateMonitoringOrchestrator;
   }
 }

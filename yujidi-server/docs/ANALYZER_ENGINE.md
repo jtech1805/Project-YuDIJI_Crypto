@@ -1147,3 +1147,33 @@ GET /api/scoring/realtime-context
 ```
 
 Runtime state remains process-local and is not a multi-instance source of truth.
+
+## Market Snapshot Sidecar
+
+`MarketSnapshotService` is an additive consumer of normalized live ticks. It does not
+replace or modify AnalyzerEngine price buffers, CVD buffers, cooldowns, monitor queries,
+threshold rules, alert generation, or `NEW_ALERT` delivery.
+
+Integration points:
+
+```txt
+Binance ticker
+  -> MarketSnapshotService.recordTick
+  -> existing TICKER_UPDATE and ActiveTrade paths continue
+
+Angel normalized user tick
+  -> MarketSnapshotService.recordTick with userId
+  -> existing MARKET_TICK, analyzer, and ActiveTrade paths continue
+```
+
+The sidecar maintains bounded rolling candles, basic VWAP/volume context, and freshness for
+scoring. Analyzer runtime summaries and market snapshots are both exposed by the protected
+scoring context endpoint, but they remain separate ownership lanes.
+
+Safety rules:
+
+- AnalyzerEngine behavior is unchanged.
+- Market snapshots do not trigger alerts.
+- Snapshot failures must not invent market context.
+- Angel snapshot keys must include user id.
+- Snapshot state is process-local and cleared on restart.

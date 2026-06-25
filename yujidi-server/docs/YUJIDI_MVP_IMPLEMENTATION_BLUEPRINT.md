@@ -903,3 +903,50 @@ evaluators remain honest stubs.
 
 `GET /api/scoring/realtime-context` is authenticated, read-only, sanitized, and bounded.
 Buffer items are omitted by default and capped at 100 when explicitly requested.
+
+## 14. Phase 16 Market Snapshot Engine Foundation
+
+Phase 16 adds a deterministic, process-local market context layer beside the existing
+AnalyzerEngine and ActiveTrade monitoring lanes.
+
+```txt
+normalized Binance/Angel tick
+  -> MarketSnapshotService
+  -> provider-aware resource snapshot
+  -> rolling 1m/3m/5m/15m candles
+  -> basic VWAP and volume context
+  -> freshness/readiness
+  -> scoring context and deterministic evaluators
+```
+
+Implemented:
+
+- public Binance resources use `BINANCE:<exchange>:<instrumentToken>`
+- Angel resources include the owning user:
+  `ANGEL_ONE:<userId>:<exchange>:<instrumentToken>`
+- snapshots are capped at 5,000 resources by default
+- each timeframe retains at most 100 candles by default
+- returned snapshots and candle arrays are defensive copies
+- `GET /api/scoring/realtime-context` includes summarized snapshot, candle, VWAP,
+  volume, freshness, and template-resource readiness data
+- ScoreCheck reads the current snapshot and registers template resource interest
+- VWAP position/distance, freshness, RVOL, and index VWAP alignment evaluators now
+  have deterministic implementations
+
+Boundaries:
+
+- no raw tick persistence
+- no AnalyzerEngine behavior change
+- no ActiveTrade or risk-state mutation
+- no AI scoring
+- no broker execution
+- no new provider WebSocket ownership
+- no Redis or cross-instance coordination
+
+Current limitations:
+
+- process restart clears snapshots
+- template resource registration does not yet guarantee a provider subscription
+- RVOL requires enough in-process one-minute candle history
+- index/sector/VIX resource resolution is not yet automated
+- the calculations are an MVP context foundation, not a historical market-data system
