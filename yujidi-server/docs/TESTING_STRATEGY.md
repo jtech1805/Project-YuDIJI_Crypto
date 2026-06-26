@@ -1024,3 +1024,45 @@ Future coverage:
 - longer historical RVOL baselines
 - index/sector/VIX resource resolution
 - out-of-order provider ticks and session-boundary reset policy
+
+## 16. India Equity Intraday Evaluator Coverage
+
+Phase 17 adds focused tests for:
+
+- index VWAP alignment for LONG/SHORT/opposed/missing contexts
+- index 5m/15m structure with full and one-timeframe alignment
+- index choppiness transitions
+- India VIX stable and unavailable states
+- sector relative strength for LONG and SHORT
+- missing sector snapshots
+- stock vs sector and stock vs index relative strength
+- stock intraday structure and missing key levels
+- RVOL, volume expansion, candle-volume confirmation, and dry-up warnings
+- spread readiness and unavailable depth
+- supported/missing setup types
+- geometry-only stoploss partial state
+- candle confirmation and nearby-level blocking
+- conservative India-equity weighted section aggregation
+- final score matching weighted section-score sum in the normal path
+- ScoreCheck and TradeScoreSnapshot evaluator persistence
+- realtime criteria readiness, resource keys, freshness, reason codes, and warnings
+- Angel index/VIX resource keys remaining scoped by user
+
+Tests do not call Angel APIs or broker WebSockets. Resource snapshots and canonical symbols
+are injected through service ports.
+
+## 17. Phase 17B Runtime Context Consistency Coverage
+
+Phase 17B adds tests for:
+
+- realtime context and ScoreCheck sharing `ScoringContextBuilderService`
+- ScoreCheck storing a safe bounded runtime summary in `TradeScoreSnapshot`
+- CVD evaluator scoring LONG/SHORT alignment from analyzer runtime
+- order-book evaluator scoring tight and wide spreads from analyzer runtime
+- partial liquidity sections keeping missing evaluators in the denominator
+- missing data producing `PARTIAL_DATA` instead of stale status
+- stale snapshot readiness producing `MARKET_SNAPSHOT_STALE`
+- stale runtime-backed criteria showing partial readiness in template context
+
+Tests still do not call provider WebSockets, Angel APIs, broker APIs, or AI services.
+Runtime snapshots are injected through service ports.

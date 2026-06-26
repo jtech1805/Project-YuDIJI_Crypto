@@ -49,7 +49,34 @@ export type ScoringTemplateDefinition = {
   tradeStyle: string;
   instrumentType: InstrumentType;
   maxScore: number;
+  aggregationMode?: "NORMALIZE_EXECUTED" | "WEIGHTED_SUM";
   sections: ScoringSectionDefinition[];
+};
+
+export const SCORING_SETUP_TYPES = [
+  "BREAKOUT",
+  "PULLBACK",
+  "VWAP_RECLAIM",
+  "VWAP_REJECTION",
+  "RANGE_BREAKDOWN",
+  "SUPPORT_BOUNCE",
+  "RESISTANCE_REJECTION",
+] as const;
+export type ScoringSetupType = (typeof SCORING_SETUP_TYPES)[number];
+
+export type ScoringUserLevels = {
+  breakoutLevel?: number;
+  supportLevel?: number;
+  resistanceLevel?: number;
+  pullbackZone?: number;
+  rangeHigh?: number;
+  rangeLow?: number;
+};
+
+export type ScoringContextSymbolIds = {
+  indexSymbolId?: string;
+  sectorSymbolId?: string;
+  vixSymbolId?: string;
 };
 
 export type ScoringRuleEvaluationResult = {

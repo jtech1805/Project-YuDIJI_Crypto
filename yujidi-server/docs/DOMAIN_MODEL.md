@@ -1650,3 +1650,41 @@ Business boundaries:
 - scoring remains deterministic
 - missing market data remains explicit rather than synthesized
 - raw provider payloads are not persisted in snapshots
+
+## India Equity Scoring Context
+
+An India equity ScoreCheck may now include optional deterministic context:
+
+```txt
+setupType
+userLevels:
+  breakoutLevel
+  supportLevel
+  resistanceLevel
+  pullbackZone
+  rangeHigh
+  rangeLow
+contextSymbolIds:
+  indexSymbolId
+  sectorSymbolId
+  vixSymbolId
+```
+
+These values are user/system scoring inputs, not execution instructions.
+
+`TemplateResourceResolverService` resolves canonical Symbol records and then reads their
+provider-aware MarketSnapshot:
+
+```txt
+primary stock -> ScoreCheck symbol
+market index  -> explicit indexSymbolId or default NIFTY50
+sector index  -> explicit sectorSymbolId
+volatility    -> explicit vixSymbolId or default INDIA_VIX
+```
+
+The resolved resource keys are recorded in `TradeScoreSnapshot.snapshotRefs` for audit
+traceability. Snapshot data itself remains process-local and is not copied as raw ticks.
+
+India equity section scoring is conservative: unavailable criteria remain `PARTIAL` and
+contribute zero within the weighted section. This prevents a score from increasing merely
+because sector, breadth, VIX, or depth data is absent.

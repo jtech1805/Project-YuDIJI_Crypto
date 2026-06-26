@@ -1177,3 +1177,56 @@ Safety rules:
 - Snapshot failures must not invent market context.
 - Angel snapshot keys must include user id.
 - Snapshot state is process-local and cleared on restart.
+
+## Phase 17 Scoring Consumers
+
+India-equity scoring consumes MarketSnapshotService output without changing AnalyzerEngine.
+
+Consumers may read:
+
+- primary stock snapshot
+- NIFTY/index snapshot
+- optional sector snapshot
+- optional INDIA_VIX snapshot
+- 1m, 5m, and 15m candle summaries
+- VWAP, RVOL, freshness, and bid/ask spread when available
+
+The analyzer and scoring lanes remain separate:
+
+```txt
+AnalyzerEngine
+  -> monitor threshold decisions and alerts
+
+MarketSnapshotService
+  -> derived context
+  -> deterministic ScoringEngine evaluators
+```
+
+Scoring cannot create Analyzer alerts, alter monitor cooldowns, mutate risk state, or place
+broker orders. Missing sector, breadth, VIX, or depth inputs remain visible as partial
+criteria.
+
+## Phase 17B Scoring Runtime Consumer
+
+AnalyzerEngine remains the owner of monitor threshold state, alert generation, CVD buffers,
+price buffers, cooldowns, and order-book snapshots.
+
+Scoring reads AnalyzerEngine only through `getRuntimeSnapshot` via
+`ScoringContextBuilderService`.
+
+Important boundary:
+
+- scoring receives copied summaries, not mutable buffers
+- buffer items are omitted by default and capped at 100 when explicitly requested
+- ScoreCheck stores only safe runtime summaries in `TradeScoreSnapshot.runtimeSnapshot`
+- scoring does not create alerts or mutate monitor cooldowns
+
+Runtime evaluator usage:
+
+- `CVD_CONTEXT` uses `currentCVD` or recent `netDelta` to score direction alignment
+- `ORDER_BOOK_CONTEXT` uses best bid/ask to score spread quality
+- unavailable runtime remains honest as skipped/partial
+
+Market snapshot freshness is still evaluated separately from AnalyzerEngine runtime. CVD or
+order-book data can be available while the market snapshot is stale; in that case template
+readiness is partial and emits `MARKET_SNAPSHOT_STALE`.

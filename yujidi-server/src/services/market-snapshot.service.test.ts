@@ -170,6 +170,16 @@ test("returned snapshots are safe copies", () => {
   assert.equal(second?.vwap.value, 100);
 });
 
+test("bid ask input calculates spread percentage", () => {
+  const now = new Date("2026-06-25T09:00:00.000Z");
+  const snapshot = new MarketSnapshotService({ now: () => now })
+    .recordTick(binanceTick(100, now, { bid: 99.9, ask: 100.1 }));
+
+  assert.equal(snapshot.bid, 99.9);
+  assert.equal(snapshot.ask, 100.1);
+  assert.equal(snapshot.spreadPercent, 0.2);
+});
+
 test("template resource registry tracks readiness and reference count", () => {
   const now = new Date("2026-06-25T09:00:00.000Z");
   const snapshot = new MarketSnapshotService({ now: () => now })

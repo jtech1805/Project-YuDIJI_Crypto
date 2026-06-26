@@ -66,6 +66,9 @@ export type MarketSnapshot = {
   userId?: string;
   latestPrice?: number;
   previousPrice?: number;
+  bid?: number;
+  ask?: number;
+  spreadPercent?: number;
   dayOpen?: number;
   high?: number;
   low?: number;

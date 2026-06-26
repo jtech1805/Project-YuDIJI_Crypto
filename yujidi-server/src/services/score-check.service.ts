@@ -18,24 +18,36 @@ import {
 } from "../types/market-data.types.js";
 import {
   DATA_CONFIDENCE_LEVELS,
+  SCORING_SETUP_TYPES,
   SCORING_TEMPLATE_KEYS,
+  type ScoringContextSymbolIds,
+  type ScoringSetupType,
   type DataConfidence,
+  type ScoringUserLevels,
   type ScoringTemplateKey,
 } from "../types/scoring.types.js";
 import { TRADE_DIRECTIONS, type TradeDirection } from "../types/trade.types.js";
 import { auditLogService, type AuditLogService } from "./audit-log.service.js";
 import { ScoringEngineService, type ScoringEngineResult } from "./scoring-engine.service.js";
 import {
-  buildMarketResourceKey,
-  sharedMarketSnapshotService,
-  type MarketSnapshotService,
-} from "./market-snapshot.service.js";
-import {
-  sharedTemplateMonitoringOrchestrator,
-  type TemplateMonitoringOrchestratorService,
-} from "./template-monitoring-orchestrator.service.js";
+  ScoringContextBuilderService,
+  type BuiltScoringContext,
+} from "./scoring-context-builder.service.js";
 
 const positiveNumber = z.number().positive();
+const userLevelsSchema = z.object({
+  breakoutLevel: positiveNumber.optional(),
+  supportLevel: positiveNumber.optional(),
+  resistanceLevel: positiveNumber.optional(),
+  pullbackZone: positiveNumber.optional(),
+  rangeHigh: positiveNumber.optional(),
+  rangeLow: positiveNumber.optional(),
+}).strict();
+const contextSymbolIdsSchema = z.object({
+  indexSymbolId: z.string().refine(isValidObjectId, "Invalid indexSymbolId").optional(),
+  sectorSymbolId: z.string().refine(isValidObjectId, "Invalid sectorSymbolId").optional(),
+  vixSymbolId: z.string().refine(isValidObjectId, "Invalid vixSymbolId").optional(),
+}).strict();
 
 export const createScoreCheckSchema = z.object({
   symbolId: z.string().min(1),
@@ -47,6 +59,9 @@ export const createScoreCheckSchema = z.object({
   stopLoss: positiveNumber,
   target1: positiveNumber,
   target2: positiveNumber.optional(),
+  setupType: z.enum(SCORING_SETUP_TYPES).optional(),
+  userLevels: userLevelsSchema.optional(),
+  contextSymbolIds: contextSymbolIdsSchema.optional(),
   scoringTemplateKey: z.enum(SCORING_TEMPLATE_KEYS),
   scoringTemplateVersion: z.string().min(1).max(64),
   dataConfidence: z.enum(DATA_CONFIDENCE_LEVELS).optional(),
@@ -108,8 +123,7 @@ type ScoreCheckServiceDependencies = {
   scoringEngine: Pick<ScoringEngineService, "score">;
   auditLogService: Pick<AuditLogService, "record">;
   now: () => Date;
-  marketSnapshotService: Pick<MarketSnapshotService, "getSnapshot">;
-  templateOrchestrator: Pick<TemplateMonitoringOrchestratorService, "ensure">;
+  scoringContextBuilder: Pick<ScoringContextBuilderService, "build">;
 };
 
 type SymbolRecord = {
@@ -143,6 +157,9 @@ type ScoreCheckRecord = {
   stopLoss: number;
   target1: number;
   target2?: number;
+  setupType?: ScoringSetupType;
+  userLevels?: ScoringUserLevels;
+  contextSymbolIds?: ScoringContextSymbolIds;
   riskPerUnit: number;
   rewardPerUnit: number;
   rewardRiskRatio: number;
@@ -225,42 +242,36 @@ export class ScoreCheckService {
     this.assertTemplateMatchesSymbol(symbol, parsedInput);
 
     const symbolSnapshot = this.buildSymbolSnapshot(symbol);
-    const resourceKey = buildMarketResourceKey({
-      provider: symbol.provider,
-      exchange: symbol.exchange,
-      ...(symbol.instrumentToken ? { instrumentToken: symbol.instrumentToken } : {}),
-      ...(symbol.providerSymbol ? { providerSymbol: symbol.providerSymbol } : {}),
-      symbol: symbol.symbol,
-      ...(symbol.provider === "ANGEL_ONE" ? { userId } : {}),
-    });
-    const marketSnapshot = this.getMarketSnapshotService().getSnapshot(resourceKey);
-    this.getTemplateOrchestrator().ensure(resourceKey, marketSnapshot);
+    const userLevels = this.compactUserLevels(parsedInput.userLevels);
+    const contextSymbolIds = this.compactContextSymbolIds(parsedInput.contextSymbolIds);
     const geometry = calculateTradeGeometry(parsedInput);
     const calculatedAt = this.getNow();
-    const scoringResult = this.getScoringEngine().score({
-      scoringTemplateKey: parsedInput.scoringTemplateKey,
-      scoringTemplateVersion: parsedInput.scoringTemplateVersion,
-      marketType: parsedInput.marketType,
-      tradeStyle: parsedInput.tradeStyle,
-      instrumentType: parsedInput.instrumentType,
-      rewardRiskRatio: geometry.rewardRiskRatio,
-      ...(parsedInput.dataConfidence ? { dataConfidence: parsedInput.dataConfidence } : {}),
-      symbol: {
-        status: symbol.status,
-        marketType: symbol.marketType,
-        exchange: symbol.exchange,
-        instrumentType: symbol.instrumentType,
-        ...(symbol.lotSize !== undefined ? { lotSize: symbol.lotSize } : {}),
-        ...(symbol.tickSize !== undefined ? { tickSize: symbol.tickSize } : {}),
-        ...(symbol.expiry ? { expiry: symbol.expiry } : {}),
-        ...(typeof symbol.requiresBrokerLogin === "boolean"
-          ? { requiresBrokerLogin: symbol.requiresBrokerLogin }
-          : {}),
+    const scoringContext = await this.getScoringContextBuilder().build({
+      userId,
+      symbolId: parsedInput.symbolId,
+      templateKey: parsedInput.scoringTemplateKey,
+      ...(contextSymbolIds ? { contextSymbolIds } : {}),
+      includeBuffers: false,
+      bufferLimit: 20,
+      scoring: {
+        scoringTemplateKey: parsedInput.scoringTemplateKey,
+        scoringTemplateVersion: parsedInput.scoringTemplateVersion,
+        marketType: parsedInput.marketType,
+        tradeStyle: parsedInput.tradeStyle,
+        instrumentType: parsedInput.instrumentType,
+        rewardRiskRatio: geometry.rewardRiskRatio,
+        ...(parsedInput.dataConfidence ? { dataConfidence: parsedInput.dataConfidence } : {}),
+        evaluatedAt: calculatedAt,
+        direction: parsedInput.direction,
+        entry: parsedInput.entry,
+        stopLoss: parsedInput.stopLoss,
+        target1: parsedInput.target1,
+        ...(parsedInput.target2 !== undefined ? { target2: parsedInput.target2 } : {}),
+        ...(parsedInput.setupType ? { setupType: parsedInput.setupType } : {}),
+        ...(userLevels ? { userLevels } : {}),
       },
-      evaluatedAt: calculatedAt,
-      direction: parsedInput.direction,
-      marketSnapshot,
     });
+    const scoringResult = this.getScoringEngine().score(scoringContext.evaluatorInput!);
     const validUntil = new Date(calculatedAt.getTime() + 15 * 60 * 1000);
     const reasonCodes = ["VALID_GEOMETRY", ...scoringResult.reasonCodes, "SCORE_CHECK_CREATED"];
 
@@ -277,6 +288,9 @@ export class ScoreCheckService {
       stopLoss: parsedInput.stopLoss,
       target1: parsedInput.target1,
       ...(parsedInput.target2 ? { target2: parsedInput.target2 } : {}),
+      ...(parsedInput.setupType ? { setupType: parsedInput.setupType } : {}),
+      ...(userLevels ? { userLevels } : {}),
+      ...(contextSymbolIds ? { contextSymbolIds } : {}),
       ...geometry,
       scoringTemplateKey: parsedInput.scoringTemplateKey,
       scoringTemplateVersion: parsedInput.scoringTemplateVersion,
@@ -308,7 +322,8 @@ export class ScoreCheckService {
       breakdown: this.buildBreakdown(scoringResult, geometry),
       reasonCodes: [...reasonCodes, "SCORE_CALCULATED"],
       warnings: scoringResult.warnings,
-      snapshotRefs: {},
+      snapshotRefs: scoringContext.snapshotRefs,
+      runtimeSnapshot: this.buildRuntimeSnapshot(scoringContext),
       inputHash: this.hashScoreInput(parsedInput, geometry),
       calculatedAt,
       validUntil,
@@ -451,6 +466,9 @@ export class ScoreCheckService {
         stopLoss: input.stopLoss,
         target1: input.target1,
         target2: input.target2,
+        setupType: input.setupType,
+        userLevels: input.userLevels,
+        contextSymbolIds: input.contextSymbolIds,
         scoringTemplateKey: input.scoringTemplateKey,
         scoringTemplateVersion: input.scoringTemplateVersion,
         geometry,
@@ -542,10 +560,60 @@ export class ScoreCheckService {
   private getAuditLogService(): Pick<AuditLogService, "record"> {
     return this.dependencies.auditLogService ?? auditLogService;
   }
-  private getMarketSnapshotService(): Pick<MarketSnapshotService, "getSnapshot"> {
-    return this.dependencies.marketSnapshotService ?? sharedMarketSnapshotService;
+  private getScoringContextBuilder(): Pick<ScoringContextBuilderService, "build"> {
+    return this.dependencies.scoringContextBuilder ?? new ScoringContextBuilderService({
+      symbolRepository: this.getSymbolRepository() as never,
+    });
   }
-  private getTemplateOrchestrator(): Pick<TemplateMonitoringOrchestratorService, "ensure"> {
-    return this.dependencies.templateOrchestrator ?? sharedTemplateMonitoringOrchestrator;
+  private compactUserLevels(
+    levels: CreateScoreCheckInput["userLevels"],
+  ): ScoringUserLevels | undefined {
+    if (!levels) return undefined;
+    const compact: ScoringUserLevels = {
+      ...(levels.breakoutLevel !== undefined ? { breakoutLevel: levels.breakoutLevel } : {}),
+      ...(levels.supportLevel !== undefined ? { supportLevel: levels.supportLevel } : {}),
+      ...(levels.resistanceLevel !== undefined ? { resistanceLevel: levels.resistanceLevel } : {}),
+      ...(levels.pullbackZone !== undefined ? { pullbackZone: levels.pullbackZone } : {}),
+      ...(levels.rangeHigh !== undefined ? { rangeHigh: levels.rangeHigh } : {}),
+      ...(levels.rangeLow !== undefined ? { rangeLow: levels.rangeLow } : {}),
+    };
+    return Object.keys(compact).length > 0 ? compact : undefined;
+  }
+  private compactContextSymbolIds(
+    ids: CreateScoreCheckInput["contextSymbolIds"],
+  ): ScoringContextSymbolIds | undefined {
+    if (!ids) return undefined;
+    const compact: ScoringContextSymbolIds = {
+      ...(ids.indexSymbolId ? { indexSymbolId: ids.indexSymbolId } : {}),
+      ...(ids.sectorSymbolId ? { sectorSymbolId: ids.sectorSymbolId } : {}),
+      ...(ids.vixSymbolId ? { vixSymbolId: ids.vixSymbolId } : {}),
+    };
+    return Object.keys(compact).length > 0 ? compact : undefined;
+  }
+  private buildRuntimeSnapshot(context: BuiltScoringContext): Record<string, unknown> {
+    return {
+      streamKey: context.runtime.streamKey,
+      latestPrice: context.runtime.latestPrice,
+      priceBuffer: {
+        available: context.runtime.priceBuffer.available,
+        count: context.runtime.priceBuffer.count,
+        returnedCount: context.runtime.priceBuffer.returnedCount,
+        changePercent: context.runtime.priceBuffer.changePercent,
+      },
+      cvd: {
+        available: context.runtime.cvd.available,
+        currentCVD: context.runtime.cvd.currentCVD,
+        netDelta: context.runtime.cvd.netDelta,
+        bufferCount: context.runtime.cvd.bufferCount,
+      },
+      orderBook: {
+        available: context.runtime.orderBook.available,
+        bidLevels: context.runtime.orderBook.bidLevels,
+        askLevels: context.runtime.orderBook.askLevels,
+        bestBid: context.runtime.orderBook.bestBid,
+        bestAsk: context.runtime.orderBook.bestAsk,
+      },
+      activeTradeMonitoring: context.runtimeSnapshotSummary.activeTradeMonitoring,
+    };
   }
 }

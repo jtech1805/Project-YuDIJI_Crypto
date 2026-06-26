@@ -85,10 +85,22 @@ const tradeScoreSnapshotSchema = new Schema(
         type: String,
         trim: true,
       },
+      indexSnapshotId: {
+        type: String,
+        trim: true,
+      },
+      vixSnapshotId: {
+        type: String,
+        trim: true,
+      },
       symbolSnapshotId: {
         type: String,
         trim: true,
       },
+    },
+    runtimeSnapshot: {
+      type: Schema.Types.Mixed,
+      default: {},
     },
     inputHash: {
       type: String,

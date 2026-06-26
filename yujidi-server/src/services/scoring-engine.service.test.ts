@@ -79,8 +79,8 @@ test("missing market context is partial or skipped without fake score", () => {
   const marketSection = result.breakdown.sectionResults.find((section) => section.sectionKey === "MARKET_REGIME");
   assert.equal(marketSection?.status, "PARTIAL");
   assert.equal(marketSection?.score, 0);
-  assert.equal(result.scoreStatus, "READY_WITH_STALE_DATA");
-  assert.equal(result.warnings.includes("Index VWAP context is unavailable."), true);
+  assert.equal(result.scoreStatus, "PARTIAL_DATA");
+  assert.equal(result.warnings.includes("Index snapshot is unavailable."), true);
 });
 
 test("snapshot-backed VWAP evaluators score direction and distance deterministically", () => {
@@ -205,7 +205,106 @@ test("freshness RVOL and index evaluators remain honest about missing data", () 
     rewardRiskRatio: 2,
     direction: "LONG",
     indexSnapshot: null,
-  }).status, "SKIPPED");
+  }).status, "PARTIAL");
+});
+
+test("CVD evaluator scores alignment using analyzer runtime", () => {
+  const evaluators = new ScoringRuleEvaluatorRegistryService();
+  const aligned = evaluators.evaluate("CVD_CONTEXT", {
+    rewardRiskRatio: 2,
+    direction: "LONG",
+    runtime: {
+      currentCvdAvailable: true,
+      cvd: {
+        available: true,
+        currentCVD: 8,
+        netDelta: 8,
+        bufferCount: 12,
+      },
+    },
+  });
+  assert.equal(aligned.status, "EXECUTED");
+  assert.equal(aligned.score, 100);
+  assert.equal(aligned.reasonCodes.includes("CVD_ALIGNED_WITH_DIRECTION"), true);
+
+  const opposed = evaluators.evaluate("CVD_CONTEXT", {
+    rewardRiskRatio: 2,
+    direction: "LONG",
+    runtime: {
+      currentCvdAvailable: true,
+      cvd: {
+        available: true,
+        currentCVD: -3,
+        netDelta: -3,
+        bufferCount: 8,
+      },
+    },
+  });
+  assert.equal(opposed.status, "EXECUTED");
+  assert.equal(opposed.score, 0);
+  assert.equal(opposed.warnings.includes("CVD_OPPOSES_TRADE_DIRECTION"), true);
+});
+
+test("order book evaluator scores tight and wide spreads from runtime", () => {
+  const evaluators = new ScoringRuleEvaluatorRegistryService();
+  const tight = evaluators.evaluate("ORDER_BOOK_CONTEXT", {
+    rewardRiskRatio: 2,
+    runtime: {
+      orderBookAvailable: true,
+      orderBook: {
+        available: true,
+        bidLevels: 20,
+        askLevels: 20,
+        bestBid: 100,
+        bestAsk: 100.01,
+      },
+    },
+  });
+  assert.equal(tight.status, "EXECUTED");
+  assert.equal(tight.score, 100);
+  assert.equal(tight.reasonCodes.includes("ORDER_BOOK_SPREAD_TIGHT"), true);
+
+  const wide = evaluators.evaluate("ORDER_BOOK_CONTEXT", {
+    rewardRiskRatio: 2,
+    runtime: {
+      orderBookAvailable: true,
+      orderBook: {
+        available: true,
+        bidLevels: 20,
+        askLevels: 20,
+        bestBid: 100,
+        bestAsk: 100.1,
+      },
+    },
+  });
+  assert.equal(wide.status, "EXECUTED");
+  assert.equal(wide.score, 0);
+  assert.equal(wide.warnings.includes("ORDER_BOOK_SPREAD_WIDE"), true);
+});
+
+test("partial liquidity section does not receive full credit for missing order book", () => {
+  const result = new ScoringEngineService().score({
+    scoringTemplateKey: "CRYPTO_SPOT_INTRADAY_V1",
+    scoringTemplateVersion: "1",
+    marketType: "CRYPTO",
+    tradeStyle: "INTRADAY",
+    instrumentType: "SPOT",
+    rewardRiskRatio: 2,
+    marketSnapshot: {
+      resourceKey: "BINANCE:BINANCE:BTCUSDT",
+      provider: "BINANCE",
+      exchange: "BINANCE",
+      tickCount: 2,
+      candles: { "1m": [], "3m": [], "5m": [], "15m": [] },
+      vwap: { cumulativePriceVolume: 0, cumulativeVolume: 0, status: "UNAVAILABLE" },
+      volume: { status: "UNAVAILABLE" },
+      freshness: { status: "FRESH", ageMs: 100 },
+      dataConfidence: "MEDIUM",
+    },
+  });
+  const liquidity = result.breakdown.sectionResults.find((section) => section.sectionKey === "LIQUIDITY_CONTEXT");
+  assert.equal(liquidity?.status, "PARTIAL");
+  assert.equal(liquidity?.score, 10);
 });
 
 test("commodity sanity reports contract metadata and preserves baseline warnings", () => {

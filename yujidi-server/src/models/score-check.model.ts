@@ -8,6 +8,7 @@ import {
 } from "../types/market-data.types.js";
 import {
   DATA_CONFIDENCE_LEVELS,
+  SCORING_SETUP_TYPES,
   SCORE_MODES,
   SCORE_STATUSES,
   SCORING_TEMPLATE_KEYS,
@@ -143,6 +144,23 @@ const scoreCheckSchema = new Schema(
     target2: {
       type: Number,
       min: 0,
+    },
+    setupType: {
+      type: String,
+      enum: SCORING_SETUP_TYPES,
+    },
+    userLevels: {
+      breakoutLevel: { type: Number, min: 0 },
+      supportLevel: { type: Number, min: 0 },
+      resistanceLevel: { type: Number, min: 0 },
+      pullbackZone: { type: Number, min: 0 },
+      rangeHigh: { type: Number, min: 0 },
+      rangeLow: { type: Number, min: 0 },
+    },
+    contextSymbolIds: {
+      indexSymbolId: { type: Schema.Types.ObjectId, ref: "Symbol" },
+      sectorSymbolId: { type: Schema.Types.ObjectId, ref: "Symbol" },
+      vixSymbolId: { type: Schema.Types.ObjectId, ref: "Symbol" },
     },
     riskPerUnit: {
       type: Number,

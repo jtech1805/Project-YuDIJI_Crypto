@@ -50,7 +50,7 @@ const createHarness = () => {
     receivedAt: new Date(now.getTime() + 1_000),
     source: "BINANCE_WS",
   });
-  const service = new ScoringContextService({
+  const dependencies = {
     symbolRepository: {
       findOne: () => ({
         lean: () => ({
@@ -59,7 +59,7 @@ const createHarness = () => {
       }),
     } as never,
     runtimeProvider: {
-      getAnalyzerRuntimeSnapshot: (input) => {
+      getAnalyzerRuntimeSnapshot: (input: { includeBuffers: boolean; bufferLimit: number }) => {
         runtimeInputs.push(input);
         const includeBuffers = input.includeBuffers;
         const limit = input.bufferLimit;
@@ -105,8 +105,9 @@ const createHarness = () => {
     },
     marketSnapshotService,
     templateOrchestrator,
-  });
-  return { runtimeInputs, service };
+  };
+  const service = new ScoringContextService(dependencies);
+  return { dependencies, runtimeInputs, service };
 };
 
 test("context service returns summarized price buffer and CVD", async () => {
@@ -242,6 +243,105 @@ test("Angel snapshot lookup uses the user-scoped provider resource key", async (
     "ANGEL_ONE:user-a:MCX:495213",
     "ANGEL_ONE:user-a:MCX:495213",
   ]);
+});
+
+test("India equity realtime context reports criteria readiness and resource keys", async () => {
+  const { dependencies: baseDependencies } = createHarness();
+  const indexSnapshot = baseDependencies.marketSnapshotService.getSnapshot(
+    "BINANCE:BINANCE:BTCUSDT",
+  );
+  const service = new ScoringContextService({
+    ...baseDependencies,
+    templateResourceResolver: {
+      resolveIndiaEquityResources: async () => ({
+        index: {
+          role: "INDEX",
+          resourceKey: "ANGEL_ONE:user-a:NSE:99926000",
+          snapshot: indexSnapshot,
+        },
+        sector: {
+          role: "SECTOR",
+          snapshot: null,
+          reasonCode: "SECTOR_MAPPING_UNAVAILABLE",
+        },
+        vix: {
+          role: "VIX",
+          snapshot: null,
+          reasonCode: "VIX_SYMBOL_UNAVAILABLE",
+        },
+      }),
+    },
+  });
+
+  const context = await service.getRealtimeContext({
+    userId: "user-a",
+    symbol: "BTCUSDT",
+    templateKey: "INDIA_EQUITY_INTRADAY_V1",
+  }) as any;
+  const evaluators = context.templateContext.sections
+    .flatMap((section: any) => section.evaluators);
+  const indexVwap = evaluators.find(
+    (item: any) => item.evaluatorKey === "INDEX_VWAP_TREND_ALIGNMENT",
+  );
+  const sector = evaluators.find(
+    (item: any) => item.evaluatorKey === "SECTOR_RELATIVE_STRENGTH",
+  );
+
+  assert.equal(indexVwap.status, "READY");
+  assert.deepEqual(indexVwap.resourceKeys, ["ANGEL_ONE:user-a:NSE:99926000"]);
+  assert.equal(indexVwap.snapshotFreshness.includes("FRESH"), true);
+  assert.equal(sector.status, "PARTIAL");
+  assert.equal(context.templateContext.resources.length, 2);
+});
+
+test("template context marks runtime criteria partial when market snapshot is stale", async () => {
+  const staleSnapshot = {
+    resourceKey: "BINANCE:BINANCE:BTCUSDT",
+    provider: "BINANCE",
+    exchange: "BINANCE",
+    tickCount: 4,
+    candles: { "1m": [], "3m": [], "5m": [], "15m": [] },
+    vwap: { cumulativePriceVolume: 0, cumulativeVolume: 0, status: "UNAVAILABLE" as const },
+    volume: { status: "UNAVAILABLE" as const },
+    freshness: { status: "STALE" as const, ageMs: 30_000 },
+    dataConfidence: "LOW" as const,
+  };
+  const service = new ScoringContextService({
+    symbolRepository: {
+      findOne: () => ({
+        lean: () => ({
+          exec: async () => symbol,
+        }),
+      }),
+    } as never,
+    runtimeProvider: {
+      getAnalyzerRuntimeSnapshot: () => ({
+        streamKey: "BTCUSDT",
+        priceBuffer: { available: true, count: 10, returnedCount: 0 },
+        cvd: { available: true, currentCVD: 10, netDelta: 10, bufferCount: 10, returnedCount: 0 },
+        cooldown: { active: false, activeCount: 0, remainingMs: 0 },
+        orderBook: { available: true, bidLevels: 20, askLevels: 20, bestBid: 100, bestAsk: 100.01 },
+      }),
+      getTradeMonitoringHealthSnapshot: () => [],
+      getActiveTradeSubscriptionSnapshot: () => [],
+    },
+    marketSnapshotService: {
+      getSnapshot: () => staleSnapshot,
+      getDebugSnapshot: () => staleSnapshot,
+    },
+    templateOrchestrator: new TemplateMonitoringOrchestratorService(),
+  });
+
+  const context = await service.getRealtimeContext({
+    userId: "69e64c5f9042aac89c8c83f8",
+    symbol: "BTCUSDT",
+    templateKey: "CRYPTO_SPOT_INTRADAY_V1",
+  }) as any;
+  const evaluators = context.templateContext.sections.flatMap((section: any) => section.evaluators);
+  const orderBook = evaluators.find((item: any) => item.evaluatorKey === "ORDER_BOOK_CONTEXT");
+  assert.equal(orderBook.status, "PARTIAL");
+  assert.equal(orderBook.reasonCodes.includes("MARKET_SNAPSHOT_STALE"), true);
+  assert.equal(context.warnings.includes("MARKET_SNAPSHOT_STALE"), true);
 });
 
 test("missing symbol returns a safe validation error", async () => {

@@ -66,6 +66,14 @@ export class MarketSnapshotService {
       snapshot.previousPrice = snapshot.latestPrice;
     }
     snapshot.latestPrice = tick.price;
+    if (tick.bid !== undefined && tick.bid > 0) snapshot.bid = tick.bid;
+    if (tick.ask !== undefined && tick.ask > 0) snapshot.ask = tick.ask;
+    if (snapshot.bid && snapshot.ask && snapshot.ask >= snapshot.bid) {
+      const midpoint = (snapshot.bid + snapshot.ask) / 2;
+      snapshot.spreadPercent = Number(
+        (((snapshot.ask - snapshot.bid) / midpoint) * 100).toFixed(4),
+      );
+    }
     snapshot.lastTickAt = new Date(timestamp);
     snapshot.tickCount += 1;
     snapshot.touchedAt = this.getNow().getTime();
@@ -112,6 +120,9 @@ export class MarketSnapshotService {
       resourceKey: snapshot.resourceKey,
       latestPrice: snapshot.latestPrice,
       previousPrice: snapshot.previousPrice,
+      bid: snapshot.bid,
+      ask: snapshot.ask,
+      spreadPercent: snapshot.spreadPercent,
       dayOpen: snapshot.dayOpen,
       high: snapshot.high,
       low: snapshot.low,

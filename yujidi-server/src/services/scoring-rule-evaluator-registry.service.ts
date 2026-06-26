@@ -1,9 +1,12 @@
 import type {
   DataConfidence,
+  ScoringSetupType,
+  ScoringUserLevels,
   ScoringRuleEvaluationResult,
 } from "../types/scoring.types.js";
 import type { MarketSnapshot } from "../types/market-snapshot.types.js";
 import type { TradeDirection } from "../types/trade.types.js";
+import { indiaEquityScoringEvaluators } from "./india-equity-scoring-evaluators.js";
 
 export type ScoringEvaluatorInput = {
   rewardRiskRatio: number;
@@ -22,11 +25,38 @@ export type ScoringEvaluatorInput = {
     priceBufferAvailable?: boolean;
     currentCvdAvailable?: boolean;
     orderBookAvailable?: boolean;
+    priceBuffer?: {
+      available: boolean;
+      count: number;
+      changePercent?: number;
+    };
+    cvd?: {
+      available: boolean;
+      currentCVD?: number;
+      netDelta?: number;
+      bufferCount: number;
+    };
+    orderBook?: {
+      available: boolean;
+      bidLevels: number;
+      askLevels: number;
+      bestBid?: number;
+      bestAsk?: number;
+    };
   };
   evaluatedAt?: Date;
   direction?: TradeDirection;
+  entry?: number;
+  stopLoss?: number;
+  target1?: number;
+  target2?: number;
+  setupType?: ScoringSetupType;
+  userLevels?: ScoringUserLevels;
   marketSnapshot?: MarketSnapshot | null;
   indexSnapshot?: MarketSnapshot | null;
+  sectorSnapshot?: MarketSnapshot | null;
+  vixSnapshot?: MarketSnapshot | null;
+  marketBreadthPositivePercent?: number;
 };
 
 export type ScoringRuleEvaluator = {
@@ -57,10 +87,6 @@ const unavailableEvaluators: Record<string, [string, string]> = {
   VWAP_CONTEXT: ["VWAP_DATA_UNAVAILABLE", "VWAP data is unavailable."],
   VOLUME_CONTEXT: ["VOLUME_DATA_UNAVAILABLE", "Volume context is unavailable."],
   FUNDING_OPEN_INTEREST_CONTEXT: ["FUNDING_DATA_UNAVAILABLE", "Funding and open-interest data is unavailable."],
-  MARKET_BREADTH_CONTEXT: ["MARKET_BREADTH_UNAVAILABLE", "Market breadth data is unavailable."],
-  VIX_STABILITY_CONTEXT: ["VIX_DATA_UNAVAILABLE", "VIX context is unavailable."],
-  SECTOR_RELATIVE_STRENGTH: ["SECTOR_DATA_UNAVAILABLE", "Sector mapping is unavailable."],
-  SECTOR_BREADTH_CONTEXT: ["SECTOR_DATA_UNAVAILABLE", "Sector breadth data is unavailable."],
 };
 
 const rewardRiskEvaluator: ScoringRuleEvaluator = {
@@ -161,6 +187,89 @@ const runtimeContextEvaluator = (
     : skipped(evaluatorKey, "ORDER_FLOW_DATA_UNAVAILABLE", `${evaluatorKey} data is unavailable.`),
 });
 
+const cvdEvaluator: ScoringRuleEvaluator = {
+  evaluate: (input) => {
+    const cvd = input.runtime?.cvd;
+    const value = cvd?.netDelta ?? cvd?.currentCVD;
+    if (!cvd?.available || value === undefined || !Number.isFinite(value) || !input.direction) {
+      return skipped("CVD_CONTEXT", "CVD_DATA_UNAVAILABLE", "CVD data is unavailable.");
+    }
+    const abs = Math.abs(value);
+    const aligned = (input.direction === "LONG" && value > 0) || (input.direction === "SHORT" && value < 0);
+    const score = abs < 1 ? 50 : aligned ? (abs >= 5 ? 100 : 75) : 0;
+    return result("CVD_CONTEXT", {
+      status: "EXECUTED",
+      score,
+      maxScore: 100,
+      reasonCodes: [
+        abs < 1 ? "CVD_NEUTRAL" : aligned ? "CVD_ALIGNED_WITH_DIRECTION" : "CVD_OPPOSES_DIRECTION",
+      ],
+      warnings: aligned || abs < 1 ? [] : ["CVD_OPPOSES_TRADE_DIRECTION"],
+      dataConfidence: cvd.bufferCount > 0 ? "HIGH" : "MEDIUM",
+      metadata: {
+        direction: input.direction,
+        currentCVD: cvd.currentCVD,
+        netDelta: cvd.netDelta,
+        bufferCount: cvd.bufferCount,
+      },
+    });
+  },
+};
+
+const orderBookEvaluator: ScoringRuleEvaluator = {
+  evaluate: (input) => {
+    const orderBook = input.runtime?.orderBook;
+    if (!orderBook?.available) {
+      return skipped("ORDER_BOOK_CONTEXT", "ORDER_BOOK_DATA_UNAVAILABLE", "Order book data is unavailable.");
+    }
+    const { bestBid, bestAsk } = orderBook;
+    if (
+      bestBid === undefined
+      || bestAsk === undefined
+      || !Number.isFinite(bestBid)
+      || !Number.isFinite(bestAsk)
+      || bestBid <= 0
+      || bestAsk <= 0
+      || bestAsk < bestBid
+    ) {
+      return result("ORDER_BOOK_CONTEXT", {
+        status: "PARTIAL",
+        score: 0,
+        maxScore: 100,
+        reasonCodes: ["ORDER_BOOK_SPREAD_UNAVAILABLE"],
+        warnings: ["Order book levels are available but spread cannot be calculated."],
+        dataConfidence: "LOW",
+        metadata: {
+          bidLevels: orderBook.bidLevels,
+          askLevels: orderBook.askLevels,
+        },
+      });
+    }
+    const midpoint = (bestBid + bestAsk) / 2;
+    const spreadPercent = Number((((bestAsk - bestBid) / midpoint) * 100).toFixed(4));
+    const score = spreadPercent <= 0.02 ? 100 : spreadPercent <= 0.05 ? 60 : 0;
+    return result("ORDER_BOOK_CONTEXT", {
+      status: "EXECUTED",
+      score,
+      maxScore: 100,
+      reasonCodes: [
+        spreadPercent <= 0.02
+          ? "ORDER_BOOK_SPREAD_TIGHT"
+          : spreadPercent <= 0.05 ? "ORDER_BOOK_SPREAD_ACCEPTABLE" : "ORDER_BOOK_SPREAD_WIDE",
+      ],
+      warnings: spreadPercent > 0.05 ? ["ORDER_BOOK_SPREAD_WIDE"] : [],
+      dataConfidence: orderBook.bidLevels > 0 && orderBook.askLevels > 0 ? "HIGH" : "MEDIUM",
+      metadata: {
+        bestBid,
+        bestAsk,
+        spreadPercent,
+        bidLevels: orderBook.bidLevels,
+        askLevels: orderBook.askLevels,
+      },
+    });
+  },
+};
+
 const priceVsVwapEvaluator: ScoringRuleEvaluator = {
   evaluate: (input) => {
     const position = input.marketSnapshot?.vwap.positionVsVwap;
@@ -253,29 +362,6 @@ const rvolEvaluator: ScoringRuleEvaluator = {
   },
 };
 
-const indexVwapAlignmentEvaluator: ScoringRuleEvaluator = {
-  evaluate: (input) => {
-    const position = input.indexSnapshot?.vwap.positionVsVwap;
-    if (!position || !input.direction) {
-      return skipped(
-        "INDEX_VWAP_TREND_ALIGNMENT",
-        "INDEX_DATA_UNAVAILABLE",
-        "Index VWAP context is unavailable.",
-      );
-    }
-    const aligned = (input.direction === "LONG" && position === "ABOVE")
-      || (input.direction === "SHORT" && position === "BELOW");
-    return result("INDEX_VWAP_TREND_ALIGNMENT", {
-      status: "EXECUTED",
-      score: position === "NEAR" ? 60 : aligned ? 100 : 0,
-      maxScore: 100,
-      reasonCodes: [aligned ? "INDEX_VWAP_ALIGNED" : position === "NEAR" ? "INDEX_NEAR_VWAP" : "INDEX_VWAP_OPPOSED"],
-      warnings: aligned || position === "NEAR" ? [] : ["INDEX_CONTEXT_OPPOSES_DIRECTION"],
-      dataConfidence: input.indexSnapshot?.dataConfidence === "HIGH" ? "HIGH" : "MEDIUM",
-    });
-  },
-};
-
 export class ScoringRuleEvaluatorRegistryService {
   private readonly evaluators = new Map<string, ScoringRuleEvaluator>();
 
@@ -291,15 +377,11 @@ export class ScoringRuleEvaluatorRegistryService {
     this.evaluators.set("VWAP_DISTANCE_CONTEXT", vwapDistanceEvaluator);
     this.evaluators.set("LIQUIDITY_FRESHNESS_CONTEXT", liquidityFreshnessEvaluator);
     this.evaluators.set("RVOL_CONTEXT", rvolEvaluator);
-    this.evaluators.set("INDEX_VWAP_TREND_ALIGNMENT", indexVwapAlignmentEvaluator);
-    this.evaluators.set(
-      "CVD_CONTEXT",
-      runtimeContextEvaluator("CVD_CONTEXT", (input) => input.runtime?.currentCvdAvailable === true),
-    );
-    this.evaluators.set(
-      "ORDER_BOOK_CONTEXT",
-      runtimeContextEvaluator("ORDER_BOOK_CONTEXT", (input) => input.runtime?.orderBookAvailable === true),
-    );
+    for (const [key, evaluator] of Object.entries(indiaEquityScoringEvaluators)) {
+      this.evaluators.set(key, evaluator);
+    }
+    this.evaluators.set("CVD_CONTEXT", cvdEvaluator);
+    this.evaluators.set("ORDER_BOOK_CONTEXT", orderBookEvaluator);
     for (const [key, [reasonCode, warning]] of Object.entries(unavailableEvaluators)) {
       this.evaluators.set(key, { evaluate: () => skipped(key, reasonCode, warning) });
     }

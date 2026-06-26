@@ -2003,3 +2003,130 @@ Mitigation:
 - Reuse existing WebSocket ownership rather than creating duplicate connections.
 - Implement explicit template-interest subscription reconciliation in a separately scoped
   phase with reference-count and user-session tests.
+
+## R-085: Missing Sector Mapping Can Reduce India Equity Scores
+
+Severity: Medium
+
+Likelihood: High
+
+Status: Accepted for Phase 17
+
+Description:
+
+The Symbol registry does not yet contain a canonical stock-to-sector-index mapping.
+`sectorSymbolId` must be supplied explicitly for sector evaluators.
+
+Impact:
+
+Sector strength, sector structure, and stock-vs-sector criteria remain partial and
+contribute zero when no mapping is supplied.
+
+Mitigation:
+
+- Never infer or fabricate sector context.
+- Persist explicit partial status, reason codes, and warnings.
+- Keep missing criteria in the weighted denominator to avoid score inflation.
+- Add canonical sector mapping in a separately reviewed reference-data phase.
+
+## R-086: India Index Or VIX Snapshot May Not Be Subscribed
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+The resource resolver can locate NIFTY50/INDIA_VIX symbols and register template interest,
+but Phase 17 does not guarantee an active provider stream for those resources.
+
+Impact:
+
+The correct resource may resolve while its snapshot remains missing or stale.
+
+Mitigation:
+
+- Realtime context exposes resource key and freshness.
+- Evaluators return partial status for missing/stale snapshots.
+- Angel resource keys include the owning user id.
+- Provider subscription reconciliation remains a separate phase.
+
+## R-087: V1 Equity Thresholds Are Simplified
+
+Severity: Medium
+
+Likelihood: High
+
+Status: Accepted for MVP
+
+Description:
+
+VWAP distance, relative-strength difference, VIX movement, choppiness, spread, and volume
+thresholds are deterministic v1 defaults rather than instrument/session-calibrated models.
+
+Impact:
+
+Scores may not generalize equally across all NSE/BSE stocks, volatility regimes, or trading
+sessions.
+
+Mitigation:
+
+- Store evaluator metadata, reason codes, and template version.
+- Keep AI outside score calculation.
+- Treat unavailable data honestly.
+- Calibrate thresholds through versioned templates after replay/backtesting evidence exists.
+
+## R-088: ScoreCheck And Realtime Context Can Drift
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigated in Phase 17B
+
+Description:
+
+If ScoreCheck and realtime-context build market/runtime context through separate code paths,
+the dashboard can show CVD or order-book data as available while persisted ScoreChecks score
+those criteria as unavailable.
+
+Impact:
+
+Users may lose trust in the scoring system because the diagnostic context and stored score
+explain different market states.
+
+Mitigation:
+
+- `ScoringContextBuilderService` is now the shared context construction path.
+- ScoreCheck and realtime-context both use the same symbol resolution, stream keys, runtime
+  snapshot, market snapshot, and template-resource resolution.
+- ScoreCheck persists safe runtime summaries with the TradeScoreSnapshot.
+- Regression tests cover CVD/order-book runtime scoring and ScoreCheck runtime persistence.
+
+## R-089: Template Resource Interest Does Not Guarantee Stream Warm-Up
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Open
+
+Description:
+
+Template resource registration records interest in primary/index/sector/VIX resources, but
+it does not yet reconcile that interest into an active provider subscription.
+
+Impact:
+
+A required scoring resource can remain missing or stale even after the scoring context is
+requested.
+
+Mitigation:
+
+- realtime context reports `MARKET_SNAPSHOT_MISSING`, `MARKET_SNAPSHOT_STALE`, and
+  `TEMPLATE_RESOURCE_SUBSCRIPTION_INTEGRATION_PENDING`.
+- stale resources are partial, not ready.
+- provider subscription reconciliation remains a separate phase with reference-count and
+  user-session tests.

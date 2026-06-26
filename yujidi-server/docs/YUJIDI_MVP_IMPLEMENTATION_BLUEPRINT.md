@@ -950,3 +950,96 @@ Current limitations:
 - RVOL requires enough in-process one-minute candle history
 - index/sector/VIX resource resolution is not yet automated
 - the calculations are an MVP context foundation, not a historical market-data system
+
+## 15. Phase 17 India Equity Intraday Evaluators
+
+`INDIA_EQUITY_INTRADAY_V1` now has seven deterministic scoring sections:
+
+```txt
+MARKET_REGIME
+SECTOR_STRENGTH
+STOCK_RELATIVE_STRENGTH
+VOLUME_RVOL
+VWAP_LIQUIDITY
+PRICE_ACTION
+RISK_REWARD
+```
+
+Implemented snapshot-backed evaluators include:
+
+- index VWAP alignment, 5m/15m structure, and choppiness
+- India VIX stability when a VIX snapshot exists
+- sector/index and stock/sector relative strength
+- stock and sector 5m/15m structure
+- RVOL, volume expansion, candle-volume confirmation, and dry-up
+- price vs VWAP, VWAP distance, reclaim/hold, freshness, and spread
+- setup type, entry level, stoploss structure, candle confirmation, and nearby-level blocking
+- direction geometry, reward/risk, and trade-management levels
+
+Resource resolution:
+
+- NIFTY50 and INDIA_VIX are resolved from the universal Symbol registry by default.
+- callers may supply explicit index, sector, and VIX symbol ids.
+- Angel resources remain user-scoped in snapshot keys.
+- sector mapping is not inferred from the stock yet; callers must provide `sectorSymbolId`.
+
+Scoring behavior:
+
+- India equity uses conservative `WEIGHTED_SUM` aggregation.
+- every evaluator remains part of its section denominator.
+- missing evaluator data contributes zero and keeps the section `PARTIAL`.
+- the final normal-case score is the sum of weighted section scores.
+- invalid geometry and RR below one retain their hard deterministic controls.
+
+Still partial:
+
+- market breadth without a real breadth source
+- sector breadth
+- automatic stock-to-sector mapping
+- institutional depth when bid/ask data is unavailable
+- historical/session-normalized volume baselines
+
+No AI scoring, broker execution, risk mutation, or AnalyzerEngine behavior was added.
+
+## 16. Phase 17B Scoring Context Consistency
+
+ScoreCheck and `GET /api/scoring/realtime-context` now share
+`ScoringContextBuilderService`.
+
+Purpose:
+
+- resolve the same Symbol record
+- build the same provider-aware market resource key
+- read the same bounded AnalyzerEngine runtime snapshot
+- read the same MarketSnapshotService snapshot
+- register the same template-resource interest
+- pass the same runtime/snapshot package into ScoringEngine
+
+This fixes the previous drift where realtime context could show CVD and order-book runtime
+as available while ScoreCheck evaluated `CVD_CONTEXT` and `ORDER_BOOK_CONTEXT` as
+unavailable.
+
+Runtime scoring behavior:
+
+- `CVD_CONTEXT` scores deterministic alignment against LONG/SHORT direction.
+- `ORDER_BOOK_CONTEXT` scores deterministic bid/ask spread quality.
+- missing runtime data remains skipped/partial and contributes no fake score.
+- partial sections keep missing evaluators in the section denominator unless the section
+  explicitly uses `IGNORE`.
+- missing-but-not-stale data produces `PARTIAL_DATA`.
+- stale snapshot-backed data produces `READY_WITH_STALE_DATA`.
+
+Snapshot freshness boundary:
+
+- template context no longer reports plain `READY` for runtime criteria when the required
+  market snapshot is stale.
+- stale snapshots add `MARKET_SNAPSHOT_STALE`.
+- missing snapshots add `MARKET_SNAPSHOT_MISSING` and
+  `TEMPLATE_RESOURCE_SUBSCRIPTION_INTEGRATION_PENDING`.
+
+Still not implemented:
+
+- no automatic provider subscription warm-up for template-only resources
+- no Redis/shared runtime state
+- no AnalyzerEngine alert behavior change
+- no broker execution, AI scoring, or risk mutation

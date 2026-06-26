@@ -29,8 +29,17 @@ export type ScoringEngineInput = {
   runtime?: ScoringEvaluatorInput["runtime"];
   evaluatedAt?: Date;
   direction?: TradeDirection;
+  entry?: number;
+  stopLoss?: number;
+  target1?: number;
+  target2?: number;
+  setupType?: ScoringEvaluatorInput["setupType"];
+  userLevels?: ScoringEvaluatorInput["userLevels"];
   marketSnapshot?: MarketSnapshot | null;
   indexSnapshot?: MarketSnapshot | null;
+  sectorSnapshot?: MarketSnapshot | null;
+  vixSnapshot?: MarketSnapshot | null;
+  marketBreadthPositivePercent?: number;
 };
 
 export type ScoringEngineBreakdown = {
@@ -108,8 +117,19 @@ export class ScoringEngineService {
       ...(input.runtime ? { runtime: input.runtime } : {}),
       ...(input.evaluatedAt ? { evaluatedAt: input.evaluatedAt } : {}),
       ...(input.direction ? { direction: input.direction } : {}),
+      ...(input.entry !== undefined ? { entry: input.entry } : {}),
+      ...(input.stopLoss !== undefined ? { stopLoss: input.stopLoss } : {}),
+      ...(input.target1 !== undefined ? { target1: input.target1 } : {}),
+      ...(input.target2 !== undefined ? { target2: input.target2 } : {}),
+      ...(input.setupType ? { setupType: input.setupType } : {}),
+      ...(input.userLevels ? { userLevels: input.userLevels } : {}),
       ...(input.marketSnapshot !== undefined ? { marketSnapshot: input.marketSnapshot } : {}),
       ...(input.indexSnapshot !== undefined ? { indexSnapshot: input.indexSnapshot } : {}),
+      ...(input.sectorSnapshot !== undefined ? { sectorSnapshot: input.sectorSnapshot } : {}),
+      ...(input.vixSnapshot !== undefined ? { vixSnapshot: input.vixSnapshot } : {}),
+      ...(input.marketBreadthPositivePercent !== undefined
+        ? { marketBreadthPositivePercent: input.marketBreadthPositivePercent }
+        : {}),
     };
     const sectionResults: ScoringSectionResult[] = [];
 
@@ -117,8 +137,15 @@ export class ScoringEngineService {
       const evaluatorResults = definition.evaluators.map((key) =>
         this.evaluatorRegistry.evaluate(key, evaluatorInput));
       const executed = evaluatorResults.filter((item) => item.status === "EXECUTED");
-      const average = executed.length > 0
-        ? executed.reduce((total, item) => total + (item.score / item.maxScore) * 100, 0) / executed.length
+      const scoredEvaluators = template.aggregationMode === "WEIGHTED_SUM"
+        || definition.missingDataPolicy !== "IGNORE"
+        ? evaluatorResults
+        : executed;
+      const average = scoredEvaluators.length > 0
+        ? scoredEvaluators.reduce(
+          (total, item) => total + (item.score / item.maxScore) * 100,
+          0,
+        ) / scoredEvaluators.length
         : 0;
       const status = sectionStatus(
         evaluatorResults.map((item) => item.status),
@@ -143,7 +170,9 @@ export class ScoringEngineService {
     const executedSections = sectionResults.filter((item) => item.status === "EXECUTED");
     const executedWeight = executedSections.reduce((total, item) => total + item.weight, 0);
     const earnedScore = executedSections.reduce((total, item) => total + item.score, 0);
-    const normalizedScore = executedWeight > 0
+    const normalizedScore = template.aggregationMode === "WEIGHTED_SUM"
+      ? Number(sectionResults.reduce((total, item) => total + item.score, 0).toFixed(2))
+      : executedWeight > 0
       ? Number(((earnedScore / executedWeight) * template.maxScore).toFixed(2))
       : 0;
     const rrRejected = input.rewardRiskRatio < 1;
@@ -166,13 +195,16 @@ export class ScoringEngineService {
         : missingCount <= 2
           ? "MEDIUM"
           : "LOW";
-    const scoreStatus: ScoreStatus = blockedCritical
-      ? "UNAVAILABLE"
-      : missingCount > 0
-        ? "READY_WITH_STALE_DATA"
-        : "READY";
     const reasonCodes = unique(evaluatorResults.flatMap((item) => item.reasonCodes));
     const warnings = unique(evaluatorResults.flatMap((item) => item.warnings));
+    const staleDataPresent = [...reasonCodes, ...warnings].some((value) => value.includes("STALE"));
+    const scoreStatus: ScoreStatus = blockedCritical
+      ? "UNAVAILABLE"
+      : staleDataPresent
+        ? "READY_WITH_STALE_DATA"
+        : missingCount > 0
+          ? "PARTIAL_DATA"
+          : "READY";
 
     const breakdown: ScoringEngineBreakdown = {
       templateKey: template.key,
