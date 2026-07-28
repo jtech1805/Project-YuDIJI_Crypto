@@ -152,6 +152,9 @@ const warmActiveTradeMonitoring = (): void => {
 };
 
 const startServer = async (): Promise<void> => {
+  const { createFeatureFlagService } = await import("./config/feature-flags.js");
+  createFeatureFlagService(process.env);
+
   await connectMongoWithRetry();
 
   server = app.listen(PORT, (): void => {

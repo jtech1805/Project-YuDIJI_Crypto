@@ -5,19 +5,19 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-Phase 0C — LLM Call Inventory And Trace Design
+Phase 0D — Feature-Flag Scaffolding
 
 Last completed acceptance gate:
-Phase 0B — ADR Foundation and Phase Log
+Phase 0C — LLM Call Inventory And Trace Design
 
 Next smallest task:
-Complete Phase 0C by documenting active LLM workflows, freezing the shared trace contract, adding ADR-006, and updating the ADR index.
+Complete Phase 0D by adding typed default-OFF feature flags, startup validation, and focused config tests without connecting flags to product behavior.
 
 Characterization-suite requirement:
 The scoring characterization suite is mandatory for every later scoring-related implementation. Existing expectations must not be changed merely to make a later implementation pass.
 
 Feature-flag state:
-Future scoring architecture feature flags are documented in ADR-004 but are not implemented in Phase 0C. All future meaningful scoring architecture and LLM trace capabilities must default OFF when introduced.
+Feature-flag scaffolding exists in Phase 0D. All approved flags default OFF and no flag is connected to scoring, LLM tracing, provider, API, WebSocket, trade, or frontend behavior yet.
 
 Known constraints:
 - Legacy scoring remains authoritative during the migration.
@@ -84,7 +84,7 @@ ADR index, ADR-001 through ADR-005 and `PHASE_LOG.md` exist and are internally c
 ### Phase 0C — LLM Call Inventory And Trace Design
 
 Status:
-IN_PROGRESS
+COMPLETE
 
 Objective:
 Inventory existing LLM calls and design trace boundaries before implementation.
@@ -111,15 +111,43 @@ Copilot currently returns LLM-generated `isApproved`. Future architecture requir
 Acceptance gate:
 LLM inventory, trace design, ADR-006, ADR index and phase log are internally consistent.
 
-## Future Phase Outline
-
 ### Phase 0D — Feature-Flag Scaffolding
 
 Status:
-PENDING
+IN_PROGRESS
 
 Objective:
 Introduce default-OFF feature-flag scaffolding for future scoring architecture capabilities.
+
+Production code changed:
+Startup validation only. No product behavior is connected to a flag.
+
+Files added:
+- `yujidi-server/src/config/feature-flags.ts`
+- `yujidi-server/tests/unit/config/feature-flags.test.ts`
+
+Files modified:
+- `yujidi-server/src/server.ts`
+- `PHASE_LOG.md`
+
+Approved flags:
+- `EVIDENCE_PIPELINE_ENABLED` default OFF
+- `GENERIC_EVALUATOR_ENABLED` default OFF
+- `SOURCE_RESOLVER_FALLBACK_ENABLED` default OFF
+- `COMPILED_RULEBOOK_EXECUTION` default OFF
+- `DECISION_AXES_ENABLED` default OFF
+- `EVENT_CLASSIFICATION_READONLY` default OFF
+- `EVENT_CLASSIFICATION_AFFECTS_RISK` default OFF
+- `RAG_TEMPLATE_DRAFTING_ENABLED` default OFF
+- `WEIGHT_PROPOSALS_ENABLED` default OFF
+
+Behavior connection state:
+No scoring, LLM, provider, template, API, WebSocket, trade, or frontend behavior is controlled by these flags in Phase 0D.
+
+Acceptance gate:
+Dedicated feature-flag tests, existing backend regression suite, typecheck, optional architecture check, and `git diff --check` pass.
+
+## Future Phase Outline
 
 ### Phase 0E — LLM Trace Wrapper Implementation
 
