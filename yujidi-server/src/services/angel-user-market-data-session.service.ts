@@ -12,14 +12,14 @@ import {
   BrokerConnectionService,
   type ActiveAngelSession,
 } from "./broker-connection.service.js";
-import type { NormalizedMarketTick } from "../types/market-data.types.js";
+import type { Exchange, MarketType, NormalizedMarketTick } from "../types/market-data.types.js";
 
 const logger = pino({ name: "angel-user-market-data-session-service" });
 
 export type AngelSubscriptionResponse = {
   provider: "ANGEL_ONE";
   subscriptionKey: string;
-  exchange: "MCX";
+  exchange: Exchange;
   instrumentToken: string;
   mode: "LTP";
   streamStatus: "SUBSCRIBED" | "UNSUBSCRIBED";
@@ -114,8 +114,8 @@ export class AngelUserMarketDataSessionService {
   public async subscribeResolvedAngelSubscription(input: {
     userId: string;
     subscriptionKey: string;
-    marketType: "COMMODITY";
-    exchange: "MCX";
+    marketType: MarketType;
+    exchange: Exchange;
     symbol: string;
     displayName: string;
     providerSymbol: string;
@@ -159,8 +159,8 @@ export class AngelUserMarketDataSessionService {
   public async unsubscribeResolvedAngelSubscription(input: {
     userId: string;
     subscriptionKey: string;
-    marketType: "COMMODITY";
-    exchange: "MCX";
+    marketType: MarketType;
+    exchange: Exchange;
     symbol: string;
     displayName: string;
     providerSymbol: string;
@@ -318,11 +318,11 @@ export class AngelUserMarketDataSessionService {
     if (monitor.provider !== "ANGEL_ONE") {
       throw new AppError("MONITOR_PROVIDER_NOT_SUPPORTED", 400);
     }
-    if (monitor.exchange !== "MCX") {
-      throw new AppError("ANGEL_SUBSCRIPTION_FAILED: only MCX is supported in Phase 6", 400);
-    }
     if (!monitor.instrumentToken) {
       throw new AppError("ANGEL_SUBSCRIPTION_FAILED: monitor is missing instrument token", 400);
+    }
+    if (!monitor.marketType || !monitor.exchange) {
+      throw new AppError("ANGEL_SUBSCRIPTION_FAILED: monitor is missing market metadata", 400);
     }
 
     return monitor;
@@ -338,8 +338,8 @@ export class AngelUserMarketDataSessionService {
 
     return {
       userId,
-      marketType: "COMMODITY",
-      exchange: "MCX",
+      marketType: monitor.marketType as MarketType,
+      exchange: monitor.exchange as Exchange,
       symbol: monitor.symbol,
       displayName: monitor.displayName ?? monitor.symbol,
       providerSymbol: monitor.providerSymbol ?? monitor.symbol,

@@ -38,6 +38,30 @@ interface WebSocketContextType {
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
 
+const normalizeLivePriceKey = (value: unknown): string | null => {
+  return typeof value === 'string' && value.trim()
+    ? value.trim().toUpperCase()
+    : null;
+};
+
+const livePriceKeysFromPayload = (data: Record<string, unknown>): string[] => {
+  const directKeys = [
+    normalizeLivePriceKey(data.symbol),
+    normalizeLivePriceKey(data.displayName),
+    normalizeLivePriceKey(data.providerSymbol),
+    normalizeLivePriceKey(data.instrumentToken),
+  ];
+
+  const provider = normalizeLivePriceKey(data.provider);
+  const exchange = normalizeLivePriceKey(data.exchange);
+  const instrumentToken = normalizeLivePriceKey(data.instrumentToken);
+  const providerAwareKey = provider && exchange && instrumentToken
+    ? `${provider}:${exchange}:${instrumentToken}`
+    : null;
+
+  return Array.from(new Set([...directKeys, providerAwareKey].filter((key): key is string => Boolean(key))));
+};
+
 export const WebSocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
   const [livePriceschange, setLivePriceschange] = useState<Record<string, number>>({});
@@ -91,14 +115,29 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          const symbol = typeof data.symbol === 'string' ? data.symbol.trim().toUpperCase() : '';
+          if (data.type === 'SUBSCRIPTION_UPDATE_RESULT' && data.data?.failed?.length) {
+            console.warn('WebSocket subscription failures', data.data.failed);
+          }
+          const livePriceKeys = livePriceKeysFromPayload(data);
           const rawPrice = data.currentPrice ?? data.price;
           const price = typeof rawPrice === 'number' ? rawPrice : Number.parseFloat(rawPrice);
           const change = Number.parseFloat(data.priceChangePercent);
-          if (symbol && Number.isFinite(price)) {
-            setLivePrices((prev) => ({ ...prev, [symbol]: price }));
+          if (livePriceKeys.length > 0 && Number.isFinite(price)) {
+            setLivePrices((prev) => {
+              const next = { ...prev };
+              for (const key of livePriceKeys) {
+                next[key] = price;
+              }
+              return next;
+            });
             if (Number.isFinite(change)) {
-              setLivePriceschange((prev) => ({ ...prev, [symbol]: change }));
+              setLivePriceschange((prev) => {
+                const next = { ...prev };
+                for (const key of livePriceKeys) {
+                  next[key] = change;
+                }
+                return next;
+              });
             }
           }
           if (data.type === 'NEW_ALERT' && data.payload) {

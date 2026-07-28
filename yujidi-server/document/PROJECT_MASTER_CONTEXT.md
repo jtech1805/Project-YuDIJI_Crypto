@@ -227,6 +227,8 @@ ANGEL_SYMBOL_SYNC_ON_STARTUP
 ANGEL_SYMBOL_SYNC_MARKET_TYPES
 ANGEL_SYMBOL_SYNC_EXCHANGES
 ANGEL_SYMBOL_SYNC_NAMES
+ANGEL_SCRIP_MASTER_URL
+ANGEL_SCRIP_MASTER_FILE
 BROKER_CREDENTIAL_ENCRYPTION_KEY
 ANGEL_CLIENT_LOCAL_IP
 ANGEL_CLIENT_PUBLIC_IP
@@ -263,6 +265,8 @@ Meaning:
 - `ANGEL_SYMBOL_SYNC_MARKET_TYPES`: future Angel sync market-type filter, currently `COMMODITY`.
 - `ANGEL_SYMBOL_SYNC_EXCHANGES`: Angel sync exchange filter, currently defaults to `MCX`.
 - `ANGEL_SYMBOL_SYNC_NAMES`: Angel sync commodity-name filter, defaults to `CRUDEOIL,GOLD,SILVER,NATURALGAS`.
+- `ANGEL_SCRIP_MASTER_URL`: optional override for Angel Scrip Master download URL.
+- `ANGEL_SCRIP_MASTER_FILE`: optional local JSON file path for importing Angel symbols when the hosted URL is unavailable.
 - `BROKER_CREDENTIAL_ENCRYPTION_KEY`: required for encrypting broker credentials and session tokens at rest.
 - `ANGEL_CLIENT_LOCAL_IP`: Angel SmartAPI request header value.
 - `ANGEL_CLIENT_PUBLIC_IP`: Angel SmartAPI request header value.

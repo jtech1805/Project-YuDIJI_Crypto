@@ -8,6 +8,9 @@ type UseSymbolSearchOptions = {
   marketType?: string;
   exchange?: string;
   instrumentType?: string;
+  underlyingSymbol?: string;
+  optionType?: string;
+  strikePrice?: number;
   limit?: number;
   debounceMs?: number;
 };
@@ -41,6 +44,9 @@ export function useSymbolSearch(query: string, options: UseSymbolSearchOptions =
         marketType: options.marketType,
         exchange: options.exchange,
         instrumentType: options.instrumentType,
+        underlyingSymbol: options.underlyingSymbol,
+        optionType: options.optionType,
+        strikePrice: options.strikePrice,
         limit: options.limit ?? 20,
         signal: controller.signal,
       })
@@ -79,6 +85,9 @@ export function useSymbolSearch(query: string, options: UseSymbolSearchOptions =
     options.marketType,
     options.exchange,
     options.instrumentType,
+    options.underlyingSymbol,
+    options.optionType,
+    options.strikePrice,
     options.limit,
     options.debounceMs,
   ]);

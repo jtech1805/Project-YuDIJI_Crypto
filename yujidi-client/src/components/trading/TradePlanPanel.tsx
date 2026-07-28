@@ -1,7 +1,13 @@
-import { Play, Plus } from 'lucide-react'
+import { Pencil, Play, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import type { CreateTradePlanInput, InstrumentType, MarketType, TradePlan } from '../../types/trade'
-import { buttonClass, EmptyState, inputClass, Section } from './trading-ui'
+import type {
+  CreateTradePlanInput,
+  InstrumentType,
+  MarketType,
+  TradePlan,
+  UpdateTradePlanInput,
+} from '../../types/trade'
+import { buttonClass, DeleteConfirmDialog, EmptyState, inputClass, Section } from './trading-ui'
 
 const defaultForm: CreateTradePlanInput = {
   name: '',
@@ -24,6 +30,8 @@ export function TradePlanPanel({
   onSelect,
   onCreate,
   onActivate,
+  onUpdate,
+  onDelete,
 }: {
   plans: TradePlan[]
   selectedPlanId: string
@@ -31,9 +39,17 @@ export function TradePlanPanel({
   onSelect: (id: string) => void
   onCreate: (input: CreateTradePlanInput) => Promise<void>
   onActivate: (id: string) => Promise<void>
+  onUpdate: (id: string, input: UpdateTradePlanInput) => Promise<void>
+  onDelete: (id: string) => Promise<void>
 }) {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(defaultForm)
+  const [editPlanId, setEditPlanId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<UpdateTradePlanInput>({})
+  const [deletePlanId, setDeletePlanId] = useState<string | null>(null)
+  const [deletePhrase, setDeletePhrase] = useState('')
+  const deletePlan = plans.find((plan) => plan._id === deletePlanId)
+  const editPlan = plans.find((plan) => plan._id === editPlanId)
 
   return (
     <Section
@@ -156,10 +172,156 @@ export function TradePlanPanel({
                   Activate
                 </button>
               )}
+              <button
+                title="Edit trade plan"
+                data-edit-plan-id={plan._id}
+                className={buttonClass}
+                disabled={busy}
+                type="button"
+                onClick={() => {
+                  setEditPlanId(plan._id)
+                  setEditForm({
+                    name: plan.name,
+                    description: plan.description ?? '',
+                    maxTrades: plan.maxTrades,
+                    reviewCadence: plan.reviewCadence,
+                  })
+                }}
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+              <button
+                title="Delete trade plan"
+                className="inline-flex h-8 items-center justify-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-2.5 text-xs font-medium text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={busy}
+                type="button"
+                onClick={() => {
+                  setDeletePlanId(plan._id)
+                  setDeletePhrase('')
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
           ))}
         </div>
       )}
+      {editPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+          <form
+            className="w-full max-w-lg rounded-lg border border-white/10 bg-zinc-950 p-4 shadow-2xl"
+            onSubmit={(event) => {
+              event.preventDefault()
+              if (!editPlanId) return
+              void onUpdate(editPlanId, {
+                name: editForm.name,
+                description: editForm.description,
+                maxTrades: editForm.maxTrades,
+                reviewCadence: editForm.reviewCadence,
+              }).then(() => {
+                setEditPlanId(null)
+                setEditForm({})
+              })
+            }}
+          >
+            <h3 className="text-sm font-semibold text-white">Edit trade plan</h3>
+            <p className="mt-1 text-xs leading-5 text-zinc-500">
+              Active plans allow only capacity and label edits. Risk rules and starting capital stay locked.
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="text-xs text-zinc-500">
+                Name
+                <input
+                  required
+                  className={`${inputClass} mt-1`}
+                  value={editForm.name ?? ''}
+                  onChange={(event) => setEditForm({ ...editForm, name: event.target.value })}
+                />
+              </label>
+              <label className="text-xs text-zinc-500">
+                Max trades
+                <input
+                  className={`${inputClass} mt-1`}
+                  min="1"
+                  type="number"
+                  value={editForm.maxTrades ?? ''}
+                  onChange={(event) =>
+                    setEditForm({
+                      ...editForm,
+                      maxTrades: event.target.value ? Number(event.target.value) : undefined,
+                    })
+                  }
+                />
+              </label>
+              <label className="text-xs text-zinc-500">
+                Review cadence
+                <select
+                  className={`${inputClass} mt-1`}
+                  value={editForm.reviewCadence ?? ''}
+                  onChange={(event) =>
+                    setEditForm({
+                      ...editForm,
+                      reviewCadence: event.target.value
+                        ? (event.target.value as NonNullable<UpdateTradePlanInput['reviewCadence']>)
+                        : undefined,
+                    })
+                  }
+                >
+                  <option value="">Not set</option>
+                  {['DAILY', 'WEEKLY', 'MONTHLY', 'PLAN_END'].map((value) => (
+                    <option key={value}>{value}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs text-zinc-500 sm:col-span-2">
+                Description
+                <textarea
+                  className={`${inputClass} mt-1 h-20 py-2`}
+                  maxLength={1000}
+                  value={editForm.description ?? ''}
+                  onChange={(event) => setEditForm({ ...editForm, description: event.target.value })}
+                />
+              </label>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                className={buttonClass}
+                disabled={busy}
+                type="button"
+                onClick={() => {
+                  setEditPlanId(null)
+                  setEditForm({})
+                }}
+              >
+                Cancel
+              </button>
+              <button className={buttonClass} disabled={busy} type="submit">
+                Save changes
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+      <DeleteConfirmDialog
+        open={Boolean(deletePlan)}
+        title="Delete trade plan?"
+        description={`This will delete "${deletePlan?.name ?? 'this plan'}" only if it has no open trades or finalized history. Related draft score checks and pending setups may also be removed from the workflow.`}
+        requireText="DELETE"
+        confirmText={deletePhrase}
+        busy={busy}
+        onConfirmText={setDeletePhrase}
+        onCancel={() => {
+          setDeletePlanId(null)
+          setDeletePhrase('')
+        }}
+        onConfirm={() => {
+          if (!deletePlanId) return
+          void onDelete(deletePlanId).then(() => {
+            setDeletePlanId(null)
+            setDeletePhrase('')
+          })
+        }}
+      />
     </Section>
   )
 }

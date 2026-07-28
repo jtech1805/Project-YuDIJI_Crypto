@@ -840,16 +840,16 @@ export class AnalyzerEngine {
     // );
     // ==========================================
     const activeMonitors = await this.getActiveMonitorsForSymbol(monitorCacheKey, context.findActiveMonitors);
-    logger.info(
-      {
-        event: "ANALYZER_MONITORS_FOUND",
-        symbol: normalizedSymbol,
-        streamKey,
-        monitorCacheKey,
-        activeMonitorCount: activeMonitors.length,
-      },
-      "Fetched active monitors for analyzer stream",
-    );
+    // logger.info(
+    //   {
+    //     event: "ANALYZER_MONITORS_FOUND",
+    //     symbol: normalizedSymbol,
+    //     streamKey,
+    //     monitorCacheKey,
+    //     activeMonitorCount: activeMonitors.length,
+    //   },
+    //   "Fetched active monitors for analyzer stream",
+    // );
 
     for (const monitor of activeMonitors) {
       const monitorId = monitor._id.toString();

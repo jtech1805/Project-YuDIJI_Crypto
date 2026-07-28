@@ -235,6 +235,13 @@ export class TradeJournalService {
       .sort({ createdAt: -1 }).lean().exec() as Promise<TradeJournalRecord[]>;
   }
 
+  public async listJournalsForPlan(userId: string, tradePlanId: string): Promise<TradeJournalRecord[]> {
+    return this.getJournalRepository().find({
+      userId: toObjectId(userId, "user id"),
+      tradePlanId: toObjectId(tradePlanId, "trade plan id"),
+    }).sort({ createdAt: -1 }).lean().exec() as Promise<TradeJournalRecord[]>;
+  }
+
   public async getJournal(userId: string, journalId: string): Promise<TradeJournalRecord> {
     const journal = await this.getJournalRepository().findOne({
       _id: toObjectId(journalId, "trade journal id"),

@@ -34,8 +34,12 @@ const validateEnum = <T extends readonly string[]>(
 export const searchSymbols = async (req: Request, res: Response): Promise<void> => {
   const q = typeof req.query.q === "string" ? req.query.q : "";
   const rawLimit = typeof req.query.limit === "string" ? Number(req.query.limit) : undefined;
+  const rawStrikePrice = typeof req.query.strikePrice === "string" ? Number(req.query.strikePrice) : undefined;
   if (rawLimit !== undefined && (!Number.isInteger(rawLimit) || rawLimit <= 0 || rawLimit > 50)) {
     throw new AppError("Invalid limit", 400);
+  }
+  if (rawStrikePrice !== undefined && (!Number.isFinite(rawStrikePrice) || rawStrikePrice <= 0)) {
+    throw new AppError("Invalid strikePrice", 400);
   }
 
   const response = await symbolSearchService.search({
@@ -52,6 +56,12 @@ export const searchSymbols = async (req: Request, res: Response): Promise<void> 
     ...(validateEnum(upperQueryValue(req.query.instrumentType), INSTRUMENT_TYPES, "instrumentType")
       ? { instrumentType: validateEnum(upperQueryValue(req.query.instrumentType), INSTRUMENT_TYPES, "instrumentType") }
       : {}),
+    ...(upperQueryValue(req.query.underlyingSymbol) ? { underlyingSymbol: upperQueryValue(req.query.underlyingSymbol) } : {}),
+    ...(typeof req.query.expiry === "string" && req.query.expiry.trim() ? { expiry: req.query.expiry } : {}),
+    ...(upperQueryValue(req.query.optionType) === "CE" || upperQueryValue(req.query.optionType) === "PE"
+      ? { optionType: upperQueryValue(req.query.optionType) as "CE" | "PE" }
+      : {}),
+    ...(rawStrikePrice !== undefined ? { strikePrice: rawStrikePrice } : {}),
     includeExpired: req.query.includeExpired === "true",
     ...(rawLimit ? { limit: rawLimit } : {}),
   });

@@ -1230,3 +1230,32 @@ Runtime evaluator usage:
 Market snapshot freshness is still evaluated separately from AnalyzerEngine runtime. CVD or
 order-book data can be available while the market snapshot is stale; in that case template
 readiness is partial and emits `MARKET_SNAPSHOT_STALE`.
+
+## Phase 18C-0 Angel NSE/NFO Runtime Context
+
+AnalyzerEngine remains unchanged for Phase 18C-0.
+
+NSE/NFO live ticks flow through the market-snapshot lane:
+
+```txt
+Angel NSE/NFO tick
+  -> normalizeAngelTick
+  -> WebSocketManager.handleAngelMarketTick
+  -> MarketSnapshotService.recordTick
+  -> ScoringContextBuilderService
+  -> ScoringEngine evaluators
+```
+
+Angel market snapshot keys are user-scoped:
+
+```txt
+ANGEL_ONE:<userId>:NSE:<token>
+ANGEL_ONE:<userId>:NFO:<token>
+```
+
+This prevents one user's Angel session data from being visible to another user.
+
+Analyzer alert generation, monitor cooldowns, price buffers, CVD buffers, and order-book
+snapshots are not modified by NSE/NFO symbol support. If WebSocket ticks do not include
+volume, MarketSnapshotService still records price freshness while volume/VWAP criteria remain
+honestly partial or unavailable.

@@ -6,6 +6,9 @@ import type {
   ScoringRuleEvaluationResult,
   ScoringSectionResult,
   ScoringTemplateKey,
+  EditableScoringSectionDefinition,
+  ResolvedScoringTemplateDefinition,
+  ScoringPermissionThresholds,
   ScoreStatus,
 } from "../types/scoring.types.js";
 import type { TradePermission } from "../types/trade.types.js";
@@ -18,8 +21,9 @@ import {
 import { ScoringTemplateRegistryService } from "./scoring-template-registry.service.js";
 
 export type ScoringEngineInput = {
-  scoringTemplateKey: ScoringTemplateKey;
+  scoringTemplateKey: string;
   scoringTemplateVersion: string;
+  resolvedTemplate?: ResolvedScoringTemplateDefinition;
   marketType: MarketType;
   tradeStyle: string;
   instrumentType: InstrumentType;
@@ -43,8 +47,11 @@ export type ScoringEngineInput = {
 };
 
 export type ScoringEngineBreakdown = {
-  templateKey: ScoringTemplateKey;
+  templateKey: string;
   templateVersion: number;
+  templateId?: string;
+  templateScope?: "SYSTEM" | "USER";
+  templateName?: string;
   totalScore: number;
   maxScore: number;
   sectionResults: ScoringSectionResult[];
@@ -88,6 +95,53 @@ const permissionForScore = (score: number): TradePermission => {
   return "TAKE_TRADE";
 };
 
+const permissionForThresholds = (
+  score: number,
+  thresholds?: ScoringPermissionThresholds,
+): TradePermission => {
+  if (!thresholds) return permissionForScore(score);
+  if (score < thresholds.rejectBelow) return "REJECT";
+  if (score < thresholds.waitBelow) return "WAIT";
+  if (score < thresholds.takeTradeAtOrAbove) return "TAKE_SMALL_RISK";
+  return "TAKE_TRADE";
+};
+
+const normalizeSystemTemplate = (
+  template: ReturnType<ScoringTemplateRegistryService["get"]>,
+): ResolvedScoringTemplateDefinition => ({
+  templateKey: template.key,
+  baseTemplateKey: template.key,
+  templateName: template.key,
+  scope: "SYSTEM",
+  version: template.version,
+  marketType: template.marketType,
+  tradeStyle: template.tradeStyle,
+  instrumentType: template.instrumentType,
+  maxScore: template.maxScore,
+  ...(template.aggregationMode ? { aggregationMode: template.aggregationMode } : {}),
+  permissionThresholds: {
+    rejectBelow: 40,
+    waitBelow: 60,
+    takeSmallRiskBelow: 75,
+    takeTradeAtOrAbove: 75,
+  },
+  sections: template.sections.map((section) => ({
+    sectionKey: section.key,
+    label: section.label,
+    weight: section.weight,
+    enabled: true,
+    missingDataPolicy: section.missingDataPolicy,
+    evaluators: section.evaluators.map((evaluatorKey) => ({
+      evaluatorKey,
+      label: evaluatorKey,
+      weight: Number((100 / section.evaluators.length).toFixed(4)),
+      enabled: true,
+      missingDataPolicy: section.missingDataPolicy,
+      config: {},
+    })),
+  })),
+});
+
 export class ScoringEngineService {
   public constructor(
     private readonly templateRegistry = new ScoringTemplateRegistryService(),
@@ -99,12 +153,22 @@ export class ScoringEngineService {
       throw new AppError("Invalid rewardRiskRatio", 400);
     }
     const version = Number.parseInt(input.scoringTemplateVersion, 10);
-    const template = this.templateRegistry.get(
-      input.scoringTemplateKey,
-      Number.isFinite(version) && version > 0 ? version : 1,
+    const template = input.resolvedTemplate ?? normalizeSystemTemplate(
+      this.templateRegistry.get(
+        input.scoringTemplateKey as ScoringTemplateKey,
+        Number.isFinite(version) && version > 0 ? version : 1,
+      ),
     );
     this.templateRegistry.validateCompatibility({
-      template,
+      template: {
+        key: template.baseTemplateKey,
+        version: template.version,
+        marketType: template.marketType,
+        tradeStyle: template.tradeStyle,
+        instrumentType: template.instrumentType,
+        maxScore: template.maxScore,
+        sections: [],
+      },
       marketType: input.marketType,
       tradeStyle: input.tradeStyle,
       instrumentType: input.instrumentType,
@@ -133,26 +197,24 @@ export class ScoringEngineService {
     };
     const sectionResults: ScoringSectionResult[] = [];
 
-    for (const definition of template.sections) {
-      const evaluatorResults = definition.evaluators.map((key) =>
-        this.evaluatorRegistry.evaluate(key, evaluatorInput));
+    for (const definition of template.sections.filter((section) => section.enabled)) {
+      const enabledEvaluators = definition.evaluators.filter((evaluator) => evaluator.enabled);
+      const evaluatorResults = enabledEvaluators.map((evaluator) =>
+        this.evaluatorRegistry.evaluate(evaluator.evaluatorKey, evaluatorInput));
       const executed = evaluatorResults.filter((item) => item.status === "EXECUTED");
       const scoredEvaluators = template.aggregationMode === "WEIGHTED_SUM"
         || definition.missingDataPolicy !== "IGNORE"
         ? evaluatorResults
         : executed;
       const average = scoredEvaluators.length > 0
-        ? scoredEvaluators.reduce(
-          (total, item) => total + (item.score / item.maxScore) * 100,
-          0,
-        ) / scoredEvaluators.length
+        ? this.weightedEvaluatorAverage(scoredEvaluators, enabledEvaluators)
         : 0;
       const status = sectionStatus(
         evaluatorResults.map((item) => item.status),
         definition.missingDataPolicy,
       );
       sectionResults.push({
-        sectionKey: definition.key,
+        sectionKey: definition.sectionKey,
         label: definition.label,
         score: Number(((average / 100) * definition.weight).toFixed(4)),
         maxScore: definition.weight,
@@ -177,7 +239,7 @@ export class ScoringEngineService {
       : 0;
     const rrRejected = input.rewardRiskRatio < 1;
     const score = rrRejected ? 30 : blockedCritical ? 0 : normalizedScore;
-    const permission = rrRejected || blockedCritical ? "REJECT" : permissionForScore(score);
+    const permission = rrRejected || blockedCritical ? "REJECT" : permissionForThresholds(score, template.permissionThresholds);
     const partialSections = sectionResults
       .filter((item) => item.status === "PARTIAL")
       .map((item) => item.sectionKey);
@@ -207,8 +269,11 @@ export class ScoringEngineService {
           : "READY";
 
     const breakdown: ScoringEngineBreakdown = {
-      templateKey: template.key,
+      templateKey: template.templateKey,
       templateVersion: template.version,
+      ...(template.id ? { templateId: template.id } : {}),
+      templateScope: template.scope,
+      templateName: template.templateName,
       totalScore: score,
       maxScore: template.maxScore,
       sectionResults,
@@ -232,5 +297,18 @@ export class ScoringEngineService {
       warnings,
       breakdown,
     };
+  }
+
+  private weightedEvaluatorAverage(
+    results: ScoringRuleEvaluationResult[],
+    definitions: EditableScoringSectionDefinition["evaluators"],
+  ): number {
+    const weights = new Map(definitions.map((definition) => [definition.evaluatorKey, definition.weight]));
+    const totalWeight = results.reduce((total, result) => total + (weights.get(result.evaluatorKey) ?? 0), 0);
+    if (totalWeight <= 0) return 0;
+    return results.reduce((total, result) => {
+      const weight = weights.get(result.evaluatorKey) ?? 0;
+      return total + ((result.score / result.maxScore) * 100 * weight) / totalWeight;
+    }, 0);
   }
 }

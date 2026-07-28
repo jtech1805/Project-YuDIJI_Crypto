@@ -145,6 +145,25 @@ body {
   0% { opacity: 0; }
   100% { opacity: 1; }
 }
+@keyframes score-scan {
+  0% { transform: translateY(0); opacity: 0; }
+  18% { opacity: 1; }
+  100% { transform: translateY(112px); opacity: 0; }
+}
+@keyframes score-row {
+  0%, 100% { border-color: hsl(var(--border)); background: hsl(var(--card) / 0.25); }
+  45% { border-color: hsl(var(--primary) / 0.45); background: hsl(var(--primary) / 0.08); }
+}
+@keyframes live-glow {
+  0% { box-shadow: 0 0 0 hsl(var(--primary) / 0); }
+  45% { box-shadow: 0 0 24px hsl(var(--primary) / 0.24); }
+  100% { box-shadow: 0 0 0 hsl(var(--primary) / 0); }
+}
+@keyframes soft-shake {
+  0%, 100% { transform: translateX(0); }
+  30% { transform: translateX(-2px); }
+  60% { transform: translateX(2px); }
+}
 
 /* 4. Components */
 @layer components {

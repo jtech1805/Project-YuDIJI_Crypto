@@ -1,4 +1,5 @@
-import { Activity, LogOut, RefreshCw } from 'lucide-react'
+import { Activity, AlertTriangle, CheckCircle2, LogOut, RefreshCw, Zap } from 'lucide-react'
+import type React from 'react'
 import { useState } from 'react'
 import type {
   ActiveTrade,
@@ -54,7 +55,7 @@ export function ActiveTradePanel({
             <EmptyState>No active trades</EmptyState>
           ) : (
             openTrades.map((trade) => (
-              <div key={trade._id} className="border border-white/8 bg-white/[0.02] p-4">
+              <div key={trade._id} className="rounded-lg border border-white/8 bg-white/[0.02] p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-medium text-white">
@@ -66,8 +67,8 @@ export function ActiveTradePanel({
                   </div>
                   <PermissionBadge permission={trade.finalPermissionAtExecution} />
                 </div>
-                <div className="mt-4 grid gap-3 md:grid-cols-2">
-                  <div className="border border-white/6 bg-black/20 p-3">
+                <div className="mt-3 grid gap-2 md:grid-cols-2">
+                  <div className="rounded-md border border-white/6 bg-black/20 p-2.5">
                     <p className="text-[10px] font-semibold uppercase text-zinc-600">
                       Planned setup · historical
                     </p>
@@ -77,7 +78,7 @@ export function ActiveTradePanel({
                       <span>Target <b className="block font-mono text-zinc-300">{trade.plannedTarget1}</b></span>
                     </div>
                   </div>
-                  <div className="border border-cyan-500/15 bg-cyan-500/5 p-3">
+                  <div className="rounded-md border border-cyan-500/15 bg-cyan-500/5 p-2.5">
                     <p className="text-[10px] font-semibold uppercase text-cyan-400/70">
                       Current actual trade
                     </p>
@@ -224,7 +225,7 @@ export function ActiveTradePanel({
           )}
         </div>
 
-        <div className="max-h-[34rem] overflow-y-auto border border-white/8 bg-black/20">
+        <div className="max-h-[360px] overflow-y-auto rounded-lg border border-white/8 bg-black/20">
           <div className="sticky top-0 flex items-center gap-2 border-b border-white/8 bg-zinc-950 px-3 py-2">
             <Activity className="h-4 w-4 text-cyan-400" />
             <span className="text-xs font-semibold uppercase text-zinc-400">Trade event feed</span>
@@ -235,37 +236,76 @@ export function ActiveTradePanel({
           {uniqueEvents.length === 0 ? (
             <div className="p-5 text-center text-sm text-zinc-600">No trade events</div>
           ) : (
-            uniqueEvents.slice(0, 30).map((event) => (
-              <div
-                key={event.tradeEventId ?? event._id}
-                className="border-b border-white/6 px-3 py-3 last:border-0"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span
-                    className={`text-xs font-semibold ${
-                      event.severity === 'CRITICAL'
-                        ? 'text-red-300'
-                        : event.severity === 'WARNING'
-                          ? 'text-amber-300'
-                          : 'text-cyan-300'
-                    }`}
-                  >
-                    {event.eventType.replaceAll('_', ' ')}
-                  </span>
-                  <span className="text-[10px] text-zinc-600">
-                    {new Date(event.occurredAt).toLocaleTimeString()}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-zinc-300">{event.message}</p>
-                <p className="mt-1 font-mono text-[11px] text-zinc-500">
-                  {event.displayName ?? event.symbolSnapshot?.displayName ?? event.symbol ?? 'Unknown symbol'} · {event.price}
-                  {event.currentR !== undefined ? ` · ${event.currentR.toFixed(2)}R` : ''}
-                </p>
-              </div>
-            ))
+            uniqueEvents.slice(0, 30).map((event) => <TradeEventItem key={event.tradeEventId ?? event._id} event={event} />)
           )}
         </div>
       </div>
     </Section>
+  )
+}
+
+function eventStyle(event: TradeEvent): {
+  badge: string
+  card: string
+  icon: React.ReactNode
+  animation: string
+} {
+  const type = event.eventType
+  if (type.includes('SL_HIT') || event.severity === 'CRITICAL') {
+    return {
+      badge: 'border-red-500/40 bg-red-500/15 text-red-200',
+      card: 'border-red-500/35 bg-red-500/8',
+      icon: <AlertTriangle className="h-4 w-4" />,
+      animation: 'animate-[soft-shake_260ms_ease-out_1]',
+    }
+  }
+  if (type.includes('PRICE_NEAR_SL')) {
+    return {
+      badge: 'border-amber-500/40 bg-amber-500/15 text-amber-200',
+      card: 'border-amber-500/35 bg-amber-500/8',
+      icon: <AlertTriangle className="h-4 w-4" />,
+      animation: 'animate-pulse',
+    }
+  }
+  if (type.includes('PLUS_ONE_R') || type.includes('TARGET')) {
+    return {
+      badge: 'border-emerald-500/40 bg-emerald-500/15 text-emerald-200',
+      card: 'border-emerald-500/30 bg-emerald-500/8',
+      icon: <CheckCircle2 className="h-4 w-4" />,
+      animation: 'animate-[live-glow_1.2s_ease-out_1]',
+    }
+  }
+  return {
+    badge: 'border-cyan-500/40 bg-cyan-500/15 text-cyan-200',
+    card: 'border-cyan-500/20 bg-cyan-500/5',
+    icon: <Zap className="h-4 w-4" />,
+    animation: 'animate-[live-glow_1.2s_ease-out_1]',
+  }
+}
+
+function TradeEventItem({ event }: { event: TradeEvent }) {
+  const style = eventStyle(event)
+  return (
+    <div className={`m-2 rounded-lg border px-3 py-3 ${style.card} ${style.animation}`}>
+      <div className="flex items-center justify-between gap-2">
+        <span className={`inline-flex items-center gap-1 rounded border px-2 py-1 text-[10px] font-semibold ${style.badge}`}>
+          {style.icon}
+          {event.eventType.replaceAll('_', ' ')}
+        </span>
+        <span className="rounded border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-semibold text-cyan-200">
+          LIVE
+        </span>
+      </div>
+      <p className="mt-2 text-xs font-medium text-zinc-200">
+        {event.displayName ?? event.symbolSnapshot?.displayName ?? event.symbol ?? 'Unknown symbol'} · {event.direction}
+      </p>
+      <p className="mt-1 text-xs text-zinc-300">{event.message}</p>
+      <p className="mt-2 font-mono text-[11px] text-zinc-500">
+        Price: {event.price}
+        {event.currentR !== undefined ? ` | R: ${event.currentR.toFixed(2)}R` : ''}
+        {' | '}
+        {new Date(event.occurredAt).toLocaleTimeString()}
+      </p>
+    </div>
   )
 }

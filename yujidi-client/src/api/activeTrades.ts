@@ -11,6 +11,9 @@ import type {
 export const listActiveTrades = async () =>
   unwrapArrayData<ActiveTrade>(await apiClient.get('/active-trades'))
 
+export const listActiveTradesForPlan = async (tradePlanId: string) =>
+  unwrapArrayData<ActiveTrade>(await apiClient.get(`/trade-plans/${tradePlanId}/active-trades`))
+
 export const evaluateActiveTrade = async (id: string, price: number) =>
   unwrapData<ActiveTradeEvaluation>(
     await apiClient.post(`/active-trades/${id}/evaluate`, {

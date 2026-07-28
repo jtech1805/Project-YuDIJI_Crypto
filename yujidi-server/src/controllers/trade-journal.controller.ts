@@ -24,6 +24,12 @@ export const createTradeJournal = async (req: Request, res: Response): Promise<v
 export const listTradeJournals = async (req: Request, res: Response): Promise<void> => {
   res.status(200).json({ status: "success", data: await service().listJournals(userId(req)) });
 };
+export const listTradeJournalsForPlan = async (req: Request, res: Response): Promise<void> => {
+  res.status(200).json({
+    status: "success",
+    data: await service().listJournalsForPlan(userId(req), param(req, "id")),
+  });
+};
 export const getTradeJournal = async (req: Request, res: Response): Promise<void> => {
   res.status(200).json({ status: "success", data: await service().getJournal(userId(req), param(req, "id")) });
 };
@@ -59,4 +65,3 @@ export const archiveTradeJournal = async (req: Request, res: Response): Promise<
     data: await service().archiveJournal(userId(req), param(req, "id")),
   });
 };
-

@@ -3,7 +3,9 @@ import type { Request, Response } from "express";
 import { AppError } from "../errors/AppError.js";
 import {
   createScoreCheckSchema,
+  deleteScoreCheckSchema,
   ScoreCheckService,
+  updateScoreCheckSchema,
 } from "../services/score-check.service.js";
 
 const getUserId = (req: Request): string => {
@@ -53,6 +55,54 @@ export const getScoreCheck = async (req: Request, res: Response): Promise<void> 
   const scoreCheck = await getScoreCheckService().getScoreCheck(
     getUserId(req),
     getScoreCheckId(req),
+  );
+
+  res.status(200).json({
+    status: "success",
+    data: scoreCheck,
+  });
+};
+
+export const getScoreCheckSnapshot = async (req: Request, res: Response): Promise<void> => {
+  const snapshot = await getScoreCheckService().getScoreCheckSnapshot(
+    getUserId(req),
+    getScoreCheckId(req),
+  );
+
+  res.status(200).json({
+    status: "success",
+    data: snapshot,
+  });
+};
+
+export const updateScoreCheck = async (req: Request, res: Response): Promise<void> => {
+  const parsedBody = updateScoreCheckSchema.safeParse(req.body);
+  if (!parsedBody.success) {
+    throw new AppError("Invalid ScoreCheck update payload", 400);
+  }
+
+  const scoreCheck = await getScoreCheckService().updateScoreCheck(
+    getUserId(req),
+    getScoreCheckId(req),
+    parsedBody.data,
+  );
+
+  res.status(200).json({
+    status: "success",
+    data: scoreCheck,
+  });
+};
+
+export const deleteScoreCheck = async (req: Request, res: Response): Promise<void> => {
+  const parsedBody = deleteScoreCheckSchema.safeParse(req.body ?? {});
+  if (!parsedBody.success) {
+    throw new AppError("Invalid ScoreCheck delete payload", 400);
+  }
+
+  const scoreCheck = await getScoreCheckService().deleteScoreCheck(
+    getUserId(req),
+    getScoreCheckId(req),
+    parsedBody.data,
   );
 
   res.status(200).json({

@@ -81,6 +81,30 @@ const symbolSchema = new Schema(
       type: String,
       enum: ["CE", "PE"],
     },
+    underlyingSymbol: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      index: true,
+    },
+    segment: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      index: true,
+    },
+    contractType: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      index: true,
+    },
+    tradingSymbol: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      index: true,
+    },
     lotSize: {
       type: Number,
       min: 0,
@@ -161,6 +185,8 @@ symbolSchema.index({ name: "text", symbol: "text", displayName: "text" });
 symbolSchema.index({ status: 1, provider: 1, marketType: 1, exchange: 1 });
 symbolSchema.index({ provider: 1, exchange: 1, marketType: 1, autocompleteTokens: 1, status: 1 });
 symbolSchema.index({ marketType: 1, instrumentType: 1, status: 1, expiry: 1 });
+symbolSchema.index({ provider: 1, exchange: 1, underlyingSymbol: 1, expiry: 1, instrumentType: 1 });
+symbolSchema.index({ provider: 1, exchange: 1, underlyingSymbol: 1, optionType: 1, strikePrice: 1, expiry: 1 });
 
 export type SymbolDocument = InferSchemaType<typeof symbolSchema>;
 

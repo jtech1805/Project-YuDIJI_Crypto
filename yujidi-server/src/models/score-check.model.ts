@@ -11,7 +11,6 @@ import {
   SCORING_SETUP_TYPES,
   SCORE_MODES,
   SCORE_STATUSES,
-  SCORING_TEMPLATE_KEYS,
 } from "../types/scoring.types.js";
 import { TRADE_DIRECTIONS, TRADE_PERMISSIONS } from "../types/trade.types.js";
 
@@ -179,14 +178,32 @@ const scoreCheckSchema = new Schema(
     },
     scoringTemplateKey: {
       type: String,
-      enum: SCORING_TEMPLATE_KEYS,
       required: true,
+      trim: true,
+      index: true,
+    },
+    scoringTemplateId: {
+      type: Schema.Types.ObjectId,
+      ref: "ScoringTemplate",
       index: true,
     },
     scoringTemplateVersion: {
       type: String,
       required: true,
       trim: true,
+    },
+    scoringTemplateScope: {
+      type: String,
+      enum: ["SYSTEM", "USER"],
+      required: true,
+      default: "SYSTEM",
+      index: true,
+    },
+    scoringTemplateName: {
+      type: String,
+      required: true,
+      trim: true,
+      default: "System Template",
     },
     scoreStatus: {
       type: String,
@@ -240,6 +257,24 @@ const scoreCheckSchema = new Schema(
       ref: "TradeSetup",
       index: true,
     },
+    isDeleted: {
+      type: Boolean,
+      required: true,
+      default: false,
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+    },
+    deletedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    deleteReason: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
   },
   {
     timestamps: true,
@@ -248,6 +283,7 @@ const scoreCheckSchema = new Schema(
 );
 
 scoreCheckSchema.index({ userId: 1, createdAt: -1 });
+scoreCheckSchema.index({ userId: 1, isDeleted: 1, createdAt: -1 });
 scoreCheckSchema.index({ userId: 1, symbolId: 1, createdAt: -1 });
 scoreCheckSchema.index({ userId: 1, scoreStatus: 1, createdAt: -1 });
 

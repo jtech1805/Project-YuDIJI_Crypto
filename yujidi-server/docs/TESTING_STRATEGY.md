@@ -1066,3 +1066,229 @@ Phase 17B adds tests for:
 
 Tests still do not call provider WebSockets, Angel APIs, broker APIs, or AI services.
 Runtime snapshots are injected through service ports.
+
+## 18. Phase 18A Delete/Update Workflow Coverage
+
+Phase 18A requires backend-backed mutation coverage for trading dashboard records:
+
+- owner can soft-delete standalone ScoreCheck records
+- deleted ScoreChecks are excluded from list/detail APIs
+- linked TradeScoreSnapshot records are marked deleted
+- ScoreCheck delete/update is blocked after execution lifecycle starts
+- owner can update standalone ScoreCheck planned inputs and trigger a new score snapshot
+- owner can soft-delete pending TradeSetups
+- TradeSetup delete/update is blocked after execution or ActiveTrade creation
+- TradePlan delete is blocked by open ActiveTrades
+- TradePlan delete is blocked by finalized TradeResults or finalized Journals
+- TradePlan delete cascades only draft/planned child records through soft-delete markers
+- non-owner mutation attempts return not found/unauthorized behavior
+- destructive and update actions produce audit records
+
+Regression expectations:
+
+- RiskGovernor behavior remains unchanged.
+- AnalyzerEngine behavior remains unchanged.
+- ActiveTrade monitoring behavior remains unchanged.
+- TradeResult remains the only risk-state projection input.
+
+## 19. Phase 18A-2 Plan Context And Recovery Coverage
+
+Phase 18A-2 should be covered with tests for:
+
+- selected-plan setup, active-trade, event, result, and journal lists returning only that plan
+- global list APIs remaining backward compatible
+- owner can reset STOP_TRADING lock with a reason
+- reset requires a reason
+- reset is blocked for archived plans and open active trades
+- reset preserves TradeResults, Journals, realized P&L, trade counts, and starting capital
+- reset can optionally clear daily risk lock fields
+- reset creates `TRADE_PLAN_RISK_LOCK_RESET` audit log
+- owner can restart a plan with copied safe settings and new starting capital
+- restart creates a clean risk state for the new plan
+- restart optionally archives the old plan
+- restart preserves old TradeResults and Journals under the old plan
+- restart is blocked while open active trades exist
+- restart creates restart/archive audit logs
+- dashboard summary returns block reasons, stop reasons, reset/restart availability, and open-trade status
+
+Current regression suite still covers RiskGovernor, ScoreCheck, TradeSetup, ActiveTrade,
+TradeResult, TradeMonitoring, and analyzer behavior. Dedicated reset/restart tests should
+be added before these APIs are treated as production-risk controls.
+
+## 20. Phase 18A-3 Rejected TradeSetup Retry Coverage
+
+Phase 18A-3 should be covered with tests for:
+
+- owner can retry a rejected TradeSetup after risk reset
+- retry requires a non-empty reason
+- retry re-runs RiskGovernor using current TradePlanRiskState
+- ready plan changes a rejected setup to approved/governed status when RiskGovernor allows
+- still-blocked plan keeps the setup rejected
+- executed, cancelled, deleted, and ActiveTrade-linked setups cannot retry
+- conversion of an already converted rejected ScoreCheck returns retry guidance instead of creating a duplicate
+- retry creates `TRADE_SETUP_RISK_RETRY` and `RISK_GOVERNOR_EVALUATED` audit records
+- frontend shows retry action for rejected linked setup instead of dead-ending on "Already converted"
+
+Regression expectations:
+
+- Retry must not mutate ScoreCheck scoring output.
+- Retry must not delete TradeResults, Journals, or existing risk history.
+- Retry must not affect AnalyzerEngine, broker execution, or ActiveTrade monitoring behavior.
+
+## 21. Phase 18B User Editable Scoring Template Coverage
+
+Phase 18B should be covered with tests for:
+
+- authenticated user can list system and own user templates
+- system templates are readonly
+- user can duplicate a system template into a private user template
+- user can update an unused custom template in place
+- updating a used custom template creates a new latest version
+- archived templates are hidden from normal template lists and cannot be selected
+- section weights must total 100 across enabled sections
+- evaluator weights must total 100 within each enabled section
+- unknown evaluator keys are rejected
+- unsafe config strings such as `function`, `=>`, `eval(`, or `<script` are rejected
+- permission thresholds must be ordered and bounded from 0 to 100
+- ScoreCheck can resolve a system template by key
+- ScoreCheck can resolve a user template by id
+- ScoreCheck stores template key/id/version/scope/name in ScoreCheck and TradeScoreSnapshot
+- usedCount and lastUsedAt update only after successful scoring
+
+Regression expectations:
+
+- RiskGovernor remains final authority after ScoreCheck conversion.
+- AI cannot score or edit scoring output.
+- Historical ScoreChecks are not recalculated when templates are edited.
+- ScoringEngine executes only registered evaluator keys.
+
+## 22. Phase 18C-0 Angel NSE/NFO Symbol And Live Rate Coverage
+
+Phase 18C-0 should be covered with tests for:
+
+- Angel mapper maps NSE equity rows to `EQUITY/CASH`.
+- Angel mapper maps NFO `FUTSTK/FUTIDX` rows to `FNO/FUTURE`.
+- Angel mapper maps NFO `OPTSTK/OPTIDX` rows to `FNO/OPTION` with strike and CE/PE.
+- Angel sync can upsert NSE/NFO rows by provider + exchange + instrument token.
+- Expired NFO/BFO contracts are skipped by default.
+- Existing MCX mapping and sync behavior remains intact.
+- Symbol search finds RELIANCE cash, NIFTY futures, and NIFTY CE options.
+- Symbol search filters by exchange, instrument type, option type, strike, and underlying.
+- Angel quote mapping supports NSE and NFO without exposing raw credentials or provider payloads.
+- Angel tick normalization supports NSE/NFO and updates MarketSnapshotService through the existing path.
+- Angel subscription keys include user id for NSE/NFO.
+- Frontend symbol picker builds and can filter India Cash, India Futures, India Options, and MCX.
+
+Regression expectations:
+
+- Binance symbol search/live-rate behavior remains unchanged.
+- MCX live-rate behavior remains unchanged.
+- No order placement, option chain, Greeks, margin, or AI scoring is added.
+
+## 23. Phase 18C-1 Scoring Template Resource Configuration Coverage
+
+Phase 18C-1 should be covered with tests for:
+
+- duplicate `allowedTradableSymbols` are rejected
+- resource and allowed symbol ids must exist in the global `Symbol` registry
+- enabled `sectionOverrides` weights must total 100
+- system templates remain readonly and must be duplicated before editing
+- owning user can update only their own user template
+
+Regression expectations:
+
+- ScoreCheck snapshot capture is not implemented in this phase.
+- Scoring output and RiskGovernor behavior remain unchanged.
+- AI review does not consume template resource configuration yet.
+
+## 24. Phase 18C-2 ScoreCheck Template Symbol Validation Coverage
+
+Phase 18C-2 should be covered with tests for:
+
+- ScoreCheck with a user template and allowed symbol succeeds.
+- ScoreCheck with a user template and disallowed symbol rejects.
+- ScoreCheck with a disabled allowed-symbol shape rejects when present.
+- ScoreCheck with another user's private template still rejects through ownership lookup.
+- ScoreCheck with a user template that has no allowed symbols rejects with `TEMPLATE_HAS_NO_ALLOWED_SYMBOLS`.
+- Existing system-template ScoreCheck behavior remains broad and unchanged.
+
+Regression expectations:
+
+- Frontend filtering is only UX; backend remains the authority.
+- ScoreCheck resource snapshots are still not implemented.
+
+## 25. Phase 18C-3 Multi-Symbol Resource Snapshot Builder Coverage
+
+Phase 18C-3 should be covered with tests for:
+
+- user template resource config resolves `PRIMARY_SYMBOL` from the selected ScoreCheck symbol
+- configured `MARKET_INDEX`, `BANK_INDEX`, `VOLATILITY_INDEX`, and `SECTOR_INDEX` resolve from template symbol ids
+- configured related symbols resolve as `RELATED_SYMBOL`
+- missing optional related symbol references produce warnings but not blockers
+- missing required configured resources produce blockers and `BLOCKING_MISSING`
+- compact resource snapshot summaries exclude raw provider payloads, raw ticks, order books, and candle arrays
+- ScoreCheck response includes resource readiness summary for user templates
+- system template ScoreCheck behavior remains unchanged
+
+Regression expectations:
+
+- Persistent `ScoreCheckSnapshot` TTL storage is covered separately in Phase 18C-4.
+- RiskGovernor and scoring engine behavior are not rewritten.
+
+## 26. Phase 18C-4 Expirable ScoreCheckSnapshot Coverage
+
+Phase 18C-4 should be covered with tests for:
+
+- ScoreCheck creates one temporary `ScoreCheckSnapshot`.
+- Snapshot has an `expiresAt`.
+- `INTRADAY` snapshots default to 24 hours.
+- `SWING` snapshots default to 7 days.
+- template snapshot policy overrides are bounded between 1 hour and 7 days.
+- the MongoDB TTL index exists on `expiresAt`.
+- authenticated users can fetch their own snapshot.
+- another user cannot fetch the snapshot.
+- missing or expired snapshots return `SCORE_CHECK_SNAPSHOT_EXPIRED_OR_NOT_FOUND`.
+- snapshot payload excludes raw provider payloads, raw ticks, order books, candles, broker tokens, and secrets.
+
+Regression expectations:
+
+- `ScoreCheckSnapshot` is temporary explanation/debugging data.
+- `TradeScoreSnapshot` remains the permanent audit path.
+- RiskGovernor, scoring formulas, and template monitoring are unchanged.
+
+## 27. Phase 18C-5 Score Explanation Panel Coverage
+
+Phase 18C-5 should be covered with frontend build/type coverage for:
+
+- latest ScoreCheck renders score, permission, confidence, and status
+- snapshot metadata renders when `scoreCheckSnapshotId` and expiry fields exist
+- the UI can fetch `GET /api/score-checks/:id/snapshot`
+- resource readiness renders from fetched snapshot or inline resource summary fallback
+- section breakdown renders from fetched snapshot
+- warnings/blockers render without blocking conversion controls
+- expired or unavailable snapshots show a compact non-blocking message
+
+Regression expectations:
+
+- explanation panel is read-only
+- no scoring formulas or RiskGovernor behavior change
+- no analytics/calibration dashboard is added
+
+## 28. Phase 18C-6 Permanent TradeScoreSnapshot On Conversion Coverage
+
+Phase 18C-6 should be covered with tests for:
+
+- converting a ScoreCheck with a valid `ScoreCheckSnapshot` creates a permanent `TradeScoreSnapshot`
+- the permanent snapshot has no `expiresAt` TTL field
+- template identity, selected symbol, resolved resources, resource snapshots, readiness summary, section breakdown, final score, permission, status, confidence, warnings, blockers, and source snapshot metadata are copied
+- missing or expired `ScoreCheckSnapshot` blocks conversion with `SCORE_CHECK_SNAPSHOT_EXPIRED_RERUN_REQUIRED`
+- an existing permanent snapshot for the ScoreCheck is reused instead of duplicated
+- RiskGovernor behavior is unchanged
+- rejected governed TradeSetups still retain a linked permanent score snapshot
+- permanent snapshots exclude raw provider payloads, raw ticks, order books, candles, broker tokens, and secrets
+
+Regression expectations:
+
+- `ScoreCheckSnapshot` remains temporary explanation/debugging data
+- `TradeScoreSnapshot` is created only on conversion
+- RiskGovernor remains final authority

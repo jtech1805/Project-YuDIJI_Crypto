@@ -29,15 +29,11 @@ export class MarketSubscriptionRouter {
     }
 
     if (subscription.provider === "ANGEL_ONE") {
-      if (subscription.exchange !== "MCX" || subscription.marketType !== "COMMODITY") {
-        throw new AppError("PROVIDER_NOT_SUPPORTED", 400);
-      }
-
       await this.getAngelSessionService().subscribeResolvedAngelSubscription({
         userId,
         subscriptionKey: subscription.subscriptionKey,
-        marketType: "COMMODITY",
-        exchange: "MCX",
+        marketType: subscription.marketType,
+        exchange: subscription.exchange,
         symbol: subscription.symbol,
         displayName: subscription.displayName,
         providerSymbol: subscription.providerSymbol,
@@ -59,15 +55,11 @@ export class MarketSubscriptionRouter {
     }
 
     if (subscription.provider === "ANGEL_ONE") {
-      if (subscription.exchange !== "MCX" || subscription.marketType !== "COMMODITY") {
-        throw new AppError("PROVIDER_NOT_SUPPORTED", 400);
-      }
-
       await this.getAngelSessionService().unsubscribeResolvedAngelSubscription({
         userId,
         subscriptionKey: subscription.subscriptionKey,
-        marketType: "COMMODITY",
-        exchange: "MCX",
+        marketType: subscription.marketType,
+        exchange: subscription.exchange,
         symbol: subscription.symbol,
         displayName: subscription.displayName,
         providerSymbol: subscription.providerSymbol,

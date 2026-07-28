@@ -3,7 +3,10 @@ import type { Request, Response } from "express";
 import { AppError } from "../errors/AppError.js";
 import {
   convertScoreCheckToTradeSetupSchema,
+  deleteTradeSetupSchema,
+  retryTradeSetupRiskCheckSchema,
   TradeSetupService,
+  updateTradeSetupSchema,
 } from "../services/trade-setup.service.js";
 
 const getUserId = (req: Request): string => {
@@ -81,6 +84,60 @@ export const cancelTradeSetup = async (req: Request, res: Response): Promise<voi
   const tradeSetup = await getTradeSetupService().cancelTradeSetup(
     getUserId(req),
     getParamId(req, "id"),
+  );
+
+  res.status(200).json({
+    status: "success",
+    data: tradeSetup,
+  });
+};
+
+export const retryTradeSetupRiskCheck = async (req: Request, res: Response): Promise<void> => {
+  const parsedBody = retryTradeSetupRiskCheckSchema.safeParse(req.body);
+  if (!parsedBody.success) {
+    throw new AppError("Invalid TradeSetup risk retry payload", 400);
+  }
+
+  const result = await getTradeSetupService().retryRiskCheck(
+    getUserId(req),
+    getParamId(req, "id"),
+    parsedBody.data,
+  );
+
+  res.status(200).json({
+    status: "success",
+    data: result,
+  });
+};
+
+export const updateTradeSetup = async (req: Request, res: Response): Promise<void> => {
+  const parsedBody = updateTradeSetupSchema.safeParse(req.body);
+  if (!parsedBody.success) {
+    throw new AppError("Invalid TradeSetup update payload", 400);
+  }
+
+  const tradeSetup = await getTradeSetupService().updateTradeSetup(
+    getUserId(req),
+    getParamId(req, "id"),
+    parsedBody.data,
+  );
+
+  res.status(200).json({
+    status: "success",
+    data: tradeSetup,
+  });
+};
+
+export const deleteTradeSetup = async (req: Request, res: Response): Promise<void> => {
+  const parsedBody = deleteTradeSetupSchema.safeParse(req.body ?? {});
+  if (!parsedBody.success) {
+    throw new AppError("Invalid TradeSetup delete payload", 400);
+  }
+
+  const tradeSetup = await getTradeSetupService().deleteTradeSetup(
+    getUserId(req),
+    getParamId(req, "id"),
+    parsedBody.data,
   );
 
   res.status(200).json({

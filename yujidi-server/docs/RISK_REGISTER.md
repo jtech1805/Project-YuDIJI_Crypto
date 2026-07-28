@@ -96,6 +96,7 @@ Highest-priority current risks:
 | R-074 | Stale monitoring feed drives wrong ActiveTrade event | High | Medium | Open |
 | R-075 | Audit gaps hide critical trade/risk/provider decisions | High | Medium | Open |
 | R-076 | RAG contamination with raw market data or secrets | High | Medium | Open |
+| R-093 | Rejected setup retry could bypass risk controls | High | Low | Mitigated |
 | R-033 | Angel Scrip Master URL availability failure | Medium | Medium | Mitigating |
 | R-034 | Huge Angel symbol sync load | Medium | Medium | Mitigating |
 | R-035 | Reference sync confused with market-data permission | High | Medium | Mitigating |
@@ -2130,3 +2131,200 @@ Mitigation:
 - stale resources are partial, not ready.
 - provider subscription reconciliation remains a separate phase with reference-count and
   user-session tests.
+
+## R-090: Dashboard Delete Could Hide Trading History Incorrectly
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigating
+
+Description:
+
+Trading dashboard delete actions can damage trust if they physically remove finalized
+trade history, bypass ownership, or mutate risk state.
+
+Impact:
+
+Users could lose auditability for completed trades, and risk metrics could become
+inconsistent with journaled history.
+
+Mitigation:
+
+- TradePlan delete is blocked when open ActiveTrades, finalized TradeResults, or finalized
+  Journals exist.
+- ScoreCheck and TradeSetup delete use soft-delete fields.
+- List/detail APIs exclude soft-deleted workflow records.
+- Destructive actions are user-scoped and audited.
+- Delete/update does not place orders, cancel broker orders, mutate AnalyzerEngine, or
+  project RiskState.
+
+## R-091: Multiple TradePlans Can Mix Workflow Context
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigated in Phase 18A-2
+
+Description:
+
+If governed setups, active trades, events, results, and journals are loaded globally while
+the user has multiple TradePlans, the dashboard can show one plan's summary beside another
+plan's lifecycle records.
+
+Impact:
+
+The user may misread risk state, P&L, trade capacity, or STOP_TRADING cause.
+
+Mitigation:
+
+- Trading Workflow now prefers selected-plan APIs for setups, active trades, events,
+  results, journals, and summary.
+- Global list APIs remain for backward compatibility, but workflow context is plan-scoped.
+
+## R-092: Risk Reset Could Hide Loss History
+
+Severity: Critical
+
+Likelihood: Medium
+
+Status: Mitigated in Phase 18A-2
+
+Description:
+
+A manual recovery button could become dangerous if it deletes losses, mutates historical
+TradeResults/Journals, rewrites starting capital, or silently bypasses RiskGovernor.
+
+Impact:
+
+Risk records and user trust could become corrupted.
+
+Mitigation:
+
+- Reset Risk Lock requires a reason and audit log.
+- Reset is user-owned and blocked while open ActiveTrades exist.
+- Reset changes only lock/circuit-breaker fields and preserves P&L, trade counts,
+  TradeResults, Journals, and capital.
+- Restart Plan creates a new plan and preserves old plan history.
+
+## R-093: Rejected Setup Retry Could Bypass Risk Controls
+
+Severity: High
+
+Likelihood: Low
+
+Status: Mitigated
+
+Description:
+
+After a TradePlan risk reset, a previously rejected TradeSetup may need to be retried. If retry
+created duplicate setups or locally flipped status without RiskGovernor, users could bypass
+STOP_TRADING controls.
+
+Impact:
+
+Invalid managed-trade approval, duplicate governed setups, and poor auditability of risk recovery.
+
+Mitigation:
+
+- Retry re-runs RiskGovernor using current plan and risk state.
+- Retry updates the existing rejected TradeSetup instead of creating a duplicate.
+- Executed, cancelled, deleted, and ActiveTrade-linked setups are blocked.
+- `TRADE_SETUP_RISK_RETRY` and `RISK_GOVERNOR_EVALUATED` are audited.
+
+## R-094: User Scoring Templates Could Become Executable Logic
+
+Severity: Critical
+
+Likelihood: Low
+
+Status: Mitigated in Phase 18B
+
+Description:
+
+Editable scoring templates could become unsafe if users can submit formulas, JavaScript,
+or unregistered evaluator names that change scoring behavior outside the reviewed engine.
+
+Impact:
+
+Unsafe code execution, unreviewed scoring semantics, and loss of auditability.
+
+Mitigation:
+
+- Templates reference only registered evaluator keys.
+- Config is treated as data only.
+- Unsafe strings such as `function`, `=>`, `eval(`, `new Function`, `constructor`, and
+  `<script` are rejected.
+- ScoringEngine remains the only executor.
+
+## R-095: Editing Templates Could Rewrite Historical Scores
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigated in Phase 18B
+
+Description:
+
+If a user edits a template after it was used, old ScoreChecks could become impossible to
+audit or might appear to have been scored under different rules.
+
+Impact:
+
+Broken audit trail and unreliable trading review.
+
+Mitigation:
+
+- ScoreCheck and TradeScoreSnapshot store template key/id/version/scope/name.
+- Editing a used template creates a new latest version.
+- Historical ScoreChecks are not recalculated.
+
+## R-096: Indian F&O Symbol Drift Or Duplicate Identity
+
+Severity: High
+
+Likelihood: Medium
+
+Status: Mitigated in Phase 18C-0
+
+Description:
+
+Angel NFO symbols are expiry-heavy and token-driven. If YuJiDi uses display name or parsed
+symbol text as identity, futures/options can duplicate or drift across expiries.
+
+Impact:
+
+Wrong contract selection, stale live rates, or incorrect ScoreCheck context.
+
+Mitigation:
+
+- Symbol upsert identity remains `provider + exchange + instrumentToken`.
+- NFO symbols store expiry, underlying, strike, option type, lot size, and provider symbol.
+- Symbol search excludes expired NFO/BFO contracts by default.
+
+## R-097: Cross-User Angel Market Data Leakage
+
+Severity: Critical
+
+Likelihood: Low
+
+Status: Mitigated
+
+Description:
+
+Angel live market data depends on a user-specific broker session. If NSE/NFO subscription keys
+are not user-scoped, one user's feed could satisfy another user's dashboard or ScoreCheck.
+
+Impact:
+
+Privacy and broker-session boundary breach.
+
+Mitigation:
+
+- Angel subscription/resource keys include user id.
+- NSE, NFO, and MCX Angel keys follow `ANGEL_ONE:<userId>:<exchange>:<token>`.
+- Quote APIs require the authenticated user's active Angel session.
+- Raw Angel provider payloads and credentials are not exposed in quote responses.

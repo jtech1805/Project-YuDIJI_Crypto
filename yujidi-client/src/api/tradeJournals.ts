@@ -5,6 +5,9 @@ import type { AiExplanation, TradeJournal, UpdateTradeJournalInput } from '../ty
 export const listTradeJournals = async () =>
   unwrapArrayData<TradeJournal>(await apiClient.get('/trade-journals'))
 
+export const listTradeJournalsForPlan = async (tradePlanId: string) =>
+  unwrapArrayData<TradeJournal>(await apiClient.get(`/trade-plans/${tradePlanId}/trade-journals`))
+
 export const updateTradeJournal = async (id: string, input: UpdateTradeJournalInput) =>
   unwrapData<TradeJournal>(await apiClient.patch(`/trade-journals/${id}`, input))
 

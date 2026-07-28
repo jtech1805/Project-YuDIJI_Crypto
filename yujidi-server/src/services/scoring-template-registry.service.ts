@@ -6,6 +6,13 @@ import type {
 } from "../types/scoring.types.js";
 import type { InstrumentType, MarketType } from "../types/market-data.types.js";
 
+export const DEFAULT_SCORING_PERMISSION_THRESHOLDS = {
+  rejectBelow: 40,
+  waitBelow: 60,
+  takeSmallRiskBelow: 75,
+  takeTradeAtOrAbove: 75,
+} as const;
+
 const section = (
   key: string,
   label: string,
@@ -127,6 +134,34 @@ const templates: ScoringTemplateDefinition[] = [
       section("RISK_REWARD", "Risk and reward", 40, ["REWARD_RISK_RATIO"], "BLOCK"),
     ],
   },
+  {
+    key: "INDIA_FNO_FUTURE_INTRADAY_V1",
+    version: 1,
+    marketType: "FNO",
+    tradeStyle: "INTRADAY",
+    instrumentType: "FUTURE",
+    maxScore: 100,
+    sections: [
+      section("CONTRACT_SANITY", "Contract sanity", 20, ["SYMBOL_METADATA_SANITY"], "PARTIAL"),
+      section("MARKET_CONTEXT", "Market context", 20, ["PRICE_VS_VWAP_CONTEXT", "VWAP_DISTANCE_CONTEXT"], "PARTIAL"),
+      section("LIQUIDITY_CONTEXT", "Liquidity context", 20, ["RVOL_CONTEXT", "LIQUIDITY_FRESHNESS_CONTEXT"], "PARTIAL"),
+      section("RISK_REWARD", "Risk and reward", 40, ["REWARD_RISK_RATIO"], "BLOCK"),
+    ],
+  },
+  {
+    key: "INDIA_FNO_OPTION_INTRADAY_V1",
+    version: 1,
+    marketType: "FNO",
+    tradeStyle: "INTRADAY",
+    instrumentType: "OPTION",
+    maxScore: 100,
+    sections: [
+      section("CONTRACT_SANITY", "Contract sanity", 20, ["SYMBOL_METADATA_SANITY"], "PARTIAL"),
+      section("MARKET_CONTEXT", "Market context", 20, ["PRICE_VS_VWAP_CONTEXT", "VWAP_DISTANCE_CONTEXT"], "PARTIAL"),
+      section("LIQUIDITY_CONTEXT", "Liquidity context", 20, ["RVOL_CONTEXT", "LIQUIDITY_FRESHNESS_CONTEXT"], "PARTIAL"),
+      section("RISK_REWARD", "Risk and reward", 40, ["REWARD_RISK_RATIO"], "BLOCK"),
+    ],
+  },
 ];
 
 export class ScoringTemplateRegistryService {
@@ -138,6 +173,10 @@ export class ScoringTemplateRegistryService {
     const template = this.templates.get(`${key}:${version}`);
     if (!template) throw new AppError("UNSUPPORTED_TEMPLATE", 400);
     return structuredClone(template);
+  }
+
+  public list(): ScoringTemplateDefinition[] {
+    return [...this.templates.values()].map((template) => structuredClone(template));
   }
 
   public validateCompatibility(input: {

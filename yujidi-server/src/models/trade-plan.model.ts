@@ -139,6 +139,24 @@ const tradePlanSchema = new Schema(
     archivedAt: {
       type: Date,
     },
+    isDeleted: {
+      type: Boolean,
+      required: true,
+      default: false,
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+    },
+    deletedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    deleteReason: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
   },
   {
     timestamps: true,
@@ -147,6 +165,7 @@ const tradePlanSchema = new Schema(
 );
 
 tradePlanSchema.index({ userId: 1, status: 1, createdAt: -1 });
+tradePlanSchema.index({ userId: 1, isDeleted: 1, createdAt: -1 });
 tradePlanSchema.index({
   userId: 1,
   marketType: 1,

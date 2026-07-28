@@ -542,8 +542,20 @@ Implemented API:
 POST /api/score-checks/:id/convert-to-trade-setup
 GET /api/trade-setups
 GET /api/trade-setups/:id
+POST /api/trade-setups/:id/retry-risk-check
 POST /api/trade-setups/:id/cancel
 GET /api/trade-plans/:id/trade-setups
+```
+
+Retry recovery:
+
+```txt
+Implemented.
+Rejected TradeSetup records can retry RiskGovernor after a TradePlan risk reset.
+Retry never creates a duplicate setup and never bypasses RiskGovernor.
+If the current TradePlanRiskState still blocks trading, the setup remains REJECTED.
+Executed, cancelled, deleted, and ActiveTrade-linked setups cannot retry.
+TRADE_SETUP_RISK_RETRY and RISK_GOVERNOR_EVALUATED are audited.
 ```
 
 ### Phase 5: ActiveTrade Foundation
@@ -1043,3 +1055,135 @@ Still not implemented:
 - no Redis/shared runtime state
 - no AnalyzerEngine alert behavior change
 - no broker execution, AI scoring, or risk mutation
+
+## Phase 18A: Backend-Backed Dashboard Delete/Update
+
+The trading dashboard now uses real backend mutation APIs for deleting core workflow
+records:
+
+- `DELETE /api/score-checks/:id`
+- `PATCH /api/score-checks/:id`
+- `DELETE /api/trade-setups/:id`
+- `PATCH /api/trade-setups/:id`
+- `DELETE /api/trade-plans/:id`
+
+Policy:
+
+- ScoreChecks, TradeSetups, TradePlans, and TradeScoreSnapshots use soft-delete fields.
+- ScoreCheck update re-runs deterministic scoring and creates a replacement snapshot.
+- TradeSetup update is limited to pre-execution planned geometry.
+- TradePlan delete cascades only draft/planned child data.
+- Delete is blocked for open ActiveTrades and finalized trade history.
+- All mutation endpoints are authenticated, user-scoped, and audited.
+
+Still not implemented:
+
+- no delete-all/reset-all endpoint
+- no broker order cancellation
+- no risk-state projection from delete/update
+- no AnalyzerEngine behavior change
+
+## Phase 18A-2: TradePlan Context And Recovery
+
+The Trading Workflow now treats the selected TradePlan as the context owner for lifecycle
+data:
+
+- governed setups
+- active trades
+- trade events
+- trade results
+- journals
+- dashboard summary
+
+The selected-plan APIs prevent records from different plans appearing together in one
+workflow view.
+
+Recovery APIs:
+
+- `POST /api/trade-plans/:id/reset-risk-lock`
+- `POST /api/trade-plans/:id/restart`
+
+Reset Risk Lock clears plan/daily STOP_TRADING lock fields only after an explicit reason.
+It preserves TradeResults, Journals, realized P&L, capital, and trade counts.
+
+Restart Plan creates a fresh copied plan with provided starting capital while preserving
+the old plan's history. The old plan can be archived by the restart action.
+
+Still not implemented:
+
+- no realtime overview aggregate API
+- no broker reconciliation
+- no broker order placement
+- no AI scoring
+- no AnalyzerEngine behavior change
+
+## Phase 18B: User Editable Scoring Templates
+
+The MVP now supports private user-owned scoring templates built from readonly system
+templates.
+
+APIs:
+
+- `GET /api/scoring-templates`
+- `GET /api/scoring-templates/system/:templateKey`
+- `POST /api/scoring-templates/system/:templateKey/duplicate`
+- `GET /api/scoring-templates/:id`
+- `PATCH /api/scoring-templates/:id`
+- `POST /api/scoring-templates/:id/archive`
+
+Rules:
+
+- System templates remain code-defined and readonly.
+- User templates are private to the owner.
+- User templates can change labels, section weights, evaluator weights, and thresholds.
+- Enabled section weights must total 100.
+- Enabled evaluator weights inside each section must total 100.
+- Templates may use only registered evaluator keys.
+- Unsafe executable config strings are rejected.
+- If a user template has already scored a trade, editing creates a new latest version.
+- ScoreCheck stores template key/id/version/scope/name in ScoreCheck and TradeScoreSnapshot.
+
+Still not implemented:
+
+- no public template marketplace
+- no AI-created scoring templates
+- no arbitrary formula execution
+- no RiskGovernor override
+
+## Phase 18C-0: Angel NSE/NFO Symbol Universe And Live Rates
+
+YuJiDi extends the Angel market-data integration from MCX commodities to Indian equity
+cash and F&O reference data.
+
+Symbol support:
+
+- NSE equity cash rows map to `provider=ANGEL_ONE`, `exchange=NSE`, `marketType=EQUITY`, `instrumentType=CASH`.
+- NFO futures rows map to `exchange=NFO`, `marketType=FNO`, `instrumentType=FUTURE`.
+- NFO options rows map to `exchange=NFO`, `marketType=FNO`, `instrumentType=OPTION`, with `strikePrice`, `optionType`, `expiry`, and `lotSize`.
+- Stable identity remains `provider + exchange + instrumentToken`.
+- Angel symbols are marked `requiresBrokerLogin=true`.
+
+Live-rate support:
+
+- Quote requests reuse `MarketQuoteService` and `AngelQuoteService`.
+- WebSocket ticks reuse `normalizeAngelTick`, `WebSocketManager`, and `MarketSnapshotService`.
+- Angel WebSocket subscription keys stay user-scoped:
+  - `ANGEL_ONE:<userId>:NSE:<token>`
+  - `ANGEL_ONE:<userId>:NFO:<token>`
+  - `ANGEL_ONE:<userId>:MCX:<token>`
+
+Search/UI support:
+
+- Symbol search supports provider, market type, exchange, instrument type, underlying,
+  expiry, option type, and strike filters.
+- The Trading Workflow symbol picker includes presets for Crypto, India Cash, India
+  Futures, India Options, and MCX.
+
+Still not implemented:
+
+- no order placement
+- no broker reconciliation
+- no option-chain analytics
+- no Greeks
+- no margin calculation
+- no from-scratch template builder

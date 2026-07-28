@@ -32,6 +32,18 @@ export const listTradeEvents = async (req: Request, res: Response): Promise<void
   });
 };
 
+export const listTradeEventsForPlan = async (req: Request, res: Response): Promise<void> => {
+  const events = await getTradeEventService().listTradeEventsForPlan(
+    getUserId(req),
+    getParamId(req, "id"),
+  );
+
+  res.status(200).json({
+    status: "success",
+    data: events,
+  });
+};
+
 export const listActiveTradeEvents = async (req: Request, res: Response): Promise<void> => {
   const events = await getTradeEventService().listActiveTradeEvents(
     getUserId(req),
@@ -55,4 +67,3 @@ export const getTradeEvent = async (req: Request, res: Response): Promise<void> 
     data: event,
   });
 };
-

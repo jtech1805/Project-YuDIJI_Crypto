@@ -31,6 +31,8 @@ export const SCORING_TEMPLATE_KEYS = [
   "CRYPTO_SPOT_INTRADAY_V1",
   "CRYPTO_PERPETUAL_INTRADAY_V1",
   "COMMODITY_MCX_INTRADAY_V1",
+  "INDIA_FNO_FUTURE_INTRADAY_V1",
+  "INDIA_FNO_OPTION_INTRADAY_V1",
 ] as const;
 export type ScoringTemplateKey = (typeof SCORING_TEMPLATE_KEYS)[number];
 
@@ -51,6 +53,150 @@ export type ScoringTemplateDefinition = {
   maxScore: number;
   aggregationMode?: "NORMALIZE_EXECUTED" | "WEIGHTED_SUM";
   sections: ScoringSectionDefinition[];
+};
+
+export const SCORING_TEMPLATE_SCOPES = ["SYSTEM", "USER"] as const;
+export type ScoringTemplateScope = (typeof SCORING_TEMPLATE_SCOPES)[number];
+
+export const SCORING_TEMPLATE_VISIBILITIES = ["PRIVATE", "PUBLIC"] as const;
+export type ScoringTemplateVisibility = (typeof SCORING_TEMPLATE_VISIBILITIES)[number];
+
+export const SCORING_TEMPLATE_STATUSES = ["DRAFT", "ACTIVE", "ARCHIVED"] as const;
+export type ScoringTemplateStatus = (typeof SCORING_TEMPLATE_STATUSES)[number];
+
+export type ScoringPermissionThresholds = {
+  rejectBelow: number;
+  waitBelow: number;
+  takeSmallRiskBelow: number;
+  takeTradeAtOrAbove: number;
+};
+
+export type EditableScoringEvaluatorDefinition = {
+  evaluatorKey: string;
+  label: string;
+  weight: number;
+  enabled: boolean;
+  missingDataPolicy?: MissingDataPolicy;
+  config?: Record<string, unknown>;
+};
+
+export type EditableScoringSectionDefinition = {
+  sectionKey: string;
+  label: string;
+  weight: number;
+  enabled: boolean;
+  missingDataPolicy: MissingDataPolicy;
+  evaluators: EditableScoringEvaluatorDefinition[];
+};
+
+export type ScoringTemplateResourceConfig = {
+  marketRegime?: {
+    marketIndexSymbolId?: string | undefined;
+    bankIndexSymbolId?: string | undefined;
+    volatilitySymbolId?: string | undefined;
+  } | undefined;
+  sectorContext?: {
+    sectorName?: string | undefined;
+    sectorIndexSymbolId?: string | undefined;
+  } | undefined;
+  relatedSymbols?: string[] | undefined;
+};
+
+export type ScoringTemplateSectionOverride = {
+  sectionKey: string;
+  weight: number;
+  enabled: boolean;
+};
+
+export type ScoringTemplateSnapshotPolicy = {
+  captureMarketRegime: boolean;
+  captureSectorContext: boolean;
+  captureRelatedSymbols: boolean;
+  captureAllowedTradableSymbol: boolean;
+  maxSnapshotAgeSeconds: number;
+};
+
+export type ScoringTemplateResourceRole =
+  | "PRIMARY_SYMBOL"
+  | "MARKET_INDEX"
+  | "BANK_INDEX"
+  | "VOLATILITY_INDEX"
+  | "SECTOR_INDEX"
+  | "RELATED_SYMBOL";
+
+export type ScoringTemplateResourceFreshnessStatus =
+  | "READY"
+  | "STALE"
+  | "MISSING"
+  | "PARTIAL"
+  | "BLOCKING_MISSING";
+
+export type ScoringTemplateResolvedResource = {
+  role: ScoringTemplateResourceRole;
+  symbolId: string;
+  symbol: string;
+  exchange: string;
+  provider: string;
+  marketType: string;
+  instrumentType: string;
+  required: boolean;
+  source: "SCORE_CHECK_SYMBOL" | "TEMPLATE_RESOURCE_CONFIG";
+};
+
+export type ScoringTemplateResourceSnapshot = {
+  role: ScoringTemplateResourceRole;
+  symbolId: string;
+  symbol: string;
+  price?: number;
+  changePercent?: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  previousClose?: number;
+  vwap?: number;
+  vwapPosition?: string;
+  volume?: number;
+  freshnessStatus: ScoringTemplateResourceFreshnessStatus;
+  ageMs?: number;
+  occurredAt?: Date;
+  receivedAt?: Date;
+  warnings: string[];
+};
+
+export type ScoringTemplateResourceSnapshotContext = {
+  resolvedResources: ScoringTemplateResolvedResource[];
+  resourceSnapshots: ScoringTemplateResourceSnapshot[];
+  resourceReadinessSummary: {
+    total: number;
+    ready: number;
+    stale: number;
+    missing: number;
+    partial: number;
+    blockingMissing: number;
+  };
+  warnings: string[];
+  blockers: string[];
+};
+
+export type ResolvedScoringTemplateDefinition = {
+  id?: string;
+  templateKey: string;
+  baseTemplateKey: ScoringTemplateKey;
+  templateName: string;
+  description?: string;
+  scope: ScoringTemplateScope;
+  version: number;
+  marketType: MarketType;
+  tradeStyle: string;
+  instrumentType: InstrumentType;
+  maxScore: number;
+  aggregationMode?: "NORMALIZE_EXECUTED" | "WEIGHTED_SUM";
+  sections: EditableScoringSectionDefinition[];
+  permissionThresholds: ScoringPermissionThresholds;
+  resourceConfig?: ScoringTemplateResourceConfig;
+  allowedTradableSymbols?: string[];
+  sectionOverrides?: ScoringTemplateSectionOverride[];
+  snapshotPolicy?: ScoringTemplateSnapshotPolicy;
 };
 
 export const SCORING_SETUP_TYPES = [

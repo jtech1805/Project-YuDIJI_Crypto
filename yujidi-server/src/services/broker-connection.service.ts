@@ -181,7 +181,12 @@ export class BrokerConnectionService {
       status: "ACTIVE",
       "permissions.marketData": true,
     }).exec();
-
+    console.log({
+      user: new Types.ObjectId(userId),
+      broker,
+      status: "ACTIVE",
+      "permissions.marketData": true,
+    })
     return Boolean(connection);
   }
 

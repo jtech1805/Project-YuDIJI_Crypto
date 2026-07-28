@@ -20,8 +20,14 @@ import {
 } from "./template-resource-resolver.service.js";
 import type { MarketSnapshot } from "../types/market-snapshot.types.js";
 import type {
+  ResolvedScoringTemplateDefinition,
   ScoringContextSymbolIds,
   ScoringSetupType,
+  ScoringTemplateResourceFreshnessStatus,
+  ScoringTemplateResourceRole,
+  ScoringTemplateResourceSnapshot,
+  ScoringTemplateResourceSnapshotContext,
+  ScoringTemplateResolvedResource,
   ScoringTemplateKey,
   ScoringUserLevels,
 } from "../types/scoring.types.js";
@@ -101,6 +107,7 @@ export type BuiltScoringContext = {
 };
 
 const projection = {
+  _id: 1,
   symbol: 1,
   displayName: 1,
   provider: 1,
@@ -115,6 +122,15 @@ const projection = {
   requiresBrokerLogin: 1,
   status: 1,
 } as const;
+
+const readinessSummary = (): ScoringTemplateResourceSnapshotContext["resourceReadinessSummary"] => ({
+  total: 0,
+  ready: 0,
+  stale: 0,
+  missing: 0,
+  partial: 0,
+  blockingMissing: 0,
+});
 
 const missingMarketSummary = (resourceKey: string): Record<string, unknown> => ({
   resourceKey,
@@ -133,6 +149,119 @@ const snapshotFreshnessWarning = (snapshot: MarketSnapshot | null): string[] => 
 
 export class ScoringContextBuilderService {
   public constructor(private readonly dependencies: Partial<Dependencies> = {}) {}
+
+  public async buildTemplateResourceSnapshotContext(input: {
+    userId: string;
+    scoringTemplate: ResolvedScoringTemplateDefinition;
+    selectedSymbol: Record<string, any>;
+  }): Promise<ScoringTemplateResourceSnapshotContext> {
+    const warnings: string[] = [];
+    const blockers: string[] = [];
+    const resolvedResources: ScoringTemplateResolvedResource[] = [];
+    const resourceSnapshots: ScoringTemplateResourceSnapshot[] = [];
+    const resolvedResourceRecords: Array<{
+      resource: ScoringTemplateResolvedResource;
+      symbol: Record<string, any>;
+    }> = [];
+
+    const addResource = (args: {
+      role: ScoringTemplateResourceRole;
+      symbol: Record<string, any>;
+      required: boolean;
+      source: ScoringTemplateResolvedResource["source"];
+    }): void => {
+      const resource = this.toResolvedResource(args.role, args.symbol, args.required, args.source);
+      resolvedResources.push(resource);
+      resolvedResourceRecords.push({ resource, symbol: args.symbol });
+    };
+
+    addResource({
+      role: "PRIMARY_SYMBOL",
+      symbol: input.selectedSymbol,
+      required: true,
+      source: "SCORE_CHECK_SYMBOL",
+    });
+
+    const configuredResources: Array<{
+      role: ScoringTemplateResourceRole;
+      symbolId?: string | undefined;
+      required: boolean;
+    }> = [
+      {
+        role: "MARKET_INDEX",
+        symbolId: input.scoringTemplate.resourceConfig?.marketRegime?.marketIndexSymbolId,
+        required: true,
+      },
+      {
+        role: "BANK_INDEX",
+        symbolId: input.scoringTemplate.resourceConfig?.marketRegime?.bankIndexSymbolId,
+        required: true,
+      },
+      {
+        role: "VOLATILITY_INDEX",
+        symbolId: input.scoringTemplate.resourceConfig?.marketRegime?.volatilitySymbolId,
+        required: true,
+      },
+      {
+        role: "SECTOR_INDEX",
+        symbolId: input.scoringTemplate.resourceConfig?.sectorContext?.sectorIndexSymbolId,
+        required: true,
+      },
+      ...(input.scoringTemplate.resourceConfig?.relatedSymbols ?? []).map((symbolId) => ({
+        role: "RELATED_SYMBOL" as const,
+        symbolId,
+        required: false,
+      })),
+    ];
+
+    for (const resource of configuredResources) {
+      if (!resource.symbolId) continue;
+      const symbol = await this.findSymbolById(resource.symbolId);
+      if (!symbol) {
+        const message = `${resource.role} symbol reference is missing`;
+        warnings.push(message);
+        if (resource.required) blockers.push(message);
+        continue;
+      }
+      addResource({
+        role: resource.role,
+        symbol,
+        required: resource.required,
+        source: "TEMPLATE_RESOURCE_CONFIG",
+      });
+    }
+
+    for (const { resource, symbol } of resolvedResourceRecords) {
+      const snapshot = this.getMarketSnapshotService().getSnapshot(
+        this.buildResourceKey(input.userId, symbol),
+      );
+      const summary = this.toResourceSnapshot(resource, snapshot);
+      resourceSnapshots.push(summary);
+      if (summary.freshnessStatus === "BLOCKING_MISSING") {
+        blockers.push(`${resource.role} market snapshot is missing`);
+      } else if (summary.freshnessStatus !== "READY") {
+        warnings.push(`${resource.role} market snapshot is ${summary.freshnessStatus}`);
+      }
+    }
+
+    const summary = readinessSummary();
+    summary.total = resourceSnapshots.length;
+    for (const snapshot of resourceSnapshots) {
+      if (snapshot.freshnessStatus === "READY") summary.ready += 1;
+      if (snapshot.freshnessStatus === "STALE") summary.stale += 1;
+      if (snapshot.freshnessStatus === "MISSING") summary.missing += 1;
+      if (snapshot.freshnessStatus === "PARTIAL") summary.partial += 1;
+      if (snapshot.freshnessStatus === "BLOCKING_MISSING") summary.blockingMissing += 1;
+    }
+
+    return {
+      resolvedResources,
+      resourceSnapshots,
+      resourceReadinessSummary: summary,
+      warnings: [...new Set(warnings)],
+      blockers: [...new Set(blockers)],
+    };
+  }
 
   public async build(input: ScoringContextBuildInput): Promise<BuiltScoringContext> {
     const symbolRecord = await this.resolveSymbol(input);
@@ -477,6 +606,88 @@ export class ScoringContextBuilderService {
     const symbol = await this.getSymbolRepository().findOne(filter, projection).lean().exec();
     if (!symbol) throw new AppError("SYMBOL_NOT_FOUND", 404);
     return symbol;
+  }
+
+  private async findSymbolById(symbolId: string): Promise<Record<string, any> | null> {
+    if (!isValidObjectId(symbolId)) return null;
+    return this.getSymbolRepository()
+      .findOne({ _id: new Types.ObjectId(symbolId) }, projection)
+      .lean()
+      .exec();
+  }
+
+  private toResolvedResource(
+    role: ScoringTemplateResourceRole,
+    symbol: Record<string, any>,
+    required: boolean,
+    source: ScoringTemplateResolvedResource["source"],
+  ): ScoringTemplateResolvedResource {
+    return {
+      role,
+      symbolId: String(symbol._id),
+      symbol: String(symbol.symbol),
+      exchange: String(symbol.exchange),
+      provider: String(symbol.provider),
+      marketType: String(symbol.marketType),
+      instrumentType: String(symbol.instrumentType),
+      required,
+      source,
+    };
+  }
+
+  private toResourceSnapshot(
+    resource: ScoringTemplateResolvedResource,
+    snapshot: MarketSnapshot | null,
+  ): ScoringTemplateResourceSnapshot {
+    if (!snapshot) {
+      return {
+        role: resource.role,
+        symbolId: resource.symbolId,
+        symbol: resource.symbol,
+        freshnessStatus: resource.required ? "BLOCKING_MISSING" : "MISSING",
+        warnings: ["MARKET_SNAPSHOT_MISSING"],
+      };
+    }
+
+    const freshnessStatus = this.resolveResourceFreshnessStatus(resource, snapshot);
+    return {
+      role: resource.role,
+      symbolId: resource.symbolId,
+      symbol: resource.symbol,
+      ...(snapshot.latestPrice !== undefined ? { price: snapshot.latestPrice } : {}),
+      ...(snapshot.changePercent !== undefined ? { changePercent: snapshot.changePercent } : {}),
+      ...(snapshot.dayOpen !== undefined ? { open: snapshot.dayOpen } : {}),
+      ...(snapshot.high !== undefined ? { high: snapshot.high } : {}),
+      ...(snapshot.low !== undefined ? { low: snapshot.low } : {}),
+      ...(snapshot.previousClose !== undefined ? { previousClose: snapshot.previousClose } : {}),
+      ...(snapshot.vwap.value !== undefined ? { vwap: snapshot.vwap.value } : {}),
+      ...(snapshot.vwap.positionVsVwap !== undefined ? { vwapPosition: snapshot.vwap.positionVsVwap } : {}),
+      ...(snapshot.volume.cumulativeVolume !== undefined ? { volume: snapshot.volume.cumulativeVolume } : {}),
+      freshnessStatus,
+      ...(snapshot.freshness.ageMs !== undefined ? { ageMs: snapshot.freshness.ageMs } : {}),
+      ...(snapshot.lastTickAt ? { occurredAt: snapshot.lastTickAt, receivedAt: snapshot.lastTickAt } : {}),
+      warnings: [
+        ...(snapshot.freshness.status === "STALE" ? ["MARKET_SNAPSHOT_STALE"] : []),
+        ...(snapshot.vwap.status !== "READY" ? ["VWAP_UNAVAILABLE"] : []),
+        ...(snapshot.volume.status !== "READY" ? ["VOLUME_UNAVAILABLE"] : []),
+      ],
+    };
+  }
+
+  private resolveResourceFreshnessStatus(
+    resource: ScoringTemplateResolvedResource,
+    snapshot: MarketSnapshot,
+  ): ScoringTemplateResourceFreshnessStatus {
+    if (snapshot.freshness.status === "MISSING") {
+      return resource.required ? "BLOCKING_MISSING" : "MISSING";
+    }
+    if (snapshot.freshness.status === "STALE") {
+      return "STALE";
+    }
+    if (snapshot.vwap.status !== "READY" || snapshot.volume.status !== "READY") {
+      return "PARTIAL";
+    }
+    return "READY";
   }
 
   private buildStreamKeys(userId: string, symbol: Record<string, any>): string[] {

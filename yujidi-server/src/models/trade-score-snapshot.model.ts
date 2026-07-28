@@ -3,9 +3,26 @@ import { model, Schema, type InferSchemaType } from "mongoose";
 import {
   DATA_CONFIDENCE_LEVELS,
   SCORE_STATUSES,
-  SCORING_TEMPLATE_KEYS,
 } from "../types/scoring.types.js";
 import { TRADE_PERMISSIONS } from "../types/trade.types.js";
+import {
+  EXCHANGES,
+  INSTRUMENT_TYPES,
+  MARKET_PROVIDERS,
+  MARKET_TYPES,
+} from "../types/market-data.types.js";
+
+const selectedSymbolSchema = new Schema(
+  {
+    symbolId: { type: Schema.Types.ObjectId, ref: "Symbol", required: true },
+    symbol: { type: String, required: true, trim: true },
+    exchange: { type: String, enum: EXCHANGES, required: true },
+    provider: { type: String, enum: MARKET_PROVIDERS, required: true },
+    marketType: { type: String, enum: MARKET_TYPES, required: true },
+    instrumentType: { type: String, enum: INSTRUMENT_TYPES, required: true },
+  },
+  { _id: false },
+);
 
 const tradeScoreSnapshotSchema = new Schema(
   {
@@ -31,10 +48,19 @@ const tradeScoreSnapshotSchema = new Schema(
       required: true,
       index: true,
     },
+    selectedSymbol: {
+      type: selectedSymbolSchema,
+      required: true,
+    },
     scoringTemplateKey: {
       type: String,
-      enum: SCORING_TEMPLATE_KEYS,
       required: true,
+      trim: true,
+      index: true,
+    },
+    scoringTemplateId: {
+      type: Schema.Types.ObjectId,
+      ref: "ScoringTemplate",
       index: true,
     },
     scoringTemplateVersion: {
@@ -42,7 +68,25 @@ const tradeScoreSnapshotSchema = new Schema(
       required: true,
       trim: true,
     },
+    scoringTemplateScope: {
+      type: String,
+      enum: ["SYSTEM", "USER"],
+      required: true,
+      default: "SYSTEM",
+    },
+    scoringTemplateName: {
+      type: String,
+      required: true,
+      trim: true,
+      default: "System Template",
+    },
     score: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 100,
+    },
+    finalScore: {
       type: Number,
       required: true,
       min: 0,
@@ -68,6 +112,22 @@ const tradeScoreSnapshotSchema = new Schema(
       required: true,
       default: {},
     },
+    resolvedResources: {
+      type: [Schema.Types.Mixed],
+      default: [],
+    },
+    resourceSnapshots: {
+      type: [Schema.Types.Mixed],
+      default: [],
+    },
+    resourceReadinessSummary: {
+      type: Schema.Types.Mixed,
+      default: {},
+    },
+    sectionBreakdown: {
+      type: [Schema.Types.Mixed],
+      default: [],
+    },
     reasonCodes: {
       type: [String],
       default: [],
@@ -75,6 +135,21 @@ const tradeScoreSnapshotSchema = new Schema(
     warnings: {
       type: [String],
       default: [],
+    },
+    blockers: {
+      type: [String],
+      default: [],
+    },
+    sourceSnapshotId: {
+      type: Schema.Types.ObjectId,
+      ref: "ScoreCheckSnapshot",
+      index: true,
+    },
+    sourceSnapshotCreatedAt: {
+      type: Date,
+    },
+    sourceSnapshotExpiresAt: {
+      type: Date,
     },
     snapshotRefs: {
       marketSnapshotId: {
@@ -114,6 +189,24 @@ const tradeScoreSnapshotSchema = new Schema(
     validUntil: {
       type: Date,
     },
+    isDeleted: {
+      type: Boolean,
+      required: true,
+      default: false,
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+    },
+    deletedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    deleteReason: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
   },
   {
     timestamps: true,
@@ -122,7 +215,9 @@ const tradeScoreSnapshotSchema = new Schema(
 );
 
 tradeScoreSnapshotSchema.index({ userId: 1, createdAt: -1 });
+tradeScoreSnapshotSchema.index({ userId: 1, isDeleted: 1, createdAt: -1 });
 tradeScoreSnapshotSchema.index({ symbolId: 1, calculatedAt: -1 });
+tradeScoreSnapshotSchema.index({ userId: 1, scoreCheckId: 1 });
 
 export type TradeScoreSnapshot = InferSchemaType<typeof tradeScoreSnapshotSchema>;
 

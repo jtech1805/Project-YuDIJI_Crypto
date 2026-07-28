@@ -11,6 +11,11 @@ export type SymbolSearchResult = {
   providerSymbol: string;
   instrumentToken: string;
   expiry?: string;
+  underlyingSymbol?: string;
+  strikePrice?: number;
+  optionType?: 'CE' | 'PE';
+  lotSize?: number;
+  tickSize?: number;
   requiresBrokerLogin: boolean;
   supportedBroker: 'ANGEL_ONE' | 'KITE' | 'NONE';
 };
@@ -21,6 +26,10 @@ type SearchSymbolsParams = {
   marketType?: string;
   exchange?: string;
   instrumentType?: string;
+  underlyingSymbol?: string;
+  expiry?: string;
+  optionType?: string;
+  strikePrice?: number;
   limit?: number;
   signal?: AbortSignal;
 };

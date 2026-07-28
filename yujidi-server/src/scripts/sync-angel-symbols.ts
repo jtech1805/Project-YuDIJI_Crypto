@@ -1,3 +1,5 @@
+// Script runs with this command ANGEL_SYMBOL_SYNC_ENABLED=true npm run sync:symbols:angel:all -- --apply
+
 import "dotenv/config";
 
 import mongoose from "mongoose";
@@ -5,6 +7,8 @@ import pino from "pino";
 
 import {
   getAngelSymbolSyncConfigFromEnv,
+  syncAngelAllSymbols,
+  syncAngelIndiaSymbols,
   syncAngelMcxSymbols,
 } from "../integrations/market-data/angel/angel-symbol-sync.service.js";
 import { EXCHANGES, MARKET_TYPES, type Exchange, type MarketType } from "../types/market-data.types.js";
@@ -20,6 +24,10 @@ type CliOptions = {
   marketTypes: MarketType[];
   supportedNames: string[];
   batchSize: number;
+  includeExpired: boolean;
+  maxExpiryMonths: number;
+  sourceUrl?: string;
+  sourceFilePath?: string;
 };
 
 const DEFAULT_BATCH_SIZE = 1_000;
@@ -76,6 +84,10 @@ const parseCliOptions = (args: string[]): CliOptions => {
   let marketTypes = envConfig.marketTypes;
   let supportedNames = envConfig.supportedNames;
   let batchSize = DEFAULT_BATCH_SIZE;
+  let includeExpired = false;
+  let maxExpiryMonths = 3;
+  let sourceUrl: string | undefined;
+  let sourceFilePath: string | undefined;
 
   for (const argument of args) {
     if (parseBooleanFlag(argument, "--apply")) {
@@ -118,6 +130,35 @@ const parseCliOptions = (args: string[]): CliOptions => {
       continue;
     }
 
+    if (parseBooleanFlag(argument, "--include-expired")) {
+      includeExpired = true;
+      continue;
+    }
+
+    if (argument.startsWith("--max-expiry-months=")) {
+      maxExpiryMonths = Number(argument.slice("--max-expiry-months=".length));
+      if (!Number.isInteger(maxExpiryMonths) || maxExpiryMonths <= 0) {
+        throw new Error("--max-expiry-months must be a positive integer");
+      }
+      continue;
+    }
+
+    if (argument.startsWith("--source-url=")) {
+      sourceUrl = argument.slice("--source-url=".length).trim();
+      if (!sourceUrl) {
+        throw new Error("--source-url must not be empty");
+      }
+      continue;
+    }
+
+    if (argument.startsWith("--source-file=")) {
+      sourceFilePath = argument.slice("--source-file=".length).trim();
+      if (!sourceFilePath) {
+        throw new Error("--source-file must not be empty");
+      }
+      continue;
+    }
+
     throw new Error(`Unknown argument '${argument}'`);
   }
 
@@ -136,6 +177,10 @@ const parseCliOptions = (args: string[]): CliOptions => {
     marketTypes,
     supportedNames,
     batchSize,
+    includeExpired,
+    maxExpiryMonths,
+    ...(sourceUrl ? { sourceUrl } : {}),
+    ...(sourceFilePath ? { sourceFilePath } : {}),
   };
 };
 
@@ -149,6 +194,11 @@ const main = async (): Promise<void> => {
       marketTypes: options.marketTypes,
       supportedNames: options.supportedNames,
       batchSize: options.batchSize,
+      includeExpired: options.includeExpired,
+      maxExpiryMonths: options.maxExpiryMonths,
+      source: options.sourceFilePath ? "file" : "url",
+      ...(options.sourceUrl ? { sourceUrl: options.sourceUrl } : {}),
+      ...(options.sourceFilePath ? { sourceFilePath: options.sourceFilePath } : {}),
     },
     "Starting Angel Scrip Master symbol sync",
   );
@@ -168,13 +218,34 @@ const main = async (): Promise<void> => {
   }
 
   try {
-    const result = await syncAngelMcxSymbols({
-      exchanges: options.exchanges,
-      marketTypes: options.marketTypes,
-      supportedNames: options.supportedNames,
+    const syncOptions = {
       dryRun: options.dryRun,
       batchSize: options.batchSize,
-    });
+      includeExpired: options.includeExpired,
+      maxExpiryMonths: options.maxExpiryMonths,
+      ...(options.sourceUrl ? { sourceUrl: options.sourceUrl } : {}),
+      ...(options.sourceFilePath ? { sourceFilePath: options.sourceFilePath } : {}),
+    };
+    const includesOnlyMcx = options.exchanges.length === 1 && options.exchanges[0] === "MCX";
+    const includesIndiaOnly = options.exchanges.every((exchange) => exchange === "NSE" || exchange === "NFO");
+    const result = includesOnlyMcx
+      ? await syncAngelMcxSymbols({
+        ...syncOptions,
+        supportedNames: options.supportedNames,
+      })
+      : includesIndiaOnly
+        ? await syncAngelIndiaSymbols({
+          ...syncOptions,
+          exchanges: options.exchanges,
+          marketTypes: options.marketTypes,
+          supportedNames: ["*"],
+        })
+        : await syncAngelAllSymbols({
+          ...syncOptions,
+          exchanges: options.exchanges,
+          marketTypes: options.marketTypes,
+          supportedNames: options.supportedNames.includes("*") ? ["*"] : options.supportedNames,
+        });
 
     logger.info({ result }, "Angel Scrip Master symbol sync finished");
   } finally {

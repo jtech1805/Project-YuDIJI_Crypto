@@ -4,6 +4,9 @@ import { AppError } from "../errors/AppError.js";
 import {
   capitalAdjustmentSchema,
   createTradePlanSchema,
+  deleteTradePlanSchema,
+  resetRiskLockSchema,
+  restartTradePlanSchema,
   TradePlanService,
   updateTradePlanSchema,
 } from "../services/trade-plan.service.js";
@@ -57,6 +60,15 @@ export const getTradePlan = async (req: Request, res: Response): Promise<void> =
   res.status(200).json({
     status: "success",
     data: tradePlan,
+  });
+};
+
+export const getTradePlanDashboardSummary = async (req: Request, res: Response): Promise<void> => {
+  const summary = await getTradePlanService().getTradePlanDashboardSummary(getUserId(req), getPlanId(req));
+
+  res.status(200).json({
+    status: "success",
+    data: summary,
   });
 };
 
@@ -136,6 +148,60 @@ export const createCapitalAdjustment = async (req: Request, res: Response): Prom
   );
 
   res.status(201).json({
+    status: "success",
+    data: result,
+  });
+};
+
+export const resetTradePlanRiskLock = async (req: Request, res: Response): Promise<void> => {
+  const parsedBody = resetRiskLockSchema.safeParse(req.body);
+  if (!parsedBody.success) {
+    throw new AppError("Invalid risk lock reset payload", 400);
+  }
+
+  const result = await getTradePlanService().resetRiskLock(
+    getUserId(req),
+    getPlanId(req),
+    parsedBody.data,
+  );
+
+  res.status(200).json({
+    status: "success",
+    data: result,
+  });
+};
+
+export const restartTradePlan = async (req: Request, res: Response): Promise<void> => {
+  const parsedBody = restartTradePlanSchema.safeParse(req.body);
+  if (!parsedBody.success) {
+    throw new AppError("Invalid TradePlan restart payload", 400);
+  }
+
+  const result = await getTradePlanService().restartTradePlan(
+    getUserId(req),
+    getPlanId(req),
+    parsedBody.data,
+  );
+
+  res.status(201).json({
+    status: "success",
+    data: result,
+  });
+};
+
+export const deleteTradePlan = async (req: Request, res: Response): Promise<void> => {
+  const parsedBody = deleteTradePlanSchema.safeParse(req.body ?? {});
+  if (!parsedBody.success) {
+    throw new AppError("Invalid TradePlan delete payload", 400);
+  }
+
+  const result = await getTradePlanService().deleteTradePlan(
+    getUserId(req),
+    getPlanId(req),
+    parsedBody.data,
+  );
+
+  res.status(200).json({
     status: "success",
     data: result,
   });

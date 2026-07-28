@@ -7,10 +7,15 @@
     "dev": "nodemon --watch src --ext ts --exec \"tsx src/server.ts\"",
     "start": "tsx src/server.ts",
     "sync:angel-symbols": "tsx src/scripts/sync-angel-symbols.ts",
+    "sync:symbols:angel:nse": "tsx src/scripts/sync-angel-symbols.ts --exchanges=NSE --market-types=EQUITY --names=*",
+    "sync:symbols:angel:nfo": "tsx src/scripts/sync-angel-symbols.ts --exchanges=NFO --market-types=FNO --names=*",
+    "sync:symbols:angel:all": "tsx src/scripts/sync-angel-symbols.ts --exchanges=MCX,NSE,NFO --market-types=COMMODITY,EQUITY,FNO --names=*",
     "symbols:backfill-search": "tsx src/scripts/backfill-symbol-search-fields.ts",
-    "test": "node --import tsx --test src/services/*.test.ts src/services/security/*.test.ts src/integrations/market-data/angel/*.test.ts src/utils/*.test.ts",
-    "test:analyzer": "node --import tsx --test src/services/analyzer.*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "test": "node --import tsx --test tests/unit/services/*.test.ts tests/unit/services/security/*.test.ts tests/unit/integrations/market-data/angel/*.test.ts tests/unit/utils/*.test.ts",
+    "test:analyzer": "node --import tsx --test tests/unit/services/analyzer.*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "arch:circular": "npx --no-install madge --circular --extensions ts src",
+    "arch:graph": "npx --no-install depcruise --include-only '^src' --output-type dot src"
   },
   "keywords": [],
   "author": "",

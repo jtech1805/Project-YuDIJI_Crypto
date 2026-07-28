@@ -178,6 +178,13 @@ export class TradeEventService {
     }).sort({ createdAt: -1 }).lean().exec() as Promise<TradeEventRecord[]>;
   }
 
+  public async listTradeEventsForPlan(userId: string, tradePlanId: string): Promise<TradeEventRecord[]> {
+    return this.getTradeEventRepository().find({
+      userId: toObjectId(userId, "user id"),
+      tradePlanId: toObjectId(tradePlanId, "trade plan id"),
+    }).sort({ createdAt: -1 }).lean().exec() as Promise<TradeEventRecord[]>;
+  }
+
   public async listActiveTradeEvents(userId: string, activeTradeId: string): Promise<TradeEventRecord[]> {
     return this.getTradeEventRepository().find({
       userId: toObjectId(userId, "user id"),

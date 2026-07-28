@@ -7,7 +7,6 @@ import {
   MARKET_TYPES,
 } from "../types/market-data.types.js";
 import { RISK_MODES } from "../types/risk.types.js";
-import { SCORING_TEMPLATE_KEYS } from "../types/scoring.types.js";
 import {
   TRADE_DIRECTIONS,
   TRADE_PERMISSIONS,
@@ -152,8 +151,8 @@ const tradeSetupSchema = new Schema(
     },
     scoringTemplateKey: {
       type: String,
-      enum: SCORING_TEMPLATE_KEYS,
       required: true,
+      trim: true,
     },
     scoringTemplateVersion: {
       type: String,
@@ -226,6 +225,24 @@ const tradeSetupSchema = new Schema(
     cancelledAt: {
       type: Date,
     },
+    isDeleted: {
+      type: Boolean,
+      required: true,
+      default: false,
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+    },
+    deletedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    deleteReason: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
   },
   {
     timestamps: true,
@@ -234,6 +251,7 @@ const tradeSetupSchema = new Schema(
 );
 
 tradeSetupSchema.index({ userId: 1, createdAt: -1 });
+tradeSetupSchema.index({ userId: 1, isDeleted: 1, createdAt: -1 });
 tradeSetupSchema.index({ userId: 1, tradePlanId: 1, createdAt: -1 });
 tradeSetupSchema.index({ userId: 1, status: 1, createdAt: -1 });
 tradeSetupSchema.index({ sourceScoreCheckId: 1 }, { unique: true, sparse: true });

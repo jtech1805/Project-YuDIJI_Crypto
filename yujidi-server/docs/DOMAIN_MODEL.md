@@ -807,6 +807,17 @@ Untracked
 - Drop trigger should fire on movement below negative threshold.
 - Spike trigger should fire on movement above positive threshold.
 
+### 6.4.1 TradeSetup Retry Rules
+
+- A ScoreCheck converts into at most one TradeSetup.
+- If that TradeSetup is rejected by RiskGovernor, the user must retry the existing setup instead of creating a duplicate.
+- Retry is allowed only for user-owned `REJECTED` TradeSetup records.
+- Retry is blocked for executed, cancelled, deleted, or ActiveTrade-linked setups.
+- The linked TradePlan must still be `ACTIVE`.
+- Retry re-runs RiskGovernor with the current TradePlanRiskState and UserDailyRiskState.
+- RiskGovernor remains final authority: if it still returns `STOP_TRADING` or `REJECT`, the TradeSetup remains `REJECTED`.
+- Retry attempts are audited as `TRADE_SETUP_RISK_RETRY`.
+
 ### 6.5 Alert Rules
 
 - Alert belongs to one user.
@@ -1161,15 +1172,18 @@ consecutive loss limit reached -> STOP_TRADING
 
 Purpose:
 
-Immutable snapshot of scoring context used for a ScoreCheck or TradeSetup.
+Permanent audit snapshot of scoring context used after a ScoreCheck is converted into a TradeSetup.
 
 Rules:
 
 - Store score inputs/outputs needed for audit and replay.
 - Do not store large raw provider payloads.
 - Store references to heavy data when needed.
-- Current Phase 3 snapshots are created from standalone ScoreCheck.
-- Snapshot stores score, permission, score status, data confidence, breakdown, reason codes, warnings, input hash, calculated time, and validity time.
+- It is created or reused during ScoreCheck -> TradeSetup conversion.
+- Conversion requires a non-expired temporary `ScoreCheckSnapshot`; otherwise the user must re-run ScoreCheck.
+- Snapshot stores template identity, selected symbol, resolved resources, resource snapshots, readiness summary, section breakdown, final score, permission, score status, data confidence, warnings, blockers, source snapshot metadata, calculated time, and validity time.
+- It has no TTL and is linked back to the resulting TradeSetup.
+- RiskGovernor remains final authority; rejected governed setups still keep this audit snapshot when a rejected TradeSetup is created.
 
 ### 7.6 TradePlanRiskState
 
@@ -1688,3 +1702,140 @@ traceability. Snapshot data itself remains process-local and is not copied as ra
 India equity section scoring is conservative: unavailable criteria remain `PARTIAL` and
 contribute zero within the weighted section. This prevents a score from increasing merely
 because sector, breadth, VIX, or depth data is absent.
+
+## Trading Dashboard Delete And Update Policy
+
+Phase 18A adds backend-backed dashboard mutation behavior for trade lifecycle records.
+
+Soft-delete fields exist on:
+
+- `TradePlan`
+- `ScoreCheck`
+- `TradeSetup`
+- `TradeScoreSnapshot`
+
+List and detail APIs exclude records where `isDeleted=true`.
+
+ScoreCheck rules:
+
+- A standalone user-owned ScoreCheck can be updated and re-scored.
+- Creating or updating a ScoreCheck creates a temporary `ScoreCheckSnapshot`, not a permanent `TradeScoreSnapshot`.
+- Converting a ScoreCheck to TradeSetup requires a non-expired temporary snapshot and creates or reuses the permanent `TradeScoreSnapshot`.
+- A ScoreCheck linked to an executed lifecycle or ActiveTrade cannot be updated or deleted.
+- Deleting a ScoreCheck soft-deletes the ScoreCheck and linked snapshots.
+- If the linked TradeSetup is not executed and has no ActiveTrade, it may be soft-deleted with the ScoreCheck.
+
+TradeSetup rules:
+
+- TradeSetup update/delete is allowed only before execution and only when no ActiveTrade exists.
+- Update changes planned geometry and recalculates planned risk/reward/R:R.
+- Update does not re-run or mutate RiskState.
+- Delete soft-deletes the setup by marking it `CANCELLED` and `isDeleted=true`.
+- The source ScoreCheck is preserved unless explicit cascade is requested.
+
+TradePlan rules:
+
+- Deleting a TradePlan is blocked if open ActiveTrades exist.
+- Deleting a TradePlan is blocked if finalized TradeResults or finalized Journals exist.
+- If only draft/planned child data exists, delete soft-deletes the plan and cascades soft-delete to pending setups, linked ScoreChecks, and linked snapshots.
+- TradeEvents and AI explanations are marked as deleted-with-plan context rather than physically removed.
+- All destructive/update operations are user-scoped and audited.
+
+Risk boundary:
+
+Delete/update operations do not place broker orders, cancel broker orders, mutate AnalyzerEngine, mutate live monitoring, or project RiskState. Finalized `TradeResult` remains the authority for risk-state projection.
+
+## TradePlan Context And Recovery
+
+Phase 18A-2 makes the selected `TradePlan` the context owner for the Trading Workflow UI.
+
+Plan-scoped lifecycle records:
+
+- `TradeSetup.tradePlanId`
+- `ActiveTrade.tradePlanId`
+- `TradeEvent.tradePlanId`
+- `TradeResult.tradePlanId`
+- `TradeJournal.tradePlanId`
+
+The frontend should use selected-plan APIs for governed setups, active trades, events,
+results, journals, and dashboard summary. Global list APIs remain backward compatible,
+but the workflow screen should not mix records from different plans.
+
+Risk recovery rules:
+
+- `Reset Risk Lock` clears plan/daily STOP_TRADING lock fields only.
+- It preserves historical `TradeResult`, `TradeJournal`, realized P&L, trade counts, and capital.
+- Reset requires user ownership, a reason, and an audit log.
+- Reset is blocked while open active trades exist.
+- `Restart Plan` creates a fresh plan copy with new starting capital and copied safe settings.
+- Restart preserves old plan history and does not move old results or journals.
+- Restart is blocked while open active trades exist.
+
+`STOP_TRADING` is a risk protection state, not a bug. Recovery actions are explicit user
+actions for testing/manual recovery and must not silently bypass RiskGovernor.
+
+## User Editable Scoring Templates
+
+Phase 18B adds DB-backed scoring templates while preserving the system-template baseline.
+
+Template scopes:
+
+- `SYSTEM`: code-defined, readonly, globally available scoring templates.
+- `USER`: private user-owned templates created by duplicating a system template.
+
+Core rules:
+
+- A user template is editable only by its owner.
+- System templates cannot be modified through API calls.
+- Template sections and evaluator weights must total 100 across enabled items.
+- Templates may reference only registered evaluator keys.
+- Template config is data only; arbitrary JavaScript, formulas, and executable strings are rejected.
+- ScoreCheck can use either a system `scoringTemplateKey` or a user `scoringTemplateId`.
+- ScoreCheck stores the exact template key/id/version/scope/name used at scoring time.
+- Once a user template has been used, editing creates a new latest version instead of mutating the used version.
+- Historical ScoreChecks and TradeScoreSnapshots are not recalculated when templates change.
+
+Authority boundary:
+
+Scoring templates can influence the score and initial score permission only. They cannot mutate
+RiskGovernor state, bypass STOP_TRADING, place orders, or act as AI-driven scoring logic.
+
+## Angel India Equity And F&O Symbols
+
+Phase 18C-0 extends the universal `Symbol` registry for Angel Indian markets.
+
+Reference-data ownership:
+
+- Symbols are global reference data, not user-owned records.
+- User-specific Angel broker login is required later for live quote/WebSocket access.
+- Broker credentials and feed tokens are not exposed in symbol APIs.
+
+Supported rows:
+
+- NSE equity cash: `EQUITY` + `CASH`
+- NFO futures: `FNO` + `FUTURE`
+- NFO options: `FNO` + `OPTION`
+- MCX commodity support remains unchanged
+
+Derivative metadata:
+
+- `underlyingSymbol`
+- `expiry`
+- `strikePrice`
+- `optionType`
+- `lotSize`
+- `tickSize`
+- `segment`
+- `contractType`
+- `tradingSymbol`
+
+Search and selection:
+
+Users can search/select NSE cash, NFO futures, and NFO options through the canonical Symbol
+search API. Search remains bounded and excludes expired contracts by default.
+
+Scoring boundary:
+
+NSE cash uses existing India equity scoring. NFO futures/options have conservative baseline
+system templates that use registered deterministic evaluators only. Missing Angel sessions or
+market snapshots must remain visible as partial or stale data, never faked as live context.

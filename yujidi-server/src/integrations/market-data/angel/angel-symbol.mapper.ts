@@ -34,6 +34,10 @@ export type UniversalSymbolSet = {
   expiry?: Date;
   strikePrice?: number;
   optionType?: "CE" | "PE";
+  underlyingSymbol?: string;
+  segment?: string;
+  contractType?: string;
+  tradingSymbol?: string;
   lotSize?: number;
   tickSize?: number;
   requiresBrokerLogin: true;
@@ -102,6 +106,10 @@ const inferMarketType = (exchange: Exchange): MarketType => {
   return "EQUITY";
 };
 
+const isDerivativeExchange = (exchange: Exchange): boolean => {
+  return exchange === "NFO" || exchange === "BFO" || exchange === "MCX" || exchange === "NCDEX";
+};
+
 const inferOptionType = (symbol: string): "CE" | "PE" | undefined => {
   const normalized = symbol.trim().toUpperCase();
   if (normalized.endsWith("CE")) {
@@ -125,6 +133,9 @@ const inferInstrumentType = (
   if (!instrumentType && (exchange === "NSE" || exchange === "BSE")) {
     return "CASH";
   }
+  if ((exchange === "NSE" || exchange === "BSE") && (instrumentType === "INDEX" || symbol === row.name.trim().toUpperCase())) {
+    return "INDEX";
+  }
   if (instrumentType.startsWith("FUT") || instrumentType === "FUTCOM") {
     return "FUTURE";
   }
@@ -143,6 +154,21 @@ const parsePositiveNumber = (value: string): number | undefined => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 };
 
+const normalizeUnderlying = (row: AngelScripMasterRow): string => {
+  return (row.name.trim() || row.symbol.trim())
+    .toUpperCase()
+    .replace(/-EQ$/, "")
+    .replace(/[^A-Z0-9]/g, "");
+};
+
+const buildContractType = (instrumentType: InstrumentType, optionType: "CE" | "PE" | undefined): string => {
+  if (instrumentType === "OPTION" && optionType) return optionType;
+  if (instrumentType === "FUTURE") return "FUTURE";
+  if (instrumentType === "CASH") return "CASH";
+  if (instrumentType === "INDEX") return "INDEX";
+  return "UNKNOWN";
+};
+
 const buildUniversalSymbol = (
   row: AngelScripMasterRow,
   exchange: Exchange,
@@ -158,6 +184,15 @@ const buildUniversalSymbol = (
   }
   if (exchange === "MCX" && instrumentType === "FUTURE" && expiryLabel) {
     return `${exchange}:${name}:${expiryLabel}:FUTURE`;
+  }
+  if ((exchange === "NFO" || exchange === "BFO") && instrumentType === "OPTION" && expiryLabel && strikePrice && optionType) {
+    return `${exchange}:${name}:${expiryLabel}:${strikePrice}:${optionType}`;
+  }
+  if ((exchange === "NFO" || exchange === "BFO") && instrumentType === "FUTURE" && expiryLabel) {
+    return `${exchange}:${name}:${expiryLabel}:FUTURE`;
+  }
+  if ((exchange === "NSE" || exchange === "BSE") && instrumentType === "CASH") {
+    return `${exchange}:${row.symbol.trim().toUpperCase()}`;
   }
 
   return `${exchange}:${row.symbol.trim().toUpperCase()}`;
@@ -205,6 +240,10 @@ export const mapAngelScripToUniversalSymbol = (row: AngelScripMasterRow): Univer
   const displayName = buildDisplayName(row, exchange, instrumentType, expiryLabel, strikePrice, optionType);
   const providerSymbol = row.symbol.trim().toUpperCase();
   const name = row.name.trim().toUpperCase();
+  const underlyingSymbol = isDerivativeExchange(exchange) || instrumentType === "CASH" || instrumentType === "INDEX"
+    ? normalizeUnderlying(row)
+    : undefined;
+  const contractType = buildContractType(instrumentType, optionType);
   const searchFields = tokenizeSymbolSearch({
     symbol,
     displayName,
@@ -214,6 +253,7 @@ export const mapAngelScripToUniversalSymbol = (row: AngelScripMasterRow): Univer
     marketType,
     instrumentType,
     expiry: expiry ?? expiryLabel,
+    ...(underlyingSymbol ? { extraTokens: [underlyingSymbol, contractType] } : {}),
   });
 
   return {
@@ -229,6 +269,10 @@ export const mapAngelScripToUniversalSymbol = (row: AngelScripMasterRow): Univer
     ...(expiry ? { expiry } : {}),
     ...(strikePrice ? { strikePrice } : {}),
     ...(optionType ? { optionType } : {}),
+    ...(underlyingSymbol ? { underlyingSymbol } : {}),
+    segment: row.exch_seg.trim().toUpperCase(),
+    contractType,
+    tradingSymbol: providerSymbol,
     ...(lotSize ? { lotSize } : {}),
     ...(tickSize ? { tickSize } : {}),
     requiresBrokerLogin: true,

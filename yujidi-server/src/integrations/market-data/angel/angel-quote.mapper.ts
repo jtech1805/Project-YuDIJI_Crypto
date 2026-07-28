@@ -44,7 +44,6 @@ export const mapAngelQuoteToMarketSnapshot = ({
     providerSymbol: symbol.providerSymbol || angelQuote.tradingSymbol || symbol.symbol,
     instrumentToken: symbol.instrumentToken || angelQuote.symbolToken || "",
     mode,
-    raw: angelQuote,
   };
 
   if (symbol._id) {

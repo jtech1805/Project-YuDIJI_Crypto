@@ -23,8 +23,44 @@ interface Monitor {
   instrumentType?: string;
   marketType?: string;
   provider?: string;
-
+  exchange?: string;
+  providerSymbol?: string;
+  instrumentToken?: string;
 }
+
+const normalizeLivePriceKey = (value: string | undefined): string | null => {
+  return value?.trim() ? value.trim().toUpperCase() : null;
+};
+
+const getMonitorLivePriceKeys = (monitor: Monitor): string[] => {
+  const provider = normalizeLivePriceKey(monitor.provider);
+  const exchange = normalizeLivePriceKey(monitor.exchange);
+  const instrumentToken = normalizeLivePriceKey(monitor.instrumentToken);
+  const providerAwareKey = provider && exchange && instrumentToken
+    ? `${provider}:${exchange}:${instrumentToken}`
+    : null;
+
+  return Array.from(new Set([
+    normalizeLivePriceKey(monitor.symbol),
+    normalizeLivePriceKey(monitor.displayName),
+    normalizeLivePriceKey(monitor.providerSymbol),
+    instrumentToken,
+    providerAwareKey,
+  ].filter((key): key is string => Boolean(key))));
+};
+
+const getMonitorLiveValue = (
+  values: Record<string, number>,
+  monitor: Monitor,
+): number | undefined => {
+  for (const key of getMonitorLivePriceKeys(monitor)) {
+    const value = values[key];
+    if (value !== undefined) {
+      return value;
+    }
+  }
+  return undefined;
+};
 const triggerMeta: Record<TriggerType, { icon: typeof Zap; label: string; color: string; bg: string; ring: string }> = {
   spike: {
     icon: Zap,
@@ -97,7 +133,7 @@ function MonitorItem({
   const positive = change ? change >= 0 : false;
   const trigger = monitor?.trigger ? monitor?.trigger : 'spike'
   const threshold = monitor.thresholdPercentage
-  const symbol = monitor.displayName
+  const symbol = monitor.displayName || monitor.symbol
   // const positive = change ? change >= 0 : 0;
   const meta = triggerMeta[trigger];
   const TriggerIcon = meta?.icon;
@@ -257,8 +293,8 @@ function DashboardSidebar({
               <MonitorItem
                 key={m._id}
                 monitor={m}
-                price={livePrices[m.symbol.trim().toUpperCase()]}
-                change={livePriceschange[m.symbol.trim().toUpperCase()] ?? 0}
+                price={getMonitorLiveValue(livePrices, m)}
+                change={getMonitorLiveValue(livePriceschange, m) ?? 0}
                 onDelete={onDelete}
               />
             ))}

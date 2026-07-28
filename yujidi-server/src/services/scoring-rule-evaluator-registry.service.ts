@@ -401,4 +401,12 @@ export class ScoringRuleEvaluatorRegistryService {
     }
     return evaluator.evaluate(input);
   }
+
+  public has(evaluatorKey: string): boolean {
+    return this.evaluators.has(evaluatorKey);
+  }
+
+  public keys(): string[] {
+    return [...this.evaluators.keys()].sort();
+  }
 }

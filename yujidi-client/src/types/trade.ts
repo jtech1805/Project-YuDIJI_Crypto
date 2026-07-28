@@ -37,7 +37,10 @@ export type TradePlan = {
   maxDailyLossPercent?: number
   maxConsecutiveLosses?: number
   maxTrades?: number
+  reviewCadence?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'PLAN_END'
   createdAt: string
+  isDeleted?: boolean
+  deletedAt?: string
 }
 
 export type CreateTradePlanInput = {
@@ -56,6 +59,191 @@ export type CreateTradePlanInput = {
   reviewCadence?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'PLAN_END'
 }
 
+export type UpdateTradePlanInput = Partial<CreateTradePlanInput>
+
+export type TradePlanDashboardSummary = {
+  plan: {
+    id: string
+    name: string
+    status: TradePlan['status']
+    marketType: MarketType
+    instrumentType: InstrumentType
+    tradeStyle: string
+    planMode: TradePlan['planMode']
+    allowedTrades: number | null
+    usedTrades: number
+    remainingTrades: number | null
+  }
+  capital: {
+    startingCapital: number
+    capitalBase: number
+    totalDeposits: number
+    totalWithdrawals: number
+    realizedGrossPnl: number
+    realizedNetPnl: number
+    currentCapital: number
+    availableCapital: number
+    openRiskAmount: number
+    pnlBasis: 'CONFIRMED_NET' | 'ESTIMATED_NET' | 'GROSS_FALLBACK'
+  }
+  performance: {
+    totalClosedTrades: number
+    wins: number
+    losses: number
+    breakeven: number
+    winRate: number
+    averageR: number
+    totalRealizedR: number
+  }
+  risk: {
+    riskMode: 'NORMAL_RISK' | 'REDUCED_RISK' | 'MICRO_RISK' | 'STOP_TRADING'
+    dailyRiskUsed: number
+    planRiskUsed: number
+    maxDailyRisk: number | null
+    maxPlanRisk: number
+    canTakeNextTrade: boolean
+    blockReasons: string[]
+    stopTradingReasons?: string[]
+    resetAvailable?: boolean
+    restartAvailable?: boolean
+    hasOpenTrades?: boolean
+  }
+  latestTrades: Array<{
+    tradeResultId: string
+    activeTradeId?: string
+    symbol?: string
+    displayName?: string
+    direction?: TradeDirection
+    entryPrice?: number
+    exitPrice?: number
+    quantity?: number
+    grossPnl?: number
+    netPnl?: number
+    realizedR?: number
+    resultType?: 'WIN' | 'LOSS' | 'BREAKEVEN'
+    exitReason?: string
+    closedAt?: string
+  }>
+}
+
+export type ResetRiskLockInput = {
+  reason: string
+  resetDailyRisk?: boolean
+  resetPlanRiskLock?: boolean
+}
+
+export type ResetRiskLockResult = {
+  tradePlanId: string
+  riskMode: TradePlanDashboardSummary['risk']['riskMode']
+  canTakeNextTrade: boolean
+  message: string
+}
+
+export type RestartTradePlanInput = {
+  name?: string
+  startingCapital: number
+  archiveOldPlan?: boolean
+  reason: string
+  carrySettings?: boolean
+  activateNewPlan?: boolean
+}
+
+export type RestartTradePlanResult = {
+  oldTradePlanId: string
+  newTradePlan: TradePlan
+  oldPlanArchived: boolean
+  message: string
+}
+
+export type ScoreResourceReadinessSummary = {
+  total: number
+  ready: number
+  stale: number
+  missing: number
+  partial: number
+  blockingMissing: number
+}
+
+export type ScoreResolvedResource = {
+  role: string
+  symbolId: string
+  symbol: string
+  exchange: string
+  provider: string
+  marketType: string
+  instrumentType: string
+  required: boolean
+  source: string
+}
+
+export type ScoreResourceSnapshot = {
+  role: string
+  symbolId: string
+  symbol: string
+  price?: number
+  changePercent?: number
+  open?: number
+  high?: number
+  low?: number
+  previousClose?: number
+  vwap?: number
+  vwapPosition?: string
+  volume?: number
+  freshnessStatus: 'READY' | 'STALE' | 'MISSING' | 'PARTIAL' | 'BLOCKING_MISSING'
+  ageMs?: number
+  occurredAt?: string
+  receivedAt?: string
+  warnings: string[]
+}
+
+export type ScoreResourceSnapshotSummary = {
+  resolvedResources: ScoreResolvedResource[]
+  resourceSnapshots: ScoreResourceSnapshot[]
+  resourceReadinessSummary: ScoreResourceReadinessSummary
+  warnings: string[]
+  blockers: string[]
+}
+
+export type ScoreCheckSnapshot = {
+  _id: string
+  scoreCheckId: string
+  scoringTemplateId?: string
+  scoringTemplateKey: string
+  scoringTemplateName: string
+  scoringTemplateVersion: string
+  scoringTemplateScope: 'SYSTEM' | 'USER'
+  selectedSymbol: {
+    symbolId: string
+    symbol: string
+    exchange: string
+    provider: string
+    marketType: string
+    instrumentType: string
+  }
+  resolvedResources: ScoreResolvedResource[]
+  resourceSnapshots: ScoreResourceSnapshot[]
+  resourceReadinessSummary: ScoreResourceReadinessSummary
+  sectionBreakdown: Array<{
+    sectionKey: string
+    label?: string
+    score?: number
+    maxScore?: number
+    weight?: number
+    status?: string
+    reasonCodes?: string[]
+    warnings?: string[]
+  }>
+  finalScore: number
+  permission: TradePermission
+  scoreStatus: string
+  dataConfidence: 'HIGH' | 'MEDIUM' | 'LOW'
+  warnings: string[]
+  blockers: string[]
+  expiresAt: string
+  createdAt: string
+  updatedAt?: string
+}
+
 export type ScoreCheck = {
   _id: string
   symbolId: string
@@ -69,12 +257,21 @@ export type ScoreCheck = {
   target1: number
   target2?: number
   rewardRiskRatio?: number
+  scoringTemplateKey?: string
+  scoringTemplateId?: string
+  scoringTemplateVersion?: string
+  scoringTemplateScope?: 'SYSTEM' | 'USER'
+  scoringTemplateName?: string
   score?: number
   scoreStatus: string
   permission: TradePermission
   reasonCodes?: string[]
   warnings?: string[]
   breakdown?: Record<string, unknown>
+  resourceSnapshotSummary?: ScoreResourceSnapshotSummary
+  scoreCheckSnapshotId?: string
+  scoreCheckSnapshotExpiresAt?: string
+  scoreCheckSnapshotCreatedAt?: string
   tradeScoreSnapshotId?: string
   scoreValidUntil?: string
   convertedToTradeSetupId?: string
@@ -91,20 +288,92 @@ export type CreateScoreCheckInput = {
   stopLoss: number
   target1: number
   target2?: number
-  scoringTemplateKey:
-    | 'INDIA_EQUITY_INTRADAY_V1'
-    | 'INDIA_EQUITY_SWING_V1'
-    | 'CRYPTO_SPOT_INTRADAY_V1'
-    | 'CRYPTO_PERPETUAL_INTRADAY_V1'
-    | 'COMMODITY_MCX_INTRADAY_V1'
-  scoringTemplateVersion: string
+  scoringTemplateKey?: string
+  scoringTemplateId?: string
+  scoringTemplateVersion?: string
   dataConfidence?: 'HIGH' | 'MEDIUM' | 'LOW'
+}
+
+export type UpdateScoreCheckInput = Partial<CreateScoreCheckInput>
+
+export type ScoringTemplateSummary = {
+  id?: string
+  templateKey: string
+  baseTemplateKey: string
+  templateName: string
+  description?: string
+  scope: 'SYSTEM' | 'USER'
+  version: number
+  marketType: MarketType
+  tradeStyle: string
+  instrumentType: InstrumentType
+  status: 'ACTIVE' | 'DRAFT' | 'ARCHIVED'
+  isReadonly: boolean
+  isLatest: boolean
+  usedCount: number
+  lastUsedAt?: string
+  resourceConfig?: ScoringTemplateResourceConfig
+  allowedTradableSymbols?: string[]
+  sectionOverrides?: ScoringTemplateSectionOverride[]
+  snapshotPolicy?: ScoringTemplateSnapshotPolicy
+}
+
+export type ScoringTemplateResourceConfig = {
+  marketRegime?: {
+    marketIndexSymbolId?: string
+    bankIndexSymbolId?: string
+    volatilitySymbolId?: string
+  }
+  sectorContext?: {
+    sectorName?: string
+    sectorIndexSymbolId?: string
+  }
+  relatedSymbols?: string[]
+}
+
+export type ScoringTemplateSectionOverride = {
+  sectionKey: string
+  weight: number
+  enabled: boolean
+}
+
+export type ScoringTemplateSnapshotPolicy = {
+  captureMarketRegime: boolean
+  captureSectorContext: boolean
+  captureRelatedSymbols: boolean
+  captureAllowedTradableSymbol: boolean
+  maxSnapshotAgeSeconds: number
+}
+
+export type ScoringTemplateDetail = ScoringTemplateSummary & {
+  permissionThresholds: {
+    rejectBelow: number
+    waitBelow: number
+    takeSmallRiskBelow: number
+    takeTradeAtOrAbove: number
+  }
+  sections: Array<{
+    sectionKey: string
+    label: string
+    weight: number
+    enabled: boolean
+    missingDataPolicy: 'BLOCK' | 'PARTIAL' | 'ZERO' | 'IGNORE'
+    evaluators: Array<{
+      evaluatorKey: string
+      label: string
+      weight: number
+      enabled: boolean
+      missingDataPolicy?: 'BLOCK' | 'PARTIAL' | 'ZERO' | 'IGNORE'
+      config?: Record<string, unknown>
+    }>
+  }>
 }
 
 export type TradeSetup = {
   _id: string
   tradePlanId: string
   sourceScoreCheckId?: string
+  tradeScoreSnapshotId?: string
   symbolSnapshot: SymbolSnapshot
   direction: TradeDirection
   plannedEntry: number
@@ -121,6 +390,32 @@ export type TradeSetup = {
   reasonCodes: string[]
   warnings: string[]
   createdAt: string
+  isDeleted?: boolean
+  deletedAt?: string
+}
+
+export type UpdateTradeSetupInput = {
+  entry?: number
+  stopLoss?: number
+  target1?: number
+  target2?: number
+  expiresAt?: string
+}
+
+export type RetryTradeSetupRiskCheckInput = {
+  reason: string
+}
+
+export type RetryTradeSetupRiskCheckResult = {
+  tradeSetup: TradeSetup
+  riskDecision: {
+    permission: TradePermission
+    riskMode: string
+    reasonCodes: string[]
+    warnings: string[]
+    evaluatedAt: string
+  }
+  message: string
 }
 
 export type ConfirmActualTradeInput = {

@@ -21,6 +21,10 @@ const searchInputSchema = z.object({
   marketType: z.enum(MARKET_TYPES).optional(),
   exchange: z.enum(EXCHANGES).optional(),
   instrumentType: z.enum(INSTRUMENT_TYPES).optional(),
+  underlyingSymbol: z.string().trim().transform((value) => value.toUpperCase()).optional(),
+  expiry: z.coerce.date().optional(),
+  optionType: z.enum(["CE", "PE"]).optional(),
+  strikePrice: z.coerce.number().positive().optional(),
   includeExpired: z.boolean().default(false),
   limit: z.number().int().positive().max(MAX_LIMIT).default(DEFAULT_LIMIT),
 });
@@ -38,6 +42,11 @@ export type SymbolSearchResult = {
   providerSymbol: string;
   instrumentToken: string;
   expiry?: string;
+  underlyingSymbol?: string;
+  strikePrice?: number;
+  optionType?: "CE" | "PE";
+  lotSize?: number;
+  tickSize?: number;
   requiresBrokerLogin: boolean;
   supportedBroker: string;
 };
@@ -63,6 +72,11 @@ type SymbolSearchDocument = Record<string, unknown> & {
   providerSymbol?: string;
   instrumentToken?: string;
   expiry?: Date | string;
+  underlyingSymbol?: string;
+  strikePrice?: number;
+  optionType?: "CE" | "PE";
+  lotSize?: number;
+  tickSize?: number;
   requiresBrokerLogin?: boolean;
   supportedBroker?: string;
   status?: string;
@@ -104,6 +118,11 @@ const projection = {
   providerSymbol: 1,
   instrumentToken: 1,
   expiry: 1,
+  underlyingSymbol: 1,
+  strikePrice: 1,
+  optionType: 1,
+  lotSize: 1,
+  tickSize: 1,
   requiresBrokerLogin: 1,
   supportedBroker: 1,
   status: 1,
@@ -170,6 +189,22 @@ export class SymbolSearchService {
     if (parsed.instrumentType) {
       filter.instrumentType = parsed.instrumentType;
     }
+    if (parsed.underlyingSymbol) {
+      filter.underlyingSymbol = parsed.underlyingSymbol;
+    }
+    if (parsed.expiry) {
+      const start = new Date(parsed.expiry);
+      start.setUTCHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setUTCDate(end.getUTCDate() + 1);
+      filter.expiry = { $gte: start, $lt: end };
+    }
+    if (parsed.optionType) {
+      filter.optionType = parsed.optionType;
+    }
+    if (parsed.strikePrice !== undefined) {
+      filter.strikePrice = parsed.strikePrice;
+    }
     if (!parsed.includeExpired) {
       filter.$or = [
         { expiry: { $exists: false } },
@@ -229,6 +264,10 @@ export class SymbolSearchService {
       `marketType=${parsed.marketType ?? ""}`,
       `exchange=${parsed.exchange ?? ""}`,
       `instrumentType=${parsed.instrumentType ?? ""}`,
+      `underlyingSymbol=${parsed.underlyingSymbol ?? ""}`,
+      `expiry=${parsed.expiry?.toISOString() ?? ""}`,
+      `optionType=${parsed.optionType ?? ""}`,
+      `strikePrice=${parsed.strikePrice ?? ""}`,
       `includeExpired=${parsed.includeExpired}`,
       `limit=${parsed.limit}`,
     ].join(":");
@@ -289,6 +328,11 @@ export class SymbolSearchService {
       providerSymbol: candidate.providerSymbol ?? candidate.symbol ?? "",
       instrumentToken: candidate.instrumentToken ?? candidate.symbol ?? "",
       ...(expiry ? { expiry } : {}),
+      ...(candidate.underlyingSymbol ? { underlyingSymbol: candidate.underlyingSymbol } : {}),
+      ...(candidate.strikePrice !== undefined ? { strikePrice: candidate.strikePrice } : {}),
+      ...(candidate.optionType ? { optionType: candidate.optionType } : {}),
+      ...(candidate.lotSize !== undefined ? { lotSize: candidate.lotSize } : {}),
+      ...(candidate.tickSize !== undefined ? { tickSize: candidate.tickSize } : {}),
       requiresBrokerLogin: candidate.requiresBrokerLogin === true,
       supportedBroker: candidate.supportedBroker ?? "NONE",
     };

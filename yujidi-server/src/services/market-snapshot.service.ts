@@ -49,7 +49,7 @@ export class MarketSnapshotService {
       freshThresholdMs?: number;
       now?: () => Date;
     } = {},
-  ) {}
+  ) { }
 
   public recordTick(tick: SnapshotMarketTick): MarketSnapshot {
     if (!Number.isFinite(tick.price) || tick.price <= 0) {

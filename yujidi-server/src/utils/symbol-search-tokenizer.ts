@@ -127,6 +127,7 @@ export function tokenizeSymbolSearch(input: {
   marketType?: string | undefined;
   instrumentType?: string | undefined;
   expiry?: Date | string | undefined;
+  extraTokens?: string[] | undefined;
 }): {
   searchName: string;
   searchSymbol: string;
@@ -157,6 +158,10 @@ export function tokenizeSymbolSearch(input: {
   addExpiryTokens(tokens, input.displayName);
   addProviderSymbolHints(tokens, input.providerSymbol);
   expandInstrumentType(tokens, input.instrumentType);
+  for (const token of input.extraTokens ?? []) {
+    addToken(tokens, token);
+    addRawToken(tokens, token);
+  }
 
   return {
     searchName,

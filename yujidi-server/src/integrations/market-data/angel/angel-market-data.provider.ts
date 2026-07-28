@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import pino from "pino";
 import WebSocket from "ws";
 
-import type { NormalizedMarketTick } from "../../../types/market-data.types.js";
+import type { Exchange, MarketType, NormalizedMarketTick } from "../../../types/market-data.types.js";
 import { parseAngelLtpPacket } from "./angel-ltp-packet.parser.js";
 
 const logger = pino({ name: "angel-market-data-provider" });
@@ -21,10 +21,17 @@ const ANGEL_EXCHANGE_TYPE_BY_EXCHANGE: Record<string, number> = {
   MCX: 5,
 };
 
+const ANGEL_EXCHANGE_BY_EXCHANGE_TYPE = new Map<number, Exchange>(
+  Object.entries(ANGEL_EXCHANGE_TYPE_BY_EXCHANGE).map(([exchange, exchangeType]) => [
+    exchangeType,
+    exchange as Exchange,
+  ]),
+);
+
 export type AngelMarketSubscription = {
   userId: string;
-  marketType: "COMMODITY";
-  exchange: "MCX";
+  marketType: MarketType;
+  exchange: Exchange;
   symbol: string;
   displayName: string;
   providerSymbol: string;
@@ -145,7 +152,7 @@ export class AngelMarketDataProvider {
 
   public async subscribe(subscription: AngelMarketSubscription): Promise<void> {
     await this.ensureOpen();
-    this.subscriptionsByToken.set(subscription.instrumentToken, subscription);
+    this.subscriptionsByToken.set(this.subscriptionLookupKey(subscription.exchange, subscription.instrumentToken), subscription);
     this.sendSubscriptionMessage(1, subscription);
   }
 
@@ -153,7 +160,7 @@ export class AngelMarketDataProvider {
     if (this.socket?.readyState === WebSocket.OPEN) {
       this.sendSubscriptionMessage(0, subscription);
     }
-    this.subscriptionsByToken.delete(subscription.instrumentToken);
+    this.subscriptionsByToken.delete(this.subscriptionLookupKey(subscription.exchange, subscription.instrumentToken));
   }
 
   public isConnected(): boolean {
@@ -212,10 +219,13 @@ export class AngelMarketDataProvider {
     try {
       const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data as ArrayBuffer);
       const packet = parseAngelLtpPacket(buffer);
-      const subscription = this.subscriptionsByToken.get(packet.token);
+      const exchange = ANGEL_EXCHANGE_BY_EXCHANGE_TYPE.get(packet.exchangeType);
+      const subscription = exchange
+        ? this.subscriptionsByToken.get(this.subscriptionLookupKey(exchange, packet.token))
+        : this.subscriptionsByToken.get(packet.token);
       if (!subscription) {
         logger.warn(
-          { userId: this.options.userId, instrumentToken: packet.token },
+          { userId: this.options.userId, exchangeType: packet.exchangeType, instrumentToken: packet.token },
           "Angel LTP packet received for unknown token",
         );
         return;
@@ -259,5 +269,9 @@ export class AngelMarketDataProvider {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
+  }
+
+  private subscriptionLookupKey(exchange: Exchange, instrumentToken: string): string {
+    return `${exchange}:${instrumentToken}`;
   }
 }

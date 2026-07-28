@@ -902,6 +902,7 @@ export class WebSocketManager {
       exchange: tick.exchange,
       instrumentToken: tick.instrumentToken,
     });
+    const subscription = this.subscriptionMetadata.get(subscriptionKey);
     const previousPrice = this.previousMarketTickPrices.get(subscriptionKey);
     const previousClose = previousPrice ?? tick.price;
     const priceChangePercent = previousPrice && previousPrice > 0
@@ -909,13 +910,16 @@ export class WebSocketManager {
       : 0;
     this.previousMarketTickPrices.set(subscriptionKey, tick.price);
     try {
+
       const marketSnapshot = sharedMarketSnapshotService.recordTick({
         provider: tick.provider,
         exchange: tick.exchange,
         marketType: tick.marketType,
         userId: tick.userId,
-        symbol: tick.symbol,
-        ...(tick.providerSymbol ? { providerSymbol: tick.providerSymbol } : {}),
+        symbol: subscription?.symbol ?? tick.symbol,
+        ...(subscription?.providerSymbol || tick.providerSymbol
+          ? { providerSymbol: subscription?.providerSymbol ?? tick.providerSymbol }
+          : {}),
         instrumentToken: tick.instrumentToken,
         price: tick.price,
         ...(tick.volume !== undefined ? { volume: tick.volume } : {}),
@@ -933,7 +937,7 @@ export class WebSocketManager {
           event: "MARKET_SNAPSHOT_ANGEL_TICK_REJECTED",
           userId: tick.userId,
           exchange: tick.exchange,
-          symbol: tick.symbol,
+          symbol: subscription?.symbol ?? tick.symbol,
           error,
         },
         "Market snapshot enrichment rejected an Angel tick",
@@ -945,7 +949,7 @@ export class WebSocketManager {
       provider: tick.provider,
       marketType: tick.marketType,
       exchange: tick.exchange,
-      symbol: tick.symbol,
+      symbol: subscription?.symbol ?? tick.symbol,
       instrumentToken: tick.instrumentToken,
       price: tick.price,
       currentPrice: tick.price.toString(),
@@ -953,11 +957,13 @@ export class WebSocketManager {
       priceChangePercent: priceChangePercent.toFixed(3),
       timestamp: tick.timestamp,
     };
-    if (tick.displayName) {
-      payload.displayName = tick.displayName;
+    const displayName = subscription?.displayName ?? tick.displayName;
+    if (displayName) {
+      payload.displayName = displayName;
     }
-    if (tick.providerSymbol) {
-      payload.providerSymbol = tick.providerSymbol;
+    const providerSymbol = subscription?.providerSymbol ?? tick.providerSymbol;
+    if (providerSymbol) {
+      payload.providerSymbol = providerSymbol;
     }
 
     for (const [client, subscriptions] of this.clientSubscriptions.entries()) {

@@ -96,7 +96,7 @@ export class MonitorService {
 
   public constructor(
     private readonly dependencies: Partial<MonitorServiceDependencies> = {},
-  ) {}
+  ) { }
 
   public async getSymbols(): Promise<SymbolDocument[]> {
     const cachedSymbols = MonitorService.symbolListCache;
