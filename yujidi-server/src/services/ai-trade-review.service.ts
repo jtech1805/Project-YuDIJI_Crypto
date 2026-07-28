@@ -15,6 +15,7 @@ import {
   AiTradeReviewContextService,
   type TradeJournalAiContext,
 } from "./ai-trade-review-context.service.js";
+import { llmTraceService, type LlmTraceService } from "./llm-trace.service.js";
 import { sharedLlmService } from "./llm.service.js";
 
 export const POST_TRADE_REVIEW_PROMPT_VERSION = "post-trade-review-v1";
@@ -35,6 +36,11 @@ export const postTradeReviewOutputSchema = z.object({
 }).strict();
 
 export type PostTradeReviewOutput = z.infer<typeof postTradeReviewOutputSchema>;
+type PostTradeReviewValidationFailure = {
+  success: false;
+  stage: "SCHEMA" | "SEMANTIC";
+  errors: string[];
+};
 
 const forbiddenRules = [
   { code: "FORBIDDEN_TRADE_RECOMMENDATION", pattern: /\b(?:strong[\s_-]*buy|strong[\s_-]*sell|buy|sell)\b/i },
@@ -68,18 +74,19 @@ const semanticValidationErrors = (value: unknown): string[] => {
 
 export const validatePostTradeReviewOutput = (
   value: unknown,
-): { success: true; data: PostTradeReviewOutput } | { success: false; errors: string[] } => {
+): { success: true; data: PostTradeReviewOutput } | PostTradeReviewValidationFailure => {
   const parsed = postTradeReviewOutputSchema.safeParse(value);
   if (!parsed.success) {
     return {
       success: false,
+      stage: "SCHEMA",
       errors: parsed.error.issues.map((issue) => `${issue.path.join(".") || "output"}: ${issue.message}`),
     };
   }
 
   const semanticErrors = semanticValidationErrors(parsed.data);
   return semanticErrors.length
-    ? { success: false, errors: semanticErrors }
+    ? { success: false, stage: "SEMANTIC", errors: semanticErrors }
     : { success: true, data: parsed.data };
 };
 
@@ -115,6 +122,7 @@ type Dependencies = {
   auditLogService: Pick<AuditLogService, "record">;
   contextService: Pick<AiTradeReviewContextService, "build" | "hash">;
   llmService: ReviewLlmService;
+  llmTraceService: Pick<LlmTraceService, "record">;
   now: () => Date;
 };
 type RecordShape = Record<string, any>;
@@ -156,6 +164,18 @@ export class AiTradeReviewService {
     let fallbackOutput: PostTradeReviewOutput | undefined;
     let validationErrors: string[] = [];
     let warnings: string[] = [];
+    const provider = this.getLlmService().getProviderMetadata();
+    const startedAt = this.getNow();
+    const traceId = randomUUID();
+    let completedAt: Date;
+    let traceStatus: "COMPLETED" | "VALIDATION_FAILED" | "PROVIDER_FAILED";
+    let traceValidation: {
+      parseSucceeded: boolean;
+      schemaSucceeded: boolean;
+      semanticSucceeded: boolean;
+      errors?: string[];
+    };
+    let traceFailureCode: string | undefined;
 
     try {
       const candidate = await this.getLlmService().generatePostTradeReview({
@@ -165,7 +185,18 @@ export class AiTradeReviewService {
       });
       const validation = validatePostTradeReviewOutput(candidate);
       if (!validation.success) {
+        completedAt = this.getNow();
         validationErrors = validation.errors;
+        traceStatus = "VALIDATION_FAILED";
+        traceFailureCode = validation.stage === "SCHEMA"
+          ? "POST_TRADE_REVIEW_SCHEMA_VALIDATION_FAILED"
+          : "POST_TRADE_REVIEW_SEMANTIC_VALIDATION_FAILED";
+        traceValidation = {
+          parseSucceeded: true,
+          schemaSucceeded: validation.stage !== "SCHEMA",
+          semanticSucceeded: false,
+          errors: validationErrors.slice(0, 20).map((error) => error.slice(0, 500)),
+        };
         await this.audit("AI_OUTPUT_REJECTED", userId, journalId, correlationId, {
           validationErrors,
         });
@@ -173,18 +204,77 @@ export class AiTradeReviewService {
         fallbackOutput = output;
         status = "FALLBACK_USED";
       } else {
+        completedAt = this.getNow();
+        traceStatus = "COMPLETED";
+        traceValidation = {
+          parseSucceeded: true,
+          schemaSucceeded: true,
+          semanticSucceeded: true,
+        };
         output = validation.data;
         aiOutput = output;
         status = "COMPLETED";
         await this.audit("AI_OUTPUT_VALIDATED", userId, journalId, correlationId);
       }
     } catch {
+      completedAt = this.getNow();
+      traceStatus = "PROVIDER_FAILED";
+      traceFailureCode = "POST_TRADE_REVIEW_PROVIDER_FAILED";
+      traceValidation = {
+        parseSucceeded: false,
+        schemaSucceeded: false,
+        semanticSucceeded: false,
+      };
       warnings = ["LLM_REQUEST_FAILED"];
       await this.audit("AI_OUTPUT_REJECTED", userId, journalId, correlationId, { warnings });
       output = this.buildFallback(context);
       fallbackOutput = output;
       status = "FALLBACK_USED";
     }
+
+    const traceInput = {
+      traceId,
+      correlationId,
+      taskType: "POST_TRADE_REVIEW" as const,
+      userId,
+      source: {
+        entityType: "TRADE_JOURNAL",
+        entityId: journalId,
+      },
+      provider: provider.name,
+      ...(provider.modelName ? { model: provider.modelName } : {}),
+      promptVersion: POST_TRADE_REVIEW_PROMPT_VERSION,
+      schemaVersion: POST_TRADE_REVIEW_SCHEMA_VERSION,
+      startedAt,
+      completedAt,
+      latencyMs: Math.max(0, completedAt.getTime() - startedAt.getTime()),
+      inputReference: {
+        hash: contextHash,
+        redactedSummary: {
+          sourceType: "TRADE_JOURNAL",
+          resultType: context.finalizedResult.resultType,
+          pnlBasis: context.finalizedResult.pnlBasis,
+          followedPlan: context.processEvidence.followedPlan,
+          ruleViolationCount: context.processEvidence.ruleViolations.length,
+          mistakeTagCount: context.processEvidence.mistakeTags.length,
+        },
+      },
+      outputReference: {
+        fieldSummary: {
+          processQuality: output.processQuality,
+          confidence: output.confidence,
+          strengthCount: output.strengths.length,
+          mistakeCount: output.keyMistakes.length,
+          riskNoteCount: output.riskNotes.length,
+          suggestionCount: output.improvementSuggestions.length,
+        },
+      },
+      validation: traceValidation,
+      fallbackUsed: status === "FALLBACK_USED",
+      ...(traceFailureCode ? { failureCode: traceFailureCode } : {}),
+      status: traceStatus,
+    };
+    void this.getLlmTraceService().record(traceInput).catch(() => undefined);
 
     if (status === "FALLBACK_USED") {
       await this.audit("AI_FALLBACK_USED", userId, journalId, correlationId, {
@@ -194,7 +284,6 @@ export class AiTradeReviewService {
     }
 
     const generatedAt = this.getNow();
-    const provider = this.getLlmService().getProviderMetadata();
     const explanation = normalizeRecord<RecordShape>(await this.getExplanationRepository().create({
       userId: toObjectId(userId, "user id"),
       taskType: "POST_TRADE_REVIEW",
@@ -352,6 +441,9 @@ export class AiTradeReviewService {
   }
   private getLlmService(): ReviewLlmService {
     return this.dependencies.llmService ?? sharedLlmService;
+  }
+  private getLlmTraceService(): Pick<LlmTraceService, "record"> {
+    return this.dependencies.llmTraceService ?? llmTraceService;
   }
   private getNow(): Date {
     return this.dependencies.now?.() ?? new Date();

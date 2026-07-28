@@ -5,13 +5,13 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-Phase 0D — Feature-Flag Scaffolding
+Phase 0E-2 — Post-Trade Review Trace Integration
 
 Last completed acceptance gate:
-Phase 0C — LLM Call Inventory And Trace Design
+Phase 0E-1 — LLM Trace Foundation
 
 Next smallest task:
-Complete Phase 0D by adding typed default-OFF feature flags, startup validation, and focused config tests without connecting flags to product behavior.
+Complete Phase 0E-2 by emitting one metadata-only trace for each attempted post-trade review provider call without changing review behavior.
 
 Characterization-suite requirement:
 The scoring characterization suite is mandatory for every later scoring-related implementation. Existing expectations must not be changed merely to make a later implementation pass.
@@ -114,7 +114,7 @@ LLM inventory, trace design, ADR-006, ADR index and phase log are internally con
 ### Phase 0D — Feature-Flag Scaffolding
 
 Status:
-IN_PROGRESS
+COMPLETE
 
 Objective:
 Introduce default-OFF feature-flag scaffolding for future scoring architecture capabilities.
@@ -149,13 +149,58 @@ Dedicated feature-flag tests, existing backend regression suite, typecheck, opti
 
 ## Future Phase Outline
 
-### Phase 0E — LLM Trace Wrapper Implementation
+### Phase 0E-1 — LLM Trace Foundation
+
+Status:
+COMPLETE
+
+Objective:
+Implement the approved provider-independent LLM trace contract, append-oriented model, and best-effort persistence service.
+
+Files added:
+- `yujidi-server/src/types/llm-trace.types.ts`
+- `yujidi-server/src/models/llm-trace.model.ts`
+- `yujidi-server/src/services/llm-trace.service.ts`
+- `yujidi-server/tests/unit/services/llm-trace.service.test.ts`
+- `yujidi-server/tests/unit/models/llm-trace.model.test.ts`
+
+Integration state:
+No analyzer alert, Copilot chat, post-trade review, `LlmService`, provider interface, or Groq workflow is integrated with trace persistence yet.
+
+Persistence behavior:
+Trace writes are metadata-first and best effort. Persistence failures are sanitized, logged, and never fail the calling workflow.
+
+### Phase 0E-2 — LLM Trace Workflow Integration
+
+Status:
+IN_PROGRESS
+
+Scope:
+Post-trade review only.
+
+Files modified:
+- `yujidi-server/src/services/ai-trade-review.service.ts`
+- `yujidi-server/tests/unit/services/ai-trade-review.service.test.ts`
+- `PHASE_LOG.md`
+
+Trace behavior:
+Each attempted post-trade review provider call emits exactly one finalized, metadata-only trace. Valid output, schema validation failure, semantic validation failure, and provider failure have distinct approved trace metadata. Trace persistence is non-blocking and best effort.
+
+Preserved behavior:
+Review output and deterministic fallback behavior, `AiExplanation` persistence, journal updates, API behavior, and existing audit actions and ordering remain unchanged. Requests rejected before provider invocation are not traced.
+
+Integration state:
+Analyzer alert and Copilot chat workflows remain unintegrated.
+
+### Phase 0E-3 — LLM Trace Operational Queries
 
 Status:
 PENDING
 
-Objective:
-Implement approved LLM trace wrapper behavior after inventory and design are accepted.
+### Phase 0E-4 — LLM Trace Acceptance Gate
+
+Status:
+PENDING
 
 ### Phase 1 — Evidence Foundation
 

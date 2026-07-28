@@ -5,8 +5,11 @@ import { Types } from "mongoose";
 import { AiTradeReviewContextService } from "../../../src/services/ai-trade-review-context.service.js";
 import {
   AiTradeReviewService,
+  POST_TRADE_REVIEW_PROMPT_VERSION,
+  POST_TRADE_REVIEW_SCHEMA_VERSION,
   validatePostTradeReviewOutput,
 } from "../../../src/services/ai-trade-review.service.js";
+import type { CreateLlmTraceInput } from "../../../src/types/llm-trace.types.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 const otherUserId = "69e64c5f9042aac89c8c83f9";
@@ -89,10 +92,15 @@ const createHarness = (options: {
   journals?: Record<string, any>[];
   llmResult?: unknown;
   llmError?: Error;
+  traceError?: Error;
+  nowValues?: Date[];
 } = {}) => {
   const journals = options.journals ?? [makeJournal()];
   const explanations: Record<string, any>[] = [];
   const audits: Record<string, any>[] = [];
+  const traces: CreateLlmTraceInput[] = [];
+  let llmCallCount = 0;
+  let nowIndex = 0;
   const tradeResult = { status: "FINALIZED", realizedR: 1.84 };
   const riskState = { totalTrades: 1, netPnl: 92 };
   const journalRepository = {
@@ -128,22 +136,31 @@ const createHarness = (options: {
     journalRepository,
     explanationRepository,
     auditLogService: { record: async (event) => { audits.push(event); } },
+    llmTraceService: {
+      record: async (input) => {
+        if (options.traceError) throw options.traceError;
+        traces.push(input);
+      },
+    },
     llmService: {
       generatePostTradeReview: async (input) => {
+        llmCallCount += 1;
         receivedContext = input.context;
         if (options.llmError) throw options.llmError;
         return options.llmResult ?? validOutput;
       },
       getProviderMetadata: () => ({ name: "test-provider", modelName: "test-model" }),
     },
-    now: () => fixedNow,
+    now: () => options.nowValues?.[nowIndex++] ?? fixedNow,
   });
   return {
     audits,
     explanations,
     journals,
+    llmCallCount: () => llmCallCount,
     riskState,
     service,
+    traces,
     tradeResult,
     receivedContext: () => receivedContext,
   };
@@ -154,11 +171,15 @@ test("cannot generate review for non-owned journal", async () => {
     journals: [makeJournal({ userId: new Types.ObjectId(otherUserId) })],
   });
   await assert.rejects(harness.service.generateReview(userId, journalId), /TRADE_JOURNAL_NOT_FOUND/);
+  assert.equal(harness.llmCallCount(), 0);
+  assert.equal(harness.traces.length, 0);
 });
 
 test("cannot generate review for non-finalized journal", async () => {
   const harness = createHarness({ journals: [makeJournal({ status: "DRAFT" })] });
   await assert.rejects(harness.service.generateReview(userId, journalId), /FINALIZED/);
+  assert.equal(harness.llmCallCount(), 0);
+  assert.equal(harness.traces.length, 0);
 });
 
 test("context builder excludes secrets, raw payloads, and provider tokens", () => {
@@ -176,6 +197,39 @@ test("valid model output creates a COMPLETED explanation", async () => {
   assert.equal(explanation.status, "COMPLETED");
   assert.deepEqual(explanation.aiOutput, validOutput);
   assert.equal(explanation.fallbackOutput, undefined);
+  assert.equal(harness.traces.length, 1);
+  const trace = harness.traces[0];
+  assert.equal(trace?.status, "COMPLETED");
+  assert.equal(trace?.taskType, "POST_TRADE_REVIEW");
+  assert.equal(trace?.fallbackUsed, false);
+  assert.equal(trace?.correlationId, harness.audits[0]?.correlationId);
+  assert.equal(trace?.promptVersion, POST_TRADE_REVIEW_PROMPT_VERSION);
+  assert.equal(trace?.schemaVersion, POST_TRADE_REVIEW_SCHEMA_VERSION);
+  assert.equal(trace?.provider, explanation.modelProvider);
+  assert.equal(trace?.model, explanation.modelName);
+  assert.deepEqual(trace?.validation, {
+    parseSucceeded: true,
+    schemaSucceeded: true,
+    semanticSucceeded: true,
+  });
+  assert.equal(trace?.inputReference?.hash, explanation.contextHash);
+  assert.deepEqual(trace?.inputReference?.redactedSummary, {
+    sourceType: "TRADE_JOURNAL",
+    resultType: "WIN",
+    pnlBasis: "CONFIRMED_NET",
+    followedPlan: true,
+    ruleViolationCount: 1,
+    mistakeTagCount: 1,
+  });
+  assert.deepEqual(trace?.outputReference?.fieldSummary, {
+    processQuality: "MIXED_PROCESS",
+    confidence: "HIGH",
+    strengthCount: 1,
+    mistakeCount: 1,
+    riskNoteCount: 1,
+    suggestionCount: 1,
+  });
+  assert.equal(trace?.tokenUsage, undefined);
 });
 
 test("valid output updates only journal AI reference fields", async () => {
@@ -200,6 +254,16 @@ test("invalid model schema creates deterministic fallback", async () => {
   assert.equal(explanation.aiOutput, undefined);
   assert.match(explanation.summary, /finalized as a WIN/);
   assert.equal(explanation.validationErrors.length > 0, true);
+  assert.equal(harness.traces.length, 1);
+  assert.equal(harness.traces[0]?.status, "VALIDATION_FAILED");
+  assert.equal(harness.traces[0]?.failureCode, "POST_TRADE_REVIEW_SCHEMA_VALIDATION_FAILED");
+  assert.equal(harness.traces[0]?.fallbackUsed, true);
+  assert.deepEqual(harness.traces[0]?.validation, {
+    parseSucceeded: true,
+    schemaSucceeded: false,
+    semanticSucceeded: false,
+    errors: explanation.validationErrors,
+  });
 });
 
 test("LLM failure creates deterministic fallback", async () => {
@@ -207,12 +271,25 @@ test("LLM failure creates deterministic fallback", async () => {
   const explanation = await harness.service.generateReview(userId, journalId);
   assert.equal(explanation.status, "FALLBACK_USED");
   assert.deepEqual(explanation.warnings, ["LLM_REQUEST_FAILED"]);
+  assert.equal(harness.traces.length, 1);
+  assert.equal(harness.traces[0]?.status, "PROVIDER_FAILED");
+  assert.equal(harness.traces[0]?.failureCode, "POST_TRADE_REVIEW_PROVIDER_FAILED");
+  assert.equal(harness.traces[0]?.fallbackUsed, true);
+  assert.deepEqual(harness.traces[0]?.validation, {
+    parseSucceeded: false,
+    schemaSucceeded: false,
+    semanticSucceeded: false,
+  });
+  assert.equal(JSON.stringify(harness.traces).includes("provider unavailable"), false);
 });
 
 test("validator rejects forbidden trade recommendation language", () => {
   const result = validatePostTradeReviewOutput({ ...validOutput, summary: "BUY this instrument now." });
   assert.equal(result.success, false);
-  if (!result.success) assert.equal(result.errors.includes("FORBIDDEN_TRADE_RECOMMENDATION"), true);
+  if (!result.success) {
+    assert.equal(result.stage, "SEMANTIC");
+    assert.equal(result.errors.includes("FORBIDDEN_TRADE_RECOMMENDATION"), true);
+  }
 });
 
 test("validator rejects order-placement instructions", () => {
@@ -246,7 +323,84 @@ test("validator rejects missing required summary", () => {
   const { summary: _summary, ...withoutSummary } = validOutput;
   const result = validatePostTradeReviewOutput(withoutSummary);
   assert.equal(result.success, false);
-  if (!result.success) assert.equal(result.errors.some((error) => error.startsWith("summary:")), true);
+  if (!result.success) {
+    assert.equal(result.stage, "SCHEMA");
+    assert.equal(result.errors.some((error) => error.startsWith("summary:")), true);
+  }
+});
+
+test("semantic-invalid output creates fallback and a semantic failure trace", async () => {
+  const harness = createHarness({
+    llmResult: { ...validOutput, summary: "BUY this instrument now." },
+  });
+
+  const explanation = await harness.service.generateReview(userId, journalId);
+
+  assert.equal(explanation.status, "FALLBACK_USED");
+  assert.match(explanation.summary, /finalized as a WIN/);
+  assert.equal(harness.traces[0]?.status, "VALIDATION_FAILED");
+  assert.equal(
+    harness.traces[0]?.failureCode,
+    "POST_TRADE_REVIEW_SEMANTIC_VALIDATION_FAILED",
+  );
+  assert.deepEqual(harness.traces[0]?.validation, {
+    parseSucceeded: true,
+    schemaSucceeded: true,
+    semanticSucceeded: false,
+    errors: ["FORBIDDEN_TRADE_RECOMMENDATION"],
+  });
+});
+
+test("trace metadata excludes context, output text, prices, P&L, notes, and secrets", async () => {
+  const harness = createHarness();
+  await harness.service.generateReview(userId, journalId);
+  const serialized = JSON.stringify(harness.traces[0]);
+
+  for (const forbidden of [
+    "userNotes",
+    "nextTimeFocus",
+    validOutput.summary,
+    "plannedEntry",
+    "actualEntry",
+    "exitPrice",
+    "grossPnl",
+    "netPnl",
+    "apiKey",
+    "feedToken",
+    "authorization",
+    "must-not-leak",
+  ]) {
+    assert.equal(serialized.includes(forbidden), false, `trace contains ${forbidden}`);
+  }
+});
+
+test("trace timestamps and latency use the injected clock and cannot be negative", async () => {
+  const startedAt = new Date("2026-07-28T10:00:01.000Z");
+  const completedAt = new Date("2026-07-28T10:00:00.500Z");
+  const generatedAt = new Date("2026-07-28T10:00:02.000Z");
+  const harness = createHarness({ nowValues: [startedAt, completedAt, generatedAt] });
+
+  const explanation = await harness.service.generateReview(userId, journalId);
+
+  assert.equal(harness.traces[0]?.startedAt, startedAt);
+  assert.equal(harness.traces[0]?.completedAt, completedAt);
+  assert.equal(harness.traces[0]?.latencyMs, 0);
+  assert.equal(explanation.generatedAt, generatedAt);
+});
+
+test("trace persistence rejection cannot change successful review behavior", async () => {
+  const harness = createHarness({ traceError: new Error("trace unavailable") });
+
+  const explanation = await harness.service.generateReview(userId, journalId);
+
+  assert.equal(explanation.status, "COMPLETED");
+  assert.equal(harness.explanations.length, 1);
+  assert.equal(String((harness.journals[0] as Record<string, any>).aiReviewId), explanationId);
+  assert.deepEqual(harness.audits.map((event) => event.action), [
+    "AI_EXPLANATION_REQUESTED",
+    "AI_OUTPUT_VALIDATED",
+    "AI_EXPLANATION_STORED",
+  ]);
 });
 
 test("AI review does not mutate TradeResult or risk state", async () => {
