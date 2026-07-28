@@ -74,3 +74,4 @@ If these artifacts disagree, current production code and accepted ADRs must be r
 | ADR-003 | Preserve public scoring contracts | ACCEPTED | Phase 0B | Public scoring output fields remain backward compatible during migration. | None | None |
 | ADR-004 | New capabilities require default-OFF feature flags | ACCEPTED | Phase 0B | Future scoring architecture capabilities must be guarded by explicit feature flags that default OFF. | None | None |
 | ADR-005 | Characterization suite is the regression gate | ACCEPTED | Phase 0B | Phase 0A characterization tests and full backend tests are mandatory gates for later scoring-related phases. | None | None |
+| ADR-006 | Shared provider-independent LLM trace contract | ACCEPTED | Phase 0C | All active LLM workflows will use one metadata-first trace contract that is provider-independent and best effort. | None | None |

@@ -5,19 +5,19 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-Phase 0B — ADR Foundation and Phase Log
+Phase 0C — LLM Call Inventory And Trace Design
 
 Last completed acceptance gate:
-Phase 0A — Scoring Characterization
+Phase 0B — ADR Foundation and Phase Log
 
 Next smallest task:
-Complete Phase 0B by creating the ADR index, ADR-001 through ADR-005, and this phase log.
+Complete Phase 0C by documenting active LLM workflows, freezing the shared trace contract, adding ADR-006, and updating the ADR index.
 
 Characterization-suite requirement:
 The scoring characterization suite is mandatory for every later scoring-related implementation. Existing expectations must not be changed merely to make a later implementation pass.
 
 Feature-flag state:
-Future scoring architecture feature flags are documented in ADR-004 but are not implemented in Phase 0B. All future meaningful scoring architecture capabilities must default OFF when introduced.
+Future scoring architecture feature flags are documented in ADR-004 but are not implemented in Phase 0C. All future meaningful scoring architecture and LLM trace capabilities must default OFF when introduced.
 
 Known constraints:
 - Legacy scoring remains authoritative during the migration.
@@ -67,7 +67,7 @@ pending user-provided commit hash
 ### Phase 0B — ADR Foundation and Phase Log
 
 Status:
-IN_PROGRESS
+COMPLETE
 
 Objective:
 Establish architecture decision history and phase execution tracking.
@@ -81,15 +81,37 @@ documented only, not implemented
 Acceptance gate:
 ADR index, ADR-001 through ADR-005 and `PHASE_LOG.md` exist and are internally consistent.
 
-## Future Phase Outline
-
 ### Phase 0C — LLM Call Inventory And Trace Design
 
 Status:
-PENDING
+IN_PROGRESS
 
 Objective:
 Inventory existing LLM calls and design trace boundaries before implementation.
+
+Production code changed:
+No
+
+Active LLM workflows:
+- Analyzer alert report.
+- Copilot chat.
+- Post-trade review.
+
+Artifacts:
+- `docs/ai/LLM_CALL_INVENTORY.md`
+- `docs/design/LLM_TRACE_DESIGN.md`
+- `docs/adr/ADR-006-shared-provider-independent-llm-trace-contract.md`
+
+Feature flags:
+documented only, not implemented
+
+Known architectural debt:
+Copilot currently returns LLM-generated `isApproved`. Future architecture requires deterministic systems to own trade permission. Phase 0C records this debt and does not change behavior.
+
+Acceptance gate:
+LLM inventory, trace design, ADR-006, ADR index and phase log are internally consistent.
+
+## Future Phase Outline
 
 ### Phase 0D — Feature-Flag Scaffolding
 
