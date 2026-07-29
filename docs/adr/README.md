@@ -76,3 +76,5 @@ If these artifacts disagree, current production code and accepted ADRs must be r
 | ADR-005 | Characterization suite is the regression gate | ACCEPTED | Phase 0B | Phase 0A characterization tests and full backend tests are mandatory gates for later scoring-related phases. | None | None |
 | ADR-006 | Shared provider-independent LLM trace contract | ACCEPTED | Phase 0C | All active LLM workflows will use one metadata-first trace contract that is provider-independent and best effort. | None | None |
 | ADR-007 | Append-only Evidence foundation | ACCEPTED | Phase 1A | Evidence stores immutable provider-independent observations and append-only revocations beside authoritative legacy scoring. | None | None |
+| ADR-008 | Provider-independent Evidence ingestion | ACCEPTED | Phase 1B | Strict candidates are normalized, canonically hashed, deduplicated, and persisted through an append-only provider-independent boundary. | None | None |
+| ADR-009 | Evidence lifecycle resolution | ACCEPTED | Phase 1C | Lifecycle state is derived deterministically at read time from immutable Evidence history and an explicit evaluation time. | None | None |

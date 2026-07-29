@@ -5,13 +5,13 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-Phase 1A — Evidence Contract and Persistence
+Phase 1C — Evidence Lifecycle Resolution
 
 Last completed acceptance gate:
-Phase 0 — Baseline Lock and Observability Scaffolding
+Phase 1B — Evidence Ingestion and Deduplication
 
 Next smallest task:
-Complete Phase 1A by adding the accepted Evidence ADR, typed contract, append-only model, and create-only repository without runtime integration.
+Complete Phase 1C verification for deterministic read-time lifecycle resolution without adding a runtime consumer.
 
 Phase 0 status:
 COMPLETE
@@ -238,7 +238,7 @@ Request validation, session ownership, recent-history selection, deterministic t
 ### Phase 1A — Evidence Contract and Persistence
 
 Status:
-IN_PROGRESS
+COMPLETE
 
 Objective:
 Add the provider-independent Evidence persistence foundation beside legacy scoring without making it authoritative.
@@ -272,14 +272,82 @@ Provider-internal LLM failure stages remain indistinguishable at analyzer and Co
 ### Phase 1B — Evidence Ingestion and Deduplication
 
 Status:
-PENDING
+COMPLETE
 
-### Phase 1C — Factor Registry Foundation
+Objective:
+Add a provider-independent candidate, normalization, canonical deduplication, and ingestion boundary while preserving append-only Evidence.
+
+Artifacts:
+- `docs/adr/ADR-008-provider-independent-evidence-ingestion.md`
+- `yujidi-server/src/types/evidence-ingestion.types.ts`
+- `yujidi-server/src/ports/evidence-provider-adapter.port.ts`
+- `yujidi-server/src/services/evidence-candidate-normalizer.service.ts`
+- `yujidi-server/src/services/evidence-deduplication-key.service.ts`
+- `yujidi-server/src/services/evidence-ingestion.service.ts`
+- focused service tests for normalization, deduplication, and ingestion
+
+Normalization:
+Candidates reuse the Phase 1A discriminated Evidence union without persistence-owned identifiers. Validation rejects malformed, mixed, untrimmed, incorrectly typed, or unknown data rather than coercing it.
+
+Deduplication:
+Canonical normalized identity is recursively key-sorted, serializes dates as UTC ISO strings, includes an explicit `v1` version, and is hashed with SHA-256. Duplicate-key races map to `DUPLICATE` only when structured MongoDB metadata identifies the unique deduplication index and its winning record can be read.
+
+Append-only behavior:
+The ingestion service calls only approved reads and repository `create()`. No update, replace, delete, remove, upsert, bulk mutation, mark-revoked, or mark-superseded method exists.
+
+Runtime and provider integration:
+None. Phase 1B defines only the generic adapter boundary. No concrete provider, scoring, alert, controller, route, scheduler, WebSocket, LLM, or frontend integration exists.
+
+Authority and flags:
+Legacy scoring remains authoritative. `EVIDENCE_PIPELINE_ENABLED` remains default `false` and unused.
+
+Known test-discovery limitation:
+The default backend `npm test` glob discovers the new service tests but still does not discover model, repository, controller, or configuration directories without focused commands.
+
+Retained architectural debt:
+Provider-internal LLM failure stages remain indistinguishable at analyzer and Copilot boundaries. Copilot LLM-generated `isApproved` remains non-authoritative architectural debt.
+
+### Phase 1C — Evidence Lifecycle Resolution
+
+Status:
+IN_PROGRESS
+
+Objective:
+Interpret supplied append-only Evidence history at a caller-provided evaluation time without persisting derived lifecycle state.
+
+Artifacts:
+- `docs/adr/ADR-009-evidence-lifecycle-resolution.md`
+- `yujidi-server/src/types/evidence-lifecycle.types.ts`
+- `yujidi-server/src/services/evidence-lifecycle-resolver.service.ts`
+- `yujidi-server/tests/unit/services/evidence-lifecycle-resolver.service.test.ts`
+
+Read-time computation:
+The pure resolver accepts supplied Evidence records and an explicit `asOf`. It has no repository, MongoDB, logger, environment, system-clock, feature-flag, or mutation dependency.
+
+Precedence and validity:
+Revocation takes precedence over supersession, which takes precedence over validity windows. `validFrom` and `validUntil` are inclusive, and missing boundaries are unbounded.
+
+Relationship diagnostics:
+Missing targets, self-reference, supersession cycles, and duplicate supplied Evidence IDs are tolerated and surfaced through deterministically sorted diagnostics. Cycle edges are ignored rather than selecting a winner.
+
+Runtime integration:
+None. Lifecycle resolution is not connected to scoring, alerts, controllers, routes, providers, schedulers, WebSockets, LLMs, or frontend code.
+
+Authority and flags:
+Legacy scoring remains authoritative. `EVIDENCE_PIPELINE_ENABLED` remains default `false` and unused.
+
+Known test-discovery limitation:
+The default backend `npm test` glob discovers lifecycle service tests but still does not discover model, repository, controller, or configuration directories without focused commands.
+
+Retained architectural debt:
+Provider-internal LLM failure stages remain indistinguishable at analyzer and Copilot boundaries. Copilot LLM-generated `isApproved` remains non-authoritative architectural debt.
+
+### Phase 1D — Factor Registry Foundation
 
 Status:
 PENDING
 
-### Phase 1D — Evidence Consumer Integration
+### Phase 1E — Evidence Consumer Integration
 
 Status:
 PENDING
