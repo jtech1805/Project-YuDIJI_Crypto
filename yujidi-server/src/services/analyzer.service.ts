@@ -1,3 +1,4 @@
+import { createHash, randomUUID } from "node:crypto";
 import pino from "pino";
 
 import { AlertModel, type Alert } from "../models/Alert.js";
@@ -9,10 +10,12 @@ import {
   evaluateMonitorThreshold,
   MONITOR_CACHE_TTL_MS,
 } from "./analyzer.rules.js";
+import { llmTraceService, type LlmTraceService } from "./llm-trace.service.js";
 import { sharedLlmService } from "./llm.service.js";
 import { fetchRecentHeadlines } from "./news.service.js";
 
 const logger = pino({ name: "analyzer-engine" });
+export const ALERT_REPORT_PROMPT_VERSION = "ALERT_REPORT_V1";
 
 export interface PriceTick {
   price: number;
@@ -79,9 +82,15 @@ type AnalyzerAlertDocument = {
   _id: { toString(): string };
   toObject(): Alert;
 };
-type AnalyzerLlmService = Pick<typeof sharedLlmService, "generateAlertReport">;
+type AnalyzerLlmService = Pick<
+  typeof sharedLlmService,
+  "generateAlertReport" | "getProviderMetadata"
+>;
 type AnalyzerDependencies = {
   llmService: AnalyzerLlmService;
+  llmTraceService: Pick<LlmTraceService, "record">;
+  getNow: () => Date;
+  generateId: () => string;
   fetchRecentHeadlines: (symbol: string) => Promise<string>;
   findActiveMonitors: (symbol: string) => Promise<ActiveMonitorDocument[]>;
   findActiveMonitorsForNormalizedTick: (tick: NormalizedMarketTick) => Promise<ActiveMonitorDocument[]>;
@@ -97,6 +106,9 @@ type ProcessTickContext = {
 
 const defaultAnalyzerDependencies: AnalyzerDependencies = {
   llmService: sharedLlmService,
+  llmTraceService,
+  getNow: () => new Date(),
+  generateId: randomUUID,
   fetchRecentHeadlines,
   findActiveMonitors: async (symbol: string): Promise<ActiveMonitorDocument[]> => {
     return TripwireConfigModel.find({
@@ -1001,18 +1013,107 @@ export class AnalyzerEngine {
         //   runningCVD // <-- New parameter for the RAG prompt
         // );
         // 2. Call the updated LLM Service
-        const report = await this.llmService.generateAlertReport(
-          normalizedSymbol,
-          changePercentage,
-          monitor.timeWindowMinutes,
-          newsContext,
-          runningCVD,
-          walls.support,    // <-- Pass Support
-          walls.resistance,  // <-- Pass Resistance
+        const traceId = this.dependencies.generateId();
+        const correlationId = this.dependencies.generateId();
+        const startedAt = this.dependencies.getNow();
+        const providerMetadata = this.llmService.getProviderMetadata();
+        const inputHash = createHash("sha256").update(JSON.stringify({
+          symbol: normalizedSymbol,
+          monitorId,
+          provider: monitor.provider,
+          marketType: monitor.marketType,
+          exchange: monitor.exchange,
+          instrumentToken: monitor.instrumentToken,
           triggerType,
           direction,
-          currentPrice,
-        );
+          changePercentage,
+          timeWindowMinutes: monitor.timeWindowMinutes,
+          triggerPrice: currentPrice,
+          cvdAtTrigger: runningCVD,
+          newsContextLength: newsContext.length,
+          supportAvailable: walls.support !== "Unknown",
+          resistanceAvailable: walls.resistance !== "Unknown",
+        })).digest("hex");
+        const traceBase = {
+          traceId,
+          correlationId,
+          taskType: "ALERT_REPORT" as const,
+          userId: monitor.user.toString(),
+          source: {
+            entityType: "TRIPWIRE_MONITOR",
+            entityId: monitorId,
+          },
+          provider: providerMetadata.name,
+          ...(providerMetadata.modelName ? { model: providerMetadata.modelName } : {}),
+          promptVersion: ALERT_REPORT_PROMPT_VERSION,
+          startedAt,
+          inputReference: {
+            hash: inputHash,
+            redactedSummary: {
+              provider: monitor.provider,
+              marketType: monitor.marketType,
+              exchange: monitor.exchange,
+              triggerType,
+              direction,
+              timeWindowMinutes: monitor.timeWindowMinutes,
+              newsContextLength: newsContext.length,
+              supportAvailable: walls.support !== "Unknown",
+              resistanceAvailable: walls.resistance !== "Unknown",
+            },
+          },
+          fallbackUsed: false,
+        };
+        let report;
+        try {
+          report = await this.llmService.generateAlertReport(
+            normalizedSymbol,
+            changePercentage,
+            monitor.timeWindowMinutes,
+            newsContext,
+            runningCVD,
+            walls.support,    // <-- Pass Support
+            walls.resistance,  // <-- Pass Resistance
+            triggerType,
+            direction,
+            currentPrice,
+          );
+        } catch (error: unknown) {
+          const completedAt = this.dependencies.getNow();
+          void this.dependencies.llmTraceService.record({
+            ...traceBase,
+            status: "PROVIDER_FAILED",
+            completedAt,
+            latencyMs: Math.max(0, completedAt.getTime() - startedAt.getTime()),
+            failureCode: "ALERT_REPORT_GENERATION_FAILED",
+            validation: {
+              parseSucceeded: false,
+              schemaSucceeded: false,
+              semanticSucceeded: false,
+            },
+          }).catch(() => undefined);
+          throw error;
+        }
+        const completedAt = this.dependencies.getNow();
+        void this.dependencies.llmTraceService.record({
+          ...traceBase,
+          status: "COMPLETED",
+          completedAt,
+          latencyMs: Math.max(0, completedAt.getTime() - startedAt.getTime()),
+          outputReference: {
+            fieldSummary: {
+              catalystLength: report.catalyst.length,
+              threatLevelLength: report.threatLevel.length,
+              supportLength: report.support.length,
+              resistanceLength: report.resistance.length,
+              summaryLength: report.summary.length,
+            },
+          },
+          validation: {
+            parseSucceeded: true,
+            schemaSucceeded: true,
+            semanticSucceeded: true,
+          },
+        }).catch(() => undefined);
         logger.info(
           {
             event: "ANALYZER_LLM_REPORT_SUCCESS",

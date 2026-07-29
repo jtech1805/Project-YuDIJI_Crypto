@@ -5,13 +5,13 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-Phase 0E-2 — Post-Trade Review Trace Integration
+Phase 0E-4 — Copilot Chat Trace Integration
 
 Last completed acceptance gate:
-Phase 0E-1 — LLM Trace Foundation
+Phase 0E-3 — Analyzer Alert-Report Trace Integration
 
 Next smallest task:
-Complete Phase 0E-2 by emitting one metadata-only trace for each attempted post-trade review provider call without changing review behavior.
+Complete Phase 0E-4 by emitting one metadata-only trace for each attempted Copilot provider call without changing chat or deterministic trade behavior.
 
 Characterization-suite requirement:
 The scoring characterization suite is mandatory for every later scoring-related implementation. Existing expectations must not be changed merely to make a later implementation pass.
@@ -170,10 +170,10 @@ No analyzer alert, Copilot chat, post-trade review, `LlmService`, provider inter
 Persistence behavior:
 Trace writes are metadata-first and best effort. Persistence failures are sanitized, logged, and never fail the calling workflow.
 
-### Phase 0E-2 — LLM Trace Workflow Integration
+### Phase 0E-2 — Post-Trade Review Trace Integration
 
 Status:
-IN_PROGRESS
+COMPLETE
 
 Scope:
 Post-trade review only.
@@ -190,17 +190,47 @@ Preserved behavior:
 Review output and deterministic fallback behavior, `AiExplanation` persistence, journal updates, API behavior, and existing audit actions and ordering remain unchanged. Requests rejected before provider invocation are not traced.
 
 Integration state:
-Analyzer alert and Copilot chat workflows remain unintegrated.
+Analyzer alert and Copilot chat workflows were not integrated during Phase 0E-2.
 
-### Phase 0E-3 — LLM Trace Operational Queries
-
-Status:
-PENDING
-
-### Phase 0E-4 — LLM Trace Acceptance Gate
+### Phase 0E-3 — Analyzer Alert-Report Trace Integration
 
 Status:
-PENDING
+COMPLETE
+
+Scope:
+Analyzer alert-report generation. This is the second integrated LLM workflow after post-trade review.
+
+Trace behavior:
+Every attempted analyzer alert-report generation emits one finalized, metadata-only trace. Accepted reports map to `COMPLETED`; all report-generation rejections map to `PROVIDER_FAILED` with `ALERT_REPORT_GENERATION_FAILED`. No fallback alert report exists.
+
+Provider-abstraction limitation:
+Provider-internal empty-response, parse, and schema stages are not distinguishable at the analyzer boundary. Successful validation flags mean the provider returned the accepted application output contract, not that the analyzer performs separate semantic validation.
+
+Preserved behavior:
+Threshold evaluation, monitor caching, cooldown timing, news and CVD handling, order-book calculations, Alert persistence, WebSocket emission, and existing failure behavior remain unchanged.
+
+### Phase 0E-4 — Copilot Chat Trace Integration
+
+Status:
+IN_PROGRESS
+
+Scope:
+Copilot chat. This is the third and final active LLM workflow integrated with the shared trace foundation.
+
+Trace behavior:
+Every attempted Copilot provider call emits one finalized, metadata-only trace. Accepted output maps to `COMPLETED`; provider-boundary rejection maps to `PROVIDER_FAILED` with `COPILOT_CHAT_GENERATION_FAILED`. Trace writes are non-blocking and failure-isolated.
+
+Metadata boundary:
+Input traces store a deterministic hash plus message/history counts and availability booleans. Output traces store only intent, the current `isApproved` output boolean, and reply length. Raw messages, history, replies, wallet and trade values are not persisted.
+
+Architectural debt:
+Copilot still returns LLM-generated `isApproved`. Tracing records this existing public output as metadata only and does not make the LLM authoritative for deterministic trade permission.
+
+Provider-abstraction limitation:
+Provider-internal empty-response, parse, and schema stages are not distinguishable at the controller boundary, so thrown failures use one generic provider-failure mapping without error-message inspection.
+
+Preserved behavior:
+Request validation, session ownership, recent-history selection, deterministic trade calculations, message ordering and persistence, API response fields, and existing error responses remain unchanged.
 
 ### Phase 1 — Evidence Foundation
 

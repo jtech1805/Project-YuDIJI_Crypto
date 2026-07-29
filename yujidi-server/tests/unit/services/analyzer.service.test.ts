@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { AnalyzerEngine } from "../../../src/services/analyzer.service.js";
+import {
+  ALERT_REPORT_PROMPT_VERSION,
+  AnalyzerEngine,
+} from "../../../src/services/analyzer.service.js";
+import type { CreateLlmTraceInput } from "../../../src/types/llm-trace.types.js";
 
 const SYMBOL = "SOLUSDT";
 const START_AT = Date.UTC(2026, 0, 1, 0, 0, 0);
@@ -25,10 +29,12 @@ type TestHarness = {
   engine: AnalyzerEngine;
   emittedAlerts: Array<{ userId: string; payload: unknown }>;
   createdAlerts: Record<string, unknown>[];
+  traces: CreateLlmTraceInput[];
   calls: {
     findActiveMonitors: number;
     fetchRecentHeadlines: number;
     generateAlertReport: number;
+    recordTrace: number;
     createAlert: number;
   };
 };
@@ -64,14 +70,22 @@ const createHarness = (
       resistance: string;
       summary: string;
     }>;
+    createAlertError?: Error;
+    traceError?: Error;
+    nowValues?: Date[];
+    ids?: string[];
   } = {},
 ): TestHarness => {
   const emittedAlerts: Array<{ userId: string; payload: unknown }> = [];
   const createdAlerts: Record<string, unknown>[] = [];
+  const traces: CreateLlmTraceInput[] = [];
+  let nowIndex = 0;
+  let idIndex = 0;
   const calls = {
     findActiveMonitors: 0,
     fetchRecentHeadlines: 0,
     generateAlertReport: 0,
+    recordTrace: 0,
     createAlert: 0,
   };
 
@@ -118,6 +132,10 @@ const createHarness = (
         return "Test headline";
       },
       llmService: {
+        getProviderMetadata: () => ({
+          name: "test-llm-provider",
+          modelName: "test-llm-model",
+        }),
         generateAlertReport: async () => {
           calls.generateAlertReport += 1;
           if (overrides.generateAlertReport) {
@@ -133,8 +151,22 @@ const createHarness = (
           };
         },
       },
+      llmTraceService: {
+        record: async (input) => {
+          calls.recordTrace += 1;
+          if (overrides.traceError) throw overrides.traceError;
+          traces.push(input);
+        },
+      },
+      getNow: () => overrides.nowValues?.[nowIndex++] ?? new Date(START_AT),
+      generateId: () => {
+        const generatedId = overrides.ids?.[idIndex] ?? `generated-id-${idIndex + 1}`;
+        idIndex += 1;
+        return generatedId;
+      },
       createAlert: async (payload) => {
         calls.createAlert += 1;
+        if (overrides.createAlertError) throw overrides.createAlertError;
         createdAlerts.push(payload);
 
         return {
@@ -152,6 +184,7 @@ const createHarness = (
     engine,
     emittedAlerts,
     createdAlerts,
+    traces,
     calls,
   };
 };
@@ -170,6 +203,46 @@ test("processTick creates a drop alert when drop threshold is breached", async (
   assert.equal(harness.createdAlerts[0]?.direction, "down");
   assert.equal(harness.createdAlerts[0]?.changePercentage, -2.5);
   assert.equal(harness.createdAlerts[0]?.dropPercentage, 2.5);
+  assert.equal(harness.calls.generateAlertReport, 1);
+  assert.equal(harness.traces.length, 1);
+  const trace = harness.traces[0];
+  assert.equal(trace?.traceId, "generated-id-1");
+  assert.equal(trace?.correlationId, "generated-id-2");
+  assert.equal(trace?.status, "COMPLETED");
+  assert.equal(trace?.taskType, "ALERT_REPORT");
+  assert.equal(trace?.userId, "user-1");
+  assert.deepEqual(trace?.source, {
+    entityType: "TRIPWIRE_MONITOR",
+    entityId: "monitor-1",
+  });
+  assert.equal(trace?.provider, "test-llm-provider");
+  assert.equal(trace?.model, "test-llm-model");
+  assert.equal(trace?.promptVersion, ALERT_REPORT_PROMPT_VERSION);
+  assert.equal(trace?.fallbackUsed, false);
+  assert.deepEqual(trace?.validation, {
+    parseSucceeded: true,
+    schemaSucceeded: true,
+    semanticSucceeded: true,
+  });
+  assert.match(trace?.inputReference?.hash ?? "", /^[a-f0-9]{64}$/);
+  assert.deepEqual(trace?.inputReference?.redactedSummary, {
+    provider: "BINANCE",
+    marketType: "CRYPTO",
+    exchange: "BINANCE",
+    triggerType: "drop",
+    direction: "down",
+    timeWindowMinutes: 1,
+    newsContextLength: 13,
+    supportAvailable: false,
+    resistanceAvailable: false,
+  });
+  assert.deepEqual(trace?.outputReference?.fieldSummary, {
+    catalystLength: 13,
+    threatLevelLength: 13,
+    supportLength: 23,
+    resistanceLength: 26,
+    summaryLength: 12,
+  });
 });
 
 test("processTick creates a spike alert when spike threshold is breached", async () => {
@@ -182,6 +255,11 @@ test("processTick creates a spike alert when spike threshold is breached", async
   assert.equal(harness.createdAlerts[0]?.triggerType, "spike");
   assert.equal(harness.createdAlerts[0]?.direction, "up");
   assert.equal(harness.createdAlerts[0]?.changePercentage, 2.5);
+  assert.equal(harness.traces.length, 1);
+  assert.equal(
+    harness.traces[0]?.inputReference?.redactedSummary?.triggerType,
+    "spike",
+  );
 });
 
 test("processTick does not create a spike alert on a downward drop", async () => {
@@ -192,6 +270,7 @@ test("processTick does not create a spike alert on a downward drop", async () =>
 
   assert.equal(harness.calls.createAlert, 0);
   assert.equal(harness.emittedAlerts.length, 0);
+  assert.equal(harness.traces.length, 0);
 });
 
 test("processTick does not create alert when there is insufficient price history", async () => {
@@ -201,6 +280,7 @@ test("processTick does not create alert when there is insufficient price history
 
   assert.equal(harness.calls.createAlert, 0);
   assert.equal(harness.calls.generateAlertReport, 0);
+  assert.equal(harness.traces.length, 0);
 });
 
 test("processTick cooldown prevents duplicate alerts", async () => {
@@ -212,6 +292,7 @@ test("processTick cooldown prevents duplicate alerts", async () => {
 
   assert.equal(harness.calls.createAlert, 1);
   assert.equal(harness.emittedAlerts.length, 1);
+  assert.equal(harness.traces.length, 1);
 });
 
 test("processTick does not save alert when LLM report generation fails", async () => {
@@ -227,6 +308,107 @@ test("processTick does not save alert when LLM report generation fails", async (
   assert.equal(harness.calls.generateAlertReport, 1);
   assert.equal(harness.calls.createAlert, 0);
   assert.equal(harness.emittedAlerts.length, 0);
+  assert.equal(harness.traces.length, 1);
+  assert.equal(harness.traces[0]?.status, "PROVIDER_FAILED");
+  assert.equal(harness.traces[0]?.failureCode, "ALERT_REPORT_GENERATION_FAILED");
+  assert.equal(harness.traces[0]?.fallbackUsed, false);
+  assert.deepEqual(harness.traces[0]?.validation, {
+    parseSucceeded: false,
+    schemaSucceeded: false,
+    semanticSucceeded: false,
+  });
+  assert.equal(JSON.stringify(harness.traces).includes("LLM failed"), false);
+  assert.equal(harness.engine.cooldowns.get("monitor-1"), START_AT + 60_000);
+});
+
+test("analyzer trace timing is deterministic and negative latency is clamped", async () => {
+  const startedAt = new Date("2026-07-28T10:00:01.000Z");
+  const completedAt = new Date("2026-07-28T10:00:00.000Z");
+  const harness = createHarness([makeMonitor()], {
+    nowValues: [startedAt, completedAt],
+    ids: ["trace-fixed", "correlation-fixed"],
+  });
+
+  await harness.engine.processTick(SYMBOL, 100, START_AT, false, 1);
+  await harness.engine.processTick(SYMBOL, 97.5, START_AT + 60_000, true, 1);
+
+  assert.equal(harness.traces[0]?.traceId, "trace-fixed");
+  assert.equal(harness.traces[0]?.correlationId, "correlation-fixed");
+  assert.equal(harness.traces[0]?.startedAt, startedAt);
+  assert.equal(harness.traces[0]?.completedAt, completedAt);
+  assert.equal(harness.traces[0]?.latencyMs, 0);
+});
+
+test("safe analyzer trace hash is deterministic and trace metadata excludes raw content", async () => {
+  const first = createHarness([makeMonitor()]);
+  const second = createHarness([makeMonitor()]);
+
+  for (const harness of [first, second]) {
+    await harness.engine.processTick(SYMBOL, 100, START_AT, false, 1);
+    await harness.engine.processTick(SYMBOL, 97.5, START_AT + 60_000, true, 1);
+  }
+
+  assert.equal(first.traces[0]?.inputReference?.hash, second.traces[0]?.inputReference?.hash);
+  const serialized = JSON.stringify(first.traces);
+  for (const forbidden of [
+    "Test headline",
+    "Test catalyst",
+    "Test summary",
+    "No strong support found",
+    "No strong resistance found",
+    "LLM failed",
+    "apiKey",
+    "feedToken",
+    "authorization",
+    "cookie",
+    "bids",
+    "asks",
+  ]) {
+    assert.equal(serialized.includes(forbidden), false, `trace contains ${forbidden}`);
+  }
+});
+
+test("trace rejection cannot prevent successful alert persistence and emission", async () => {
+  const harness = createHarness([makeMonitor()], {
+    traceError: new Error("trace unavailable"),
+  });
+
+  await harness.engine.processTick(SYMBOL, 100, START_AT, false, 1);
+  await harness.engine.processTick(SYMBOL, 97.5, START_AT + 60_000, true, 1);
+
+  assert.equal(harness.calls.recordTrace, 1);
+  assert.equal(harness.calls.createAlert, 1);
+  assert.equal(harness.emittedAlerts.length, 1);
+});
+
+test("LLM failure behavior is preserved when failure trace also rejects", async () => {
+  const harness = createHarness([makeMonitor()], {
+    generateAlertReport: async () => {
+      throw new Error("provider unavailable");
+    },
+    traceError: new Error("trace unavailable"),
+  });
+
+  await harness.engine.processTick(SYMBOL, 100, START_AT, false, 1);
+  await harness.engine.processTick(SYMBOL, 97.5, START_AT + 60_000, true, 1);
+
+  assert.equal(harness.calls.recordTrace, 1);
+  assert.equal(harness.calls.createAlert, 0);
+  assert.equal(harness.emittedAlerts.length, 0);
+});
+
+test("alert persistence failure does not change the completed LLM trace", async () => {
+  const harness = createHarness([makeMonitor()], {
+    createAlertError: new Error("alert persistence failed"),
+  });
+
+  await harness.engine.processTick(SYMBOL, 100, START_AT, false, 1);
+  await harness.engine.processTick(SYMBOL, 97.5, START_AT + 60_000, true, 1);
+
+  assert.equal(harness.calls.createAlert, 1);
+  assert.equal(harness.emittedAlerts.length, 0);
+  assert.equal(harness.traces.length, 1);
+  assert.equal(harness.traces[0]?.status, "COMPLETED");
 });
 
 test("processTick negative cache avoids repeated monitor fetch within TTL", async () => {
@@ -236,6 +418,7 @@ test("processTick negative cache avoids repeated monitor fetch within TTL", asyn
   await harness.engine.processTick(SYMBOL, 101, START_AT + 1_000, false, 1);
 
   assert.equal(harness.calls.findActiveMonitors, 1);
+  assert.equal(harness.traces.length, 0);
 
   const snapshot = harness.engine.getEngineStateSnapshot();
   const activeMonitorCache = snapshot.activeMonitorCache as Record<
@@ -305,6 +488,13 @@ test("processNormalizedTick creates Angel spike alert with provider metadata", a
   assert.equal(harness.createdAlerts[0]?.previousPrice, 7200);
   assert.equal(harness.createdAlerts[0]?.currentPrice, 7380);
   assert.equal(harness.createdAlerts[0]?.triggerType, "spike");
+  assert.equal(harness.traces.length, 1);
+  assert.equal(harness.traces[0]?.provider, "test-llm-provider");
+  assert.equal(harness.traces[0]?.model, "test-llm-model");
+  assert.equal(
+    harness.traces[0]?.inputReference?.redactedSummary?.provider,
+    "ANGEL_ONE",
+  );
 });
 
 test("processNormalizedTick creates Angel drop alert", async () => {
