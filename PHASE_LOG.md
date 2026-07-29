@@ -5,13 +5,13 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-Phase 1C — Evidence Lifecycle Resolution
+Phase 1E — Generic Provider Adapter Harness
 
 Last completed acceptance gate:
-Phase 1B — Evidence Ingestion and Deduplication
+Phase 1D — Evidence Read and Query Boundary
 
 Next smallest task:
-Complete Phase 1C verification for deterministic read-time lifecycle resolution without adding a runtime consumer.
+Complete Phase 1E verification for the generic sequential provider runner without activating a provider.
 
 Phase 0 status:
 COMPLETE
@@ -310,7 +310,7 @@ Provider-internal LLM failure stages remain indistinguishable at analyzer and Co
 ### Phase 1C — Evidence Lifecycle Resolution
 
 Status:
-IN_PROGRESS
+COMPLETE
 
 Objective:
 Interpret supplied append-only Evidence history at a caller-provided evaluation time without persisting derived lifecycle state.
@@ -342,12 +342,92 @@ The default backend `npm test` glob discovers lifecycle service tests but still 
 Retained architectural debt:
 Provider-internal LLM failure stages remain indistinguishable at analyzer and Copilot boundaries. Copilot LLM-generated `isApproved` remains non-authoritative architectural debt.
 
-### Phase 1D — Factor Registry Foundation
+### Phase 1D — Evidence Read and Query Boundary
+
+Status:
+COMPLETE
+
+Objective:
+Load bounded relevant Evidence history and apply the Phase 1C lifecycle resolver through an internal read-only application boundary.
+
+Artifacts:
+- `docs/adr/ADR-010-evidence-read-query-boundary.md`
+- `yujidi-server/src/types/evidence-read.types.ts`
+- `yujidi-server/src/services/evidence-read.service.ts`
+- repository read/count extensions and query-specific indexes
+- focused repository and read-service tests
+
+Bounds and counts:
+Base history defaults to 200 and is capped at 1,000. Relationship history is capped at 2,000. Both queries have matching counts.
+
+Completeness:
+Base or relationship truncation marks the result incomplete. Incomplete results expose bounded history and counts but return no active observations, lifecycle resolutions, or diagnostics.
+
+Relationship loading:
+Revocations and superseding observations targeting bounded base IDs are loaded separately with `observedAt <= asOf`, then merged deterministically.
+
+Lifecycle integration:
+Complete history is delegated to the Phase 1C resolver. Active observations and resolutions are filtered back to base query IDs so external relationship observations cannot escape query scope.
+
+Runtime integration:
+None. The read boundary is not connected to scoring, alerts, controllers, routes, providers, schedulers, WebSockets, LLMs, or frontend code.
+
+Authority and flags:
+Legacy scoring remains authoritative. `EVIDENCE_PIPELINE_ENABLED` remains default `false` and unused.
+
+Known test-discovery limitation:
+The default backend `npm test` glob discovers read-service tests but still does not discover model, repository, controller, or configuration directories without focused commands.
+
+Retained architectural debt:
+Provider-internal LLM failure stages remain indistinguishable at analyzer and Copilot boundaries. Copilot LLM-generated `isApproved` remains non-authoritative architectural debt.
+
+### Phase 1E — Generic Provider Adapter Harness
+
+Status:
+IN_PROGRESS
+
+Objective:
+Execute the frozen Phase 1B adapter contract through a bounded, deterministic, sequential ingestion harness without adding a concrete provider.
+
+Artifacts:
+- `docs/adr/ADR-011-generic-evidence-provider-runner.md`
+- `yujidi-server/src/types/evidence-provider-run.types.ts`
+- `yujidi-server/src/services/evidence-provider-runner.service.ts`
+- focused provider-runner tests
+
+Batch policy:
+Empty candidate arrays are valid and the fixed maximum is 500. Oversized arrays fail before ingestion and are not truncated or split.
+
+Execution:
+The runner validates `adapterId`, calls `readCandidates()` exactly once, and calls `EvidenceIngestionService.ingest()` sequentially once per candidate in original order.
+
+Failure isolation and status:
+Candidate rejection, duplication, failure, or unexpected thrown exception does not stop later candidates. `COMPLETED` means all candidates were created or duplicates; any candidate rejection/failure produces `PARTIAL`; batch-level `FAILED` is reserved for pre-ingestion adapter failures.
+
+Retry and logging:
+No retries and no logging are added. Raw payloads, candidates, values, credentials, and exception messages are not exposed.
+
+Deferred technical debt:
+The existing Phase 1B `EvidenceIngestionService.ingestFrom()` method uses parallel `Promise.all`. Phase 1E does not call, modify, or remove it; reconciliation is deferred.
+
+Runtime integration:
+None. No concrete provider, payload adapter, scoring, alert, controller, route, scheduler, WebSocket, LLM, lifecycle read, or frontend integration exists.
+
+Authority and flags:
+Legacy scoring remains authoritative. `EVIDENCE_PIPELINE_ENABLED` remains default `false` and unused.
+
+Known test-discovery limitation:
+The default backend `npm test` glob discovers provider-runner service tests but still does not discover model, repository, controller, or configuration directories without focused commands.
+
+Retained architectural debt:
+Provider-internal LLM failure stages remain indistinguishable at analyzer and Copilot boundaries. Copilot LLM-generated `isApproved` remains non-authoritative architectural debt.
+
+### Phase 1F — Factor Registry Foundation
 
 Status:
 PENDING
 
-### Phase 1E — Evidence Consumer Integration
+### Phase 1G — Evidence Consumer Integration
 
 Status:
 PENDING

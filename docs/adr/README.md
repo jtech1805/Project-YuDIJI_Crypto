@@ -78,3 +78,5 @@ If these artifacts disagree, current production code and accepted ADRs must be r
 | ADR-007 | Append-only Evidence foundation | ACCEPTED | Phase 1A | Evidence stores immutable provider-independent observations and append-only revocations beside authoritative legacy scoring. | None | None |
 | ADR-008 | Provider-independent Evidence ingestion | ACCEPTED | Phase 1B | Strict candidates are normalized, canonically hashed, deduplicated, and persisted through an append-only provider-independent boundary. | None | None |
 | ADR-009 | Evidence lifecycle resolution | ACCEPTED | Phase 1C | Lifecycle state is derived deterministically at read time from immutable Evidence history and an explicit evaluation time. | None | None |
+| ADR-010 | Evidence read and query boundary | ACCEPTED | Phase 1D | Bounded and counted base/relationship reads invoke lifecycle resolution only when history is complete. | None | None |
+| ADR-011 | Generic Evidence provider runner | ACCEPTED | Phase 1E | Existing adapters are executed once and bounded candidates are ingested sequentially with deterministic failure isolation. | None | None |

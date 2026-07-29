@@ -195,6 +195,27 @@ test("schema is append-oriented with only approved indexes and no forbidden fiel
     { fields: { recordType: 1, observedAt: -1 }, unique: false, sparse: false },
     { fields: { revokesEvidenceId: 1, createdAt: -1 }, unique: false, sparse: true },
     { fields: { supersedesEvidenceId: 1, createdAt: -1 }, unique: false, sparse: true },
+    {
+      fields: {
+        factorKey: 1,
+        "subject.type": 1,
+        "subject.key": 1,
+        observedAt: 1,
+        evidenceId: 1,
+      },
+      unique: false,
+      sparse: false,
+    },
+    {
+      fields: { revokesEvidenceId: 1, observedAt: 1, evidenceId: 1 },
+      unique: false,
+      sparse: true,
+    },
+    {
+      fields: { supersedesEvidenceId: 1, observedAt: 1, evidenceId: 1 },
+      unique: false,
+      sparse: true,
+    },
   ]);
 
   for (const field of [

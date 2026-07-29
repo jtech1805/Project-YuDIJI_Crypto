@@ -156,6 +156,21 @@ evidenceSchema.index({
 evidenceSchema.index({ recordType: 1, observedAt: -1 });
 evidenceSchema.index({ revokesEvidenceId: 1, createdAt: -1 }, { sparse: true });
 evidenceSchema.index({ supersedesEvidenceId: 1, createdAt: -1 }, { sparse: true });
+evidenceSchema.index({
+  factorKey: 1,
+  "subject.type": 1,
+  "subject.key": 1,
+  observedAt: 1,
+  evidenceId: 1,
+});
+evidenceSchema.index(
+  { revokesEvidenceId: 1, observedAt: 1, evidenceId: 1 },
+  { sparse: true },
+);
+evidenceSchema.index(
+  { supersedesEvidenceId: 1, observedAt: 1, evidenceId: 1 },
+  { sparse: true },
+);
 
 export type Evidence = InferSchemaType<typeof evidenceSchema>;
 export type EvidenceDocument = HydratedDocument<Evidence>;
