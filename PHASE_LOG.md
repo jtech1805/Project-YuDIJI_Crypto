@@ -5,13 +5,16 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-Phase 0E-4 — Copilot Chat Trace Integration
+Phase 1A — Evidence Contract and Persistence
 
 Last completed acceptance gate:
-Phase 0E-3 — Analyzer Alert-Report Trace Integration
+Phase 0 — Baseline Lock and Observability Scaffolding
 
 Next smallest task:
-Complete Phase 0E-4 by emitting one metadata-only trace for each attempted Copilot provider call without changing chat or deterministic trade behavior.
+Complete Phase 1A by adding the accepted Evidence ADR, typed contract, append-only model, and create-only repository without runtime integration.
+
+Phase 0 status:
+COMPLETE
 
 Characterization-suite requirement:
 The scoring characterization suite is mandatory for every later scoring-related implementation. Existing expectations must not be changed merely to make a later implementation pass.
@@ -212,7 +215,7 @@ Threshold evaluation, monitor caching, cooldown timing, news and CVD handling, o
 ### Phase 0E-4 — Copilot Chat Trace Integration
 
 Status:
-IN_PROGRESS
+COMPLETE
 
 Scope:
 Copilot chat. This is the third and final active LLM workflow integrated with the shared trace foundation.
@@ -232,10 +235,51 @@ Provider-internal empty-response, parse, and schema stages are not distinguishab
 Preserved behavior:
 Request validation, session ownership, recent-history selection, deterministic trade calculations, message ordering and persistence, API response fields, and existing error responses remain unchanged.
 
-### Phase 1 — Evidence Foundation
+### Phase 1A — Evidence Contract and Persistence
+
+Status:
+IN_PROGRESS
+
+Objective:
+Add the provider-independent Evidence persistence foundation beside legacy scoring without making it authoritative.
+
+Artifacts:
+- `docs/adr/ADR-007-append-only-evidence-foundation.md`
+- `yujidi-server/src/types/evidence.types.ts`
+- `yujidi-server/src/models/evidence.model.ts`
+- `yujidi-server/src/repositories/evidence.repository.ts`
+- `yujidi-server/tests/unit/models/evidence.model.test.ts`
+- `yujidi-server/tests/unit/repositories/evidence.repository.test.ts`
+
+Architecture:
+Evidence records normalized observations and append-only revocations rather than decisions. Observation values use a discriminated number, boolean, category, or event contract. Corrections, supersession, and revocation create new records rather than mutating existing records.
+
+Repository:
+The Evidence repository supports create, find by evidence ID, and find by deduplication key only. It exposes no update, replace, delete, upsert, or bulk-mutation API.
+
+Runtime integration:
+None. Evidence is not connected to scoring, templates, monitors, analyzer, Copilot, post-trade review, providers, schedulers, WebSockets, HTTP APIs, or frontend code.
+
+Authority and flags:
+Legacy scoring remains authoritative. `EVIDENCE_PIPELINE_ENABLED` remains default `false` and unused.
+
+Known test-discovery limitation:
+The default backend `npm test` glob does not discover tests under `tests/unit/models`, `tests/unit/repositories`, or `tests/unit/controllers`. Evidence and Copilot tests must also be run explicitly until test discovery is expanded in a separately approved task.
+
+Retained architectural debt:
+Provider-internal LLM failure stages remain indistinguishable at analyzer and Copilot boundaries. Copilot LLM-generated `isApproved` remains non-authoritative architectural debt.
+
+### Phase 1B — Evidence Ingestion and Deduplication
 
 Status:
 PENDING
 
-Objective:
-Introduce the initial Evidence foundation beside the legacy scoring path without making it authoritative.
+### Phase 1C — Factor Registry Foundation
+
+Status:
+PENDING
+
+### Phase 1D — Evidence Consumer Integration
+
+Status:
+PENDING
