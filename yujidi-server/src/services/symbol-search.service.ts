@@ -9,11 +9,15 @@ import {
 } from "../types/market-data.types.js";
 import { SimpleLruCache } from "../utils/simple-lru-cache.js";
 import { normalizeSearchText } from "../utils/symbol-search-tokenizer.js";
+import type { Clock } from "../ports/clock.port.js";
 
 const ACTIVE_STATUSES = ["ACTIVE", "TRADING"];
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 const CANDIDATE_LIMIT = 120;
+const systemClock: Clock = {
+  now: () => new Date(),
+};
 
 const searchInputSchema = z.object({
   q: z.string().optional(),
@@ -133,6 +137,7 @@ export class SymbolSearchService {
 
   public constructor(
     private readonly repository: SymbolSearchRepository = SymbolModel as unknown as SymbolSearchRepository,
+    private readonly clock: Clock = systemClock,
   ) { }
 
   public async search(input: SymbolSearchInput): Promise<SymbolSearchResponse> {
@@ -206,10 +211,11 @@ export class SymbolSearchService {
       filter.strikePrice = parsed.strikePrice;
     }
     if (!parsed.includeExpired) {
+      const evaluatedAt = this.clock.now();
       filter.$or = [
         { expiry: { $exists: false } },
         { expiry: null },
-        { expiry: { $gte: new Date() } },
+        { expiry: { $gte: evaluatedAt } },
       ];
     }
 

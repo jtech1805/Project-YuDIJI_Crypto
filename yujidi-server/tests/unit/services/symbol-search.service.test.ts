@@ -5,6 +5,8 @@ import { Types } from "mongoose";
 import { SymbolSearchService } from "../../../src/services/symbol-search.service.js";
 import { tokenizeSymbolSearch } from "../../../src/utils/symbol-search-tokenizer.js";
 
+const FIXED_EVALUATION_TIME = new Date("2026-07-01T00:00:00.000Z");
+
 type FakeSymbolBase = Record<string, unknown> & {
   _id: Types.ObjectId;
   symbol: string;
@@ -182,6 +184,16 @@ const niftyOption = withSearchFields({
   searchRank: 10,
 });
 
+const boundaryNiftyFuture = withSearchFields({
+  ...niftyFuture,
+  _id: new Types.ObjectId("65abc0000000000000000009"),
+  symbol: "NFO:NIFTY:01JUL2026:FUTURE",
+  displayName: "NFO NIFTY 01JUL2026 FUTURE",
+  providerSymbol: "NIFTY01JUL26FUT",
+  instrumentToken: "53218",
+  expiry: FIXED_EVALUATION_TIME,
+});
+
 const createService = (symbols: FakeSymbol[]) => {
   const calls: Array<Record<string, unknown>> = [];
   const projections: Array<Record<string, number>> = [];
@@ -192,6 +204,12 @@ const createService = (symbols: FakeSymbol[]) => {
       const tokenFilter = filter.autocompleteTokens as { $all?: string[]; $in?: string[] } | undefined;
       const anyTokens = new Set(tokenFilter?.$in ?? []);
       const allTokens = tokenFilter?.$all ?? [];
+      const expiryBranches = filter.$or as Array<{
+        expiry?: { $gte?: Date };
+      }> | undefined;
+      const expiryCutoff = expiryBranches
+        ?.map((branch) => branch.expiry?.$gte)
+        .find((value): value is Date => value instanceof Date);
       const filtered = symbols.filter((symbol) => {
         if (filter.provider && symbol.provider !== filter.provider) return false;
         if (filter.exchange && symbol.exchange !== filter.exchange) return false;
@@ -200,7 +218,7 @@ const createService = (symbols: FakeSymbol[]) => {
         if (filter.underlyingSymbol && symbol.underlyingSymbol !== filter.underlyingSymbol) return false;
         if (filter.optionType && symbol.optionType !== filter.optionType) return false;
         if (filter.strikePrice && symbol.strikePrice !== filter.strikePrice) return false;
-        if (filter.$or && symbol.expiry && symbol.expiry < new Date()) return false;
+        if (expiryCutoff && symbol.expiry && symbol.expiry < expiryCutoff) return false;
         if (allTokens.length > 0) {
           return allTokens.every((token) => symbol.autocompleteTokens.includes(token));
         }
@@ -220,7 +238,9 @@ const createService = (symbols: FakeSymbol[]) => {
   };
 
   return {
-    service: new SymbolSearchService(repository as never),
+    service: new SymbolSearchService(repository as never, {
+      now: () => new Date(FIXED_EVALUATION_TIME),
+    }),
     calls,
     projections,
   };
@@ -275,6 +295,18 @@ test("SymbolSearchService excludes expired symbols by default", async () => {
   const response = await service.search({ q: "gold", exchange: "MCX" });
 
   assert.equal(response.results.some((result) => result.symbol === "MCX:GOLD:04DEC2024:FUTURE"), false);
+});
+
+test("SymbolSearchService includes an instrument expiring at the evaluation boundary", async () => {
+  const { service } = createService([boundaryNiftyFuture]);
+  const response = await service.search({
+    q: "nifty fut",
+    exchange: "NFO",
+    instrumentType: "FUTURE",
+  });
+
+  assert.equal(response.results.length, 1);
+  assert.equal(response.results[0]?.symbol, "NFO:NIFTY:01JUL2026:FUTURE");
 });
 
 test("SymbolSearchService caps invalid large limit through validation", async () => {

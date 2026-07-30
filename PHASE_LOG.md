@@ -5,13 +5,13 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-Phase 1F — First Concrete Provider Adapter in Shadow Mode
+Phase 1G — Evidence Pipeline Observability and Shadow Health
 
 Last completed acceptance gate:
-Phase 1E — Generic Provider Adapter Harness
+Phase 1F-QA — Deterministic SymbolSearch Test Baseline Repair
 
 Next smallest task:
-Complete Phase 1F verification for the Binance public-price shadow adapter without runtime registration.
+Complete Phase 1G verification for bounded explicit shadow observability without runtime activation.
 
 Phase 0 status:
 COMPLETE
@@ -425,7 +425,7 @@ Provider-internal LLM failure stages remain indistinguishable at analyzer and Co
 ### Phase 1F — First Concrete Provider Adapter in Shadow Mode
 
 Status:
-IN_PROGRESS
+COMPLETE
 
 Objective:
 Translate bounded Binance public spot-price responses into normalized Evidence candidates through the frozen pull-adapter contract.
@@ -461,12 +461,67 @@ The default backend `npm test` glob discovers the runner integration test but do
 Retained architectural debt:
 The unused Phase 1B `ingestFrom()` path remains parallel while the Phase 1E runner is sequential. Provider-internal LLM failure stages remain indistinguishable at analyzer and Copilot boundaries.
 
-### Phase 1G — Factor Registry Foundation
+### Phase 1F-QA — Deterministic SymbolSearch Test Baseline Repair
+
+Status:
+COMPLETE
+
+Objective:
+Restore the full backend baseline by removing system-clock dependence from the two active NFO SymbolSearch fixtures.
+
+Deterministic time:
+`SymbolSearchService` accepts the shared clock port with a system-clock production default. Search reads the clock once when applying the unchanged default expiry filter. Tests inject `2026-07-01T00:00:00.000Z`.
+
+Preserved behavior:
+Active NFO instruments remain included, expired instruments remain excluded, and an instrument with `expiry` exactly equal to the evaluation time remains active under the existing inclusive `$gte` rule.
+
+Scope:
+No SymbolSearch business semantics, Evidence files, scoring behavior, API behavior, frontend behavior, dependencies, or package scripts changed.
+
+Verification:
+The deterministic SymbolSearch suite, Phase 1 regression, trace regression, full backend suite, typecheck, circular dependency check, and `git diff --check` pass.
+
+### Phase 1G — Evidence Pipeline Observability and Shadow Health
+
+Status:
+IN_PROGRESS
+
+Objective:
+Record privacy-safe operational summaries for explicitly executed Evidence provider runs and derive deterministic per-adapter health.
+
+Artifacts:
+- `docs/adr/ADR-013-evidence-shadow-observability.md`
+- `yujidi-server/src/types/evidence-observability.types.ts`
+- `yujidi-server/src/services/evidence-observability.service.ts`
+- focused observability tests
+
+State and bounds:
+Health is process-local in-memory operational state, not Evidence. At most 100 unique adapter IDs are tracked with no silent eviction; process restart clears all state.
+
+Health:
+Completed runs are healthy, partial runs and one consecutive batch failure are degraded, and two or more consecutive batch failures are unhealthy. Completed and partial runs reset the batch-level consecutive failure counter.
+
+Metrics:
+Safe run/candidate counters, last run, last full success, last status, safe failure code, and exact supplied duration are retained. Pipeline snapshots use one injected-clock call and sort adapters deterministically.
+
+Privacy:
+No payloads, candidate values/results, Evidence documents, credentials, exceptions, or stack traces are retained or logged.
+
+Execution state:
+Recording is explicit after a provider run. The runner and provider adapters are unchanged. No provider scheduler, automatic registration, runtime executor, API, WebSocket, frontend, or external exporter exists.
+
+Authority and flags:
+No scoring consumer exists. Legacy scoring remains authoritative and `EVIDENCE_PIPELINE_ENABLED` remains default `false`.
+
+Known test-discovery limitation:
+The default backend `npm test` glob discovers observability service tests but still omits adapter, client, model, repository, controller, and configuration directories without focused commands.
+
+### Phase 1H — Factor Registry Foundation
 
 Status:
 PENDING
 
-### Phase 1H — Evidence Consumer Integration
+### Phase 1I — Evidence Consumer Integration
 
 Status:
 PENDING
