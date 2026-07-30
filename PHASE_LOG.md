@@ -5,13 +5,13 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-Phase 2F — Deterministic Evaluator Registry Foundation
+Phase 2G — Deterministic Evaluator Execution Foundation
 
 Last completed acceptance gate:
-Phase 2E — Deterministic Factor Evaluator Contract
+Phase 2F — Deterministic Factor Evaluator Registry
 
 Next smallest task:
-Define evaluator registration and lookup under a separate ADR without production evaluator or scoring integration.
+Define explicit evaluator execution orchestration under a separate ADR without score aggregation or runtime integration.
 
 Phase 0 status:
 COMPLETE
@@ -747,6 +747,42 @@ Verification:
 Focused Phase 2E tests, combined Phase 2 regression, Phase 1 regression, trace regression, full backend suite, typecheck, the repository-owned circular dependency gate, and `git diff --check` pass.
 
 ### Phase 2F — Deterministic Evaluator Registry Foundation
+
+Status:
+COMPLETE
+
+Objective:
+Register and resolve Phase 2E-valid deterministic evaluator implementations through immutable code-defined exact lookup without executing evaluators or selecting one automatically.
+
+Artifacts:
+- `docs/adr/ADR-020-deterministic-factor-evaluator-registry.md`
+- `yujidi-server/src/types/factor-evaluator-registry.types.ts`
+- `yujidi-server/src/registries/deterministic-factor-evaluator.registry.ts`
+- `yujidi-server/src/registries/default-deterministic-factor-evaluator.registry.ts`
+- focused deterministic evaluator registry tests
+
+Construction:
+The registry accepts a dense caller-supplied array, delegates declaration validation exactly once per evaluator to Phase 2E, rejects invalid evaluators and duplicate exact IDs with sanitized typed errors, and permits an empty registry.
+
+Lookup and ordering:
+Exact ID lookup returns the retained implementation reference or `null`. Factor lookup returns every matching evaluator, never a preferred one. Summaries and implementation lists sort by evaluator ID, independent of construction order.
+
+Snapshots and immutability:
+Evaluator ID, evaluator/configuration versions, and supported Factor keys are snapshotted during construction. Source-array or evaluator-metadata mutation cannot change indexes or summaries. Returned summary structures and implementation-list arrays are defensively frozen.
+
+Default state:
+The production evaluator collection is explicitly empty. No placeholder, fake, or production evaluator is registered.
+
+Runtime integration:
+None. No evaluator execution, automatic evaluator selection, Factor Input Assembly call, Evidence read, provider, repository, score aggregation, legacy registry bridge, API, scheduler, frontend, LLM, or runtime activation exists.
+
+Authority and flags:
+Legacy scoring remains unchanged and authoritative. Evidence remains disconnected from production decisions, and `EVIDENCE_PIPELINE_ENABLED` remains default `false`.
+
+Verification:
+Focused Phase 2F tests, combined Phase 2 regression, Phase 1 regression, trace regression, full backend suite, typecheck, the repository-owned circular dependency gate, and `git diff --check` pass.
+
+### Phase 2G — Deterministic Evaluator Execution Foundation
 
 Status:
 PENDING
