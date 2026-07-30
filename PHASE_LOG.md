@@ -5,13 +5,13 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-Phase 2E — Deterministic Evaluator Foundation
+Phase 2F — Deterministic Evaluator Registry Foundation
 
 Last completed acceptance gate:
-Phase 2D — Deterministic Factor Input Assembly
+Phase 2E — Deterministic Factor Evaluator Contract
 
 Next smallest task:
-Define the first evaluator contract under a separate ADR without scoring integration.
+Define evaluator registration and lookup under a separate ADR without production evaluator or scoring integration.
 
 Phase 0 status:
 COMPLETE
@@ -711,6 +711,42 @@ Verification:
 Focused Phase 2D tests, combined Phase 2 regression, Phase 1 regression, trace regression, full backend suite, typecheck, the repository-owned circular dependency gate, and `git diff --check` pass.
 
 ### Phase 2E — Deterministic Evaluator Foundation
+
+Status:
+COMPLETE
+
+Objective:
+Define the stable synchronous contract, result taxonomy, and validation boundary that future deterministic factor evaluators must follow without implementing production factor logic or score aggregation.
+
+Artifacts:
+- `docs/adr/ADR-019-deterministic-factor-evaluator-contract.md`
+- `yujidi-server/src/types/factor-evaluator.types.ts`
+- `yujidi-server/src/ports/deterministic-factor-evaluator.port.ts`
+- `yujidi-server/src/services/factor-evaluator-contract.service.ts`
+- focused evaluator-contract tests
+
+Port and identity:
+Evaluators synchronously consume only `AssembledFactorInput`, declare an exact immutable ID, positive evaluator and configuration versions, and non-empty duplicate-free supported Factor keys. The port permits no Promise or I/O assumption.
+
+Outcomes and contributions:
+Results use `PASS`, `FAIL`, `NEUTRAL`, or `UNAVAILABLE`. Evaluators declare finite minimum and maximum points; returned points must remain within them. PASS is positive, FAIL negative, and NEUTRAL/UNAVAILABLE zero.
+
+Audit and diagnostics:
+Results preserve exact factor, subject, Evidence ID, definition version, safe source identity, and observation/evaluation times. Reason codes are bounded uppercase machine identifiers. Diagnostics are limited to 20 bounded primitive-only entries.
+
+Validation and immutability:
+Declaration validation does not invoke evaluators. Execution validation rejects identity, input, bounds, outcome, reason, diagnostics, and audit-reference mismatches without repair. Valid results are defensively cloned and frozen with independent dates.
+
+Runtime integration:
+None. No production evaluator, new evaluator registry, Factor Input Assembly call, Evidence read, repository, provider, network, database, scoring aggregation, legacy evaluator modification, API, scheduler, frontend, LLM, or runtime activation exists.
+
+Authority and flags:
+Legacy scoring remains unchanged and authoritative. Evidence remains disconnected from production decisions, and `EVIDENCE_PIPELINE_ENABLED` remains default `false`.
+
+Verification:
+Focused Phase 2E tests, combined Phase 2 regression, Phase 1 regression, trace regression, full backend suite, typecheck, the repository-owned circular dependency gate, and `git diff --check` pass.
+
+### Phase 2F — Deterministic Evaluator Registry Foundation
 
 Status:
 PENDING
