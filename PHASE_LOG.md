@@ -5,13 +5,13 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-Phase 2B — Evidence-to-Factor Compatibility Boundary
+Phase 2D — Deterministic Evaluator Foundation
 
 Last completed acceptance gate:
-Phase 2A — Factor Registry Foundation
+Phase 2C — Deterministic Evidence Source Resolution
 
 Next smallest task:
-Define a separate ADR for controlled Evidence-to-Factor compatibility integration.
+Define the first evaluator contract under a separate ADR without scoring integration.
 
 Phase 0 status:
 COMPLETE
@@ -610,6 +610,72 @@ Verification:
 Focused registry tests, Phase 1 regression, trace regression, full backend suite, typecheck, the repository-owned circular dependency gate, and `git diff --check` pass.
 
 ### Phase 2B — Evidence-to-Factor Compatibility Boundary
+
+Status:
+COMPLETE
+
+Objective:
+Validate one caller-supplied Evidence observation against immutable factor metadata, its inclusive validity interval, and freshness at an explicit evaluation time.
+
+Artifacts:
+- `docs/adr/ADR-016-evidence-factor-compatibility-freshness.md`
+- `yujidi-server/src/types/evidence-factor-compatibility.types.ts`
+- `yujidi-server/src/services/evidence-factor-compatibility.service.ts`
+- focused compatibility tests
+
+Input and evaluation:
+The service accepts one unknown runtime value and explicit `asOf`, rejects revocations, delegates factor lifecycle/value/subject/unit policy to the Phase 2A registry, evaluates inclusive validity, rejects future observations, and evaluates `MAX_AGE`, `VALIDITY_INTERVAL`, or `NON_EXPIRING` freshness deterministically.
+
+Market-price boundary:
+`MARKET.PRICE` is fresh through exactly 10,000 ms of age and stale above that boundary. Temporal validity and freshness remain separate decisions.
+
+Privacy and immutability:
+Results expose safe identity, definition version, scoring-eligibility metadata, evaluation time, and freshness only. Evidence values, deduplication keys, provenance, provider data, and raw validation errors are excluded. Inputs and registry definitions are not mutated.
+
+Runtime integration:
+None. No repository read, lifecycle resolution, source selection, evaluator execution, scoring, database write, API, scheduler, provider, frontend, LLM, or runtime activation exists.
+
+Authority and flags:
+Existing scoring remains authoritative. Evidence remains disconnected from production decision-making, and `EVIDENCE_PIPELINE_ENABLED` remains default `false`.
+
+Verification:
+Focused compatibility tests, Phase 2A regression, Phase 1 regression, trace regression, full backend suite, typecheck, the repository-owned circular dependency gate, and `git diff --check` pass.
+
+### Phase 2C — Evidence Source Resolution Foundation
+
+Status:
+COMPLETE
+
+Objective:
+Select one authoritative observation deterministically from a caller-supplied, bounded, lifecycle-active set without repository reads, lifecycle resolution, evaluator execution, or scoring.
+
+Artifacts:
+- `docs/adr/ADR-017-deterministic-evidence-source-resolution.md`
+- `yujidi-server/src/types/evidence-source-resolution.types.ts`
+- `yujidi-server/src/registries/default-evidence-source-authority.ts`
+- `yujidi-server/src/registries/evidence-source-authority.registry.ts`
+- `yujidi-server/src/services/evidence-source-resolution.service.ts`
+- focused authority-registry and resolver tests
+
+Input and bounds:
+The caller supplies factor, subject, active observations, exact Phase 1D completeness metadata, and explicit `asOf`. Zero through 100 observations are accepted; 101 or more fail before compatibility evaluation. Incomplete or truncated history fails closed.
+
+Compatibility and selection:
+Every valid candidate is evaluated exactly once through Phase 2B. For `MARKET.PRICE`, configured source authority ranks before recency, confidence, provider, source ID, and Evidence ID. The audited `MARKET_DATA` / `BINANCE` authority has priority 100. Unknown sources remain eligible without fabricated priority.
+
+Safety and determinism:
+Mixed factors, mixed subjects, duplicate IDs, malformed candidates, and unsupported factors fail closed. Input order cannot affect selection. Traces expose safe identity and decision metadata only, never Evidence values, deduplication keys, or payloads.
+
+Runtime integration:
+None. No repository, Evidence-read service, lifecycle service, provider, controller, API, scheduler, evaluator, scoring, frontend, LLM, or runtime activation is connected.
+
+Authority and flags:
+Existing scoring remains authoritative. Evidence remains disconnected from production decision-making, and `EVIDENCE_PIPELINE_ENABLED` remains default `false`.
+
+Verification:
+Focused Phase 2C tests, Phase 2A–2B regression, Phase 1 regression, trace regression, full backend suite, typecheck, the repository-owned circular dependency gate, and `git diff --check` pass.
+
+### Phase 2D — Deterministic Evaluator Foundation
 
 Status:
 PENDING
