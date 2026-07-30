@@ -83,3 +83,4 @@ If these artifacts disagree, current production code and accepted ADRs must be r
 | ADR-012 | Binance public price Evidence adapter | ACCEPTED | Phase 1F | A bounded, strict, public-only Binance spot-price adapter proves shadow Evidence translation without runtime activation. | None | None |
 | ADR-013 | Evidence shadow observability | ACCEPTED | Phase 1G | Explicit provider-run summaries update bounded, in-memory, privacy-safe adapter health without changing runner behavior. | None | None |
 | ADR-014 | Explicit Evidence shadow execution | ACCEPTED | Phase 1H | Caller-supplied adapters are explicitly run, timed, and recorded through a privacy-safe orchestration boundary with no runtime activation. | None | None |
+| ADR-015 | Factor Registry foundation | ACCEPTED | Phase 2A | A code-defined immutable registry provides strict versioned factor metadata without Evidence, evaluator, or scoring integration. | None | None |

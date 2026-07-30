@@ -5,13 +5,13 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-Phase 1I — Factor Registry Foundation
+Phase 2B — Evidence-to-Factor Compatibility Boundary
 
 Last completed acceptance gate:
-Phase 1H-QA — Circular Dependency Gate Restoration and Legacy Cycle Audit
+Phase 2A — Factor Registry Foundation
 
 Next smallest task:
-Define the Factor Registry foundation under a separate ADR.
+Define a separate ADR for controlled Evidence-to-Factor compatibility integration.
 
 Phase 0 status:
 COMPLETE
@@ -576,12 +576,40 @@ No cycle contains shadow execution, observability, the provider runner, the Bina
 Verification:
 Clean `npm ci`, focused architecture tests, the repository-owned circular gate, full Phase 1 regression, trace regression, full backend suite, typecheck, and `git diff --check` pass.
 
-### Phase 1I — Factor Registry Foundation
+### Phase 2A — Factor Registry Foundation
 
 Status:
-PENDING
+COMPLETE
 
-### Phase 1J — Evidence Consumer Integration
+Objective:
+Define authoritative, deterministic, immutable factor metadata without connecting it to Evidence reads, source resolution, evaluators, or scoring.
+
+Artifacts:
+- `docs/adr/ADR-015-factor-registry-foundation.md`
+- `yujidi-server/src/types/factor-registry.types.ts`
+- `yujidi-server/src/registries/default-factor-definitions.ts`
+- `yujidi-server/src/registries/factor.registry.ts`
+- focused registry tests
+
+Initial definition:
+Only the concretely supported `MARKET.PRICE` factor is registered. It is version 1, active, numeric, instrument-scoped, requires a quote-currency unit, carries a 10,000 ms maximum-age policy, and is metadata-classified as eligible for future deterministic scoring.
+
+Validation and immutability:
+Construction validates every runtime field, rejects empty registries and duplicate keys, and protects source and returned nested state through defensive cloning and freezing. Lookup is exact and unknown factors fail closed.
+
+Compatibility:
+The registry validates lifecycle, Evidence value type, Evidence subject type, and required, optional, forbidden, or allow-listed unit policy. It does not inspect an Evidence document or evaluate freshness or scoring eligibility.
+
+Runtime integration:
+None. No Evidence query, source selection, evaluator execution, score calculation, database registry, administration, API, scheduler, frontend, provider, LLM, or runtime activation exists.
+
+Authority and flags:
+Existing scoring remains authoritative. `EVIDENCE_PIPELINE_ENABLED` remains default `false` and unused.
+
+Verification:
+Focused registry tests, Phase 1 regression, trace regression, full backend suite, typecheck, the repository-owned circular dependency gate, and `git diff --check` pass.
+
+### Phase 2B — Evidence-to-Factor Compatibility Boundary
 
 Status:
 PENDING
