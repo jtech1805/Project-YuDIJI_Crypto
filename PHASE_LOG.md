@@ -5,13 +5,13 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-Phase 1E — Generic Provider Adapter Harness
+Phase 1F — First Concrete Provider Adapter in Shadow Mode
 
 Last completed acceptance gate:
-Phase 1D — Evidence Read and Query Boundary
+Phase 1E — Generic Provider Adapter Harness
 
 Next smallest task:
-Complete Phase 1E verification for the generic sequential provider runner without activating a provider.
+Complete Phase 1F verification for the Binance public-price shadow adapter without runtime registration.
 
 Phase 0 status:
 COMPLETE
@@ -384,7 +384,7 @@ Provider-internal LLM failure stages remain indistinguishable at analyzer and Co
 ### Phase 1E — Generic Provider Adapter Harness
 
 Status:
-IN_PROGRESS
+COMPLETE
 
 Objective:
 Execute the frozen Phase 1B adapter contract through a bounded, deterministic, sequential ingestion harness without adding a concrete provider.
@@ -422,12 +422,51 @@ The default backend `npm test` glob discovers provider-runner service tests but 
 Retained architectural debt:
 Provider-internal LLM failure stages remain indistinguishable at analyzer and Copilot boundaries. Copilot LLM-generated `isApproved` remains non-authoritative architectural debt.
 
-### Phase 1F — Factor Registry Foundation
+### Phase 1F — First Concrete Provider Adapter in Shadow Mode
+
+Status:
+IN_PROGRESS
+
+Objective:
+Translate bounded Binance public spot-price responses into normalized Evidence candidates through the frozen pull-adapter contract.
+
+Artifacts:
+- `docs/adr/ADR-012-binance-public-price-evidence-adapter.md`
+- injected Binance public-market client port and Axios implementation
+- injected clock port
+- `BINANCE_PUBLIC_MARKET_PRICE_V1` adapter and safe typed errors
+- focused adapter/client and generic-runner integration tests
+
+Provider scope:
+Public `/api/v3/ticker/price` data only. Initial shadow configurations cover `BTCUSDT` and `ETHUSDT`; constructor injection is bounded to 1–20 unique normalized USDT symbols.
+
+Mapping:
+Prices map to `MARKET.PRICE`, canonical `CRYPTO:BINANCE:<symbol>` instrument subjects, `MARKET_DATA`/`BINANCE` provenance, numeric values, and unit `USDT`.
+
+Timestamp and validation:
+An injected clock is called once per adapter run and cloned per candidate. Provider objects, symbols, and positive decimal strings are validated strictly without loose coercion.
+
+Execution and failures:
+Provider requests are sequential in configured order. Any request, response, symbol, price, or clock failure fails the coherent adapter snapshot; no partial candidate batch is returned.
+
+Shadow-only state:
+The adapter is instantiated only by tests. No scheduler, startup registration, controller, route, WebSocket, manual script, or automatic runtime path exists.
+
+Security and authority:
+No Binance credentials, account, order, balance, position, trade, or user data is accessed. No scoring or LLM integration exists. Legacy scoring remains authoritative and `EVIDENCE_PIPELINE_ENABLED` remains default `false`.
+
+Known test-discovery limitation:
+The default backend `npm test` glob discovers the runner integration test but does not discover adapter, client, model, repository, controller, or configuration directories without focused commands.
+
+Retained architectural debt:
+The unused Phase 1B `ingestFrom()` path remains parallel while the Phase 1E runner is sequential. Provider-internal LLM failure stages remain indistinguishable at analyzer and Copilot boundaries.
+
+### Phase 1G — Factor Registry Foundation
 
 Status:
 PENDING
 
-### Phase 1G — Evidence Consumer Integration
+### Phase 1H — Evidence Consumer Integration
 
 Status:
 PENDING
