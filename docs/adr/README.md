@@ -82,3 +82,4 @@ If these artifacts disagree, current production code and accepted ADRs must be r
 | ADR-011 | Generic Evidence provider runner | ACCEPTED | Phase 1E | Existing adapters are executed once and bounded candidates are ingested sequentially with deterministic failure isolation. | None | None |
 | ADR-012 | Binance public price Evidence adapter | ACCEPTED | Phase 1F | A bounded, strict, public-only Binance spot-price adapter proves shadow Evidence translation without runtime activation. | None | None |
 | ADR-013 | Evidence shadow observability | ACCEPTED | Phase 1G | Explicit provider-run summaries update bounded, in-memory, privacy-safe adapter health without changing runner behavior. | None | None |
+| ADR-014 | Explicit Evidence shadow execution | ACCEPTED | Phase 1H | Caller-supplied adapters are explicitly run, timed, and recorded through a privacy-safe orchestration boundary with no runtime activation. | None | None |

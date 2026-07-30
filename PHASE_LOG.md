@@ -5,13 +5,13 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-Phase 1G — Evidence Pipeline Observability and Shadow Health
+Phase 1I — Factor Registry Foundation
 
 Last completed acceptance gate:
-Phase 1F-QA — Deterministic SymbolSearch Test Baseline Repair
+Phase 1H-QA — Circular Dependency Gate Restoration and Legacy Cycle Audit
 
 Next smallest task:
-Complete Phase 1G verification for bounded explicit shadow observability without runtime activation.
+Define the Factor Registry foundation under a separate ADR.
 
 Phase 0 status:
 COMPLETE
@@ -484,7 +484,7 @@ The deterministic SymbolSearch suite, Phase 1 regression, trace regression, full
 ### Phase 1G — Evidence Pipeline Observability and Shadow Health
 
 Status:
-IN_PROGRESS
+COMPLETE
 
 Objective:
 Record privacy-safe operational summaries for explicitly executed Evidence provider runs and derive deterministic per-adapter health.
@@ -516,12 +516,72 @@ No scoring consumer exists. Legacy scoring remains authoritative and `EVIDENCE_P
 Known test-discovery limitation:
 The default backend `npm test` glob discovers observability service tests but still omits adapter, client, model, repository, controller, and configuration directories without focused commands.
 
-### Phase 1H — Factor Registry Foundation
+### Phase 1H — Explicit Evidence Shadow Execution Boundary
+
+Status:
+COMPLETE
+
+Objective:
+Coordinate explicitly supplied adapters through the generic runner and operational observability without creating an automatic runtime path.
+
+Artifacts:
+- `docs/adr/ADR-014-explicit-evidence-shadow-execution.md`
+- `yujidi-server/src/types/evidence-shadow-execution.types.ts`
+- `yujidi-server/src/services/evidence-shadow-execution.service.ts`
+- focused shadow-execution tests
+
+Execution:
+An explicit caller supplies an already constructed adapter. The executor reads one injected clock before and after the single runner call, sends every typed `COMPLETED`, `PARTIAL`, or `FAILED` result unchanged to observability, and returns aggregate timing, run, and health data.
+
+Failure isolation:
+Unexpected runner throws return sanitized `EXECUTION_FAILED` results without observability. Observability throws return `OBSERVABILITY_FAILED` with the safe run summary and no fabricated health. Invalid initial clocks throw a typed error; invalid completion clocks return a sanitized `INVALID_CLOCK` failure without recording.
+
+Privacy and immutability:
+No provider payload, candidate value/result, Evidence identifier, deduplication key, credential, raw error, or stack trace is returned or logged. Input dates and health dates are cloned.
+
+Runtime integration:
+None. The executor has no scheduler, registry, provider-client construction, startup hook, controller, route, WebSocket, frontend, scoring, or persistent execution-history integration.
+
+Authority and flags:
+Legacy scoring remains authoritative. `EVIDENCE_PIPELINE_ENABLED` remains default `false` and unused.
+
+Verification:
+Focused execution, full Phase 1, trace regression, full backend, typecheck, repository-owned circular dependency, and whitespace gates pass.
+
+### Phase 1H-QA — Circular Dependency Gate Restoration and Legacy Cycle Audit
+
+Status:
+COMPLETE
+
+Objective:
+Restore a reproducible repository-owned circular-dependency gate and explicitly audit the legacy cycles that predate Phase 1 Evidence work.
+
+Tooling:
+Madge 6.0.0 is pinned as a development dependency compatible with the repository's Node 20 and TypeScript 6 installation. `npm ci` installs it locally, and `npm run arch:circular` invokes the repository-owned comparison script without global or temporary tooling.
+
+Baseline and enforcement:
+Six verified legacy cycles are recorded in `docs/architecture/known-circular-dependencies.json`. Cycle paths are normalized across separators, rotation, and reverse orientation. Malformed or duplicate baseline entries fail. New or changed cycles fail. Resolved baseline entries are reported as removable debt. No production directory is broadly excluded.
+
+Legacy remediation:
+- `LEGACY-CYCLE-001`: extract live-tick and cached-trade projection contracts into a neutral type module.
+- `LEGACY-CYCLE-002`: relocate the trade-event record contract and inject a delivery port.
+- `LEGACY-CYCLE-003`: inject narrow delivery and live-monitoring ports at composition.
+- `LEGACY-CYCLE-004`: compose subscription, monitoring, and delivery without cross-imported singletons.
+- `LEGACY-CYCLE-005`: extract the active-trade record projection into a neutral trade contract.
+- `LEGACY-CYCLE-006`: relocate evaluator interfaces without changing authoritative scoring semantics.
+
+Phase 1 isolation:
+No cycle contains shadow execution, observability, the provider runner, the Binance adapter, or any Phase 1 Evidence contract. No Evidence, scoring, API, provider execution, observability, frontend, or runtime behavior changed.
+
+Verification:
+Clean `npm ci`, focused architecture tests, the repository-owned circular gate, full Phase 1 regression, trace regression, full backend suite, typecheck, and `git diff --check` pass.
+
+### Phase 1I — Factor Registry Foundation
 
 Status:
 PENDING
 
-### Phase 1I — Evidence Consumer Integration
+### Phase 1J — Evidence Consumer Integration
 
 Status:
 PENDING
