@@ -5,10 +5,10 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-Phase 2D — Deterministic Evaluator Foundation
+Phase 2E — Deterministic Evaluator Foundation
 
 Last completed acceptance gate:
-Phase 2C — Deterministic Evidence Source Resolution
+Phase 2D — Deterministic Factor Input Assembly
 
 Next smallest task:
 Define the first evaluator contract under a separate ADR without scoring integration.
@@ -675,7 +675,42 @@ Existing scoring remains authoritative. Evidence remains disconnected from produ
 Verification:
 Focused Phase 2C tests, Phase 2A–2B regression, Phase 1 regression, trace regression, full backend suite, typecheck, the repository-owned circular dependency gate, and `git diff --check` pass.
 
-### Phase 2D — Deterministic Evaluator Foundation
+### Phase 2D — Deterministic Factor Input Assembly
+
+Status:
+COMPLETE
+
+Objective:
+Assemble one evaluator-ready factor input by orchestrating bounded lifecycle-aware Evidence reads and Phase 2C source selection without independently selecting Evidence, executing an evaluator, or calculating a score.
+
+Artifacts:
+- `docs/adr/ADR-018-deterministic-factor-input-assembly.md`
+- `yujidi-server/src/types/factor-input-assembly.types.ts`
+- `yujidi-server/src/services/factor-input-assembly.service.ts`
+- focused factor-input assembly tests
+
+Read orchestration:
+All Evidence reads use `EvidenceReadService.read` with exact factor/subject scope, explicit caller `asOf`, and the Phase 1D maximum base-history limit of 1,000. No repository is imported directly and lifecycle resolution is not duplicated.
+
+Completeness and selection:
+Incomplete, base-truncated, or relationship-truncated reads fail closed before source resolution. Complete active observations and exact completeness metadata are passed unchanged to Phase 2C once. Phase 2C exclusively selects the Evidence ID.
+
+Selected input:
+The selected ID must occur exactly once in active observations. `MARKET.PRICE` projects an exact finite `NUMBER` and required unit, safe source identity, definition version, cloned times, confidence, aggregate candidate counts, and freshness derived from explicit time and registered policy.
+
+Data minimization:
+The result excludes complete Evidence records, deduplication keys, provider payloads, validity and lifecycle internals, unselected values, and the full Phase 2C trace.
+
+Runtime integration:
+None. No direct repository, lifecycle resolver, provider, controller, API, scheduler, evaluator, scoring, frontend, LLM, or runtime activation is connected.
+
+Authority and flags:
+Existing scoring remains authoritative. Evidence remains disconnected from production decisions, and `EVIDENCE_PIPELINE_ENABLED` remains default `false`.
+
+Verification:
+Focused Phase 2D tests, combined Phase 2 regression, Phase 1 regression, trace regression, full backend suite, typecheck, the repository-owned circular dependency gate, and `git diff --check` pass.
+
+### Phase 2E — Deterministic Evaluator Foundation
 
 Status:
 PENDING
