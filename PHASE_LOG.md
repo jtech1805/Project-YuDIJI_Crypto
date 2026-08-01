@@ -5,13 +5,13 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-No active implementation phase; Phase 3C provider resolution policy is complete.
+No active implementation phase; Phase 3D deterministic provider resolution execution is complete.
 
 Last completed acceptance gate:
-Phase 3C — Provider Resolution Policy
+Phase 3D — Deterministic Provider Resolution Execution
 
 Next smallest task:
-Phase 3D — Provider Resolution Execution, only through a separately approved ADR and implementation prompt.
+Phase 3E — Adapter Composition and Adversarial Fallback Proof, only through a separately approved ADR and implementation prompt.
 
 Phase 0 status:
 COMPLETE
@@ -1183,3 +1183,35 @@ Provider ordering remains owned by Phase 3A. Health assessment remains owned by 
 
 Verification:
 Focused Phase 3C tests passed 17/17, Phase 3B regression passed 18/18, and Phase 3A regression passed 21/21. Combined Phase 2 regression passed 213/213, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 724/724. Typecheck, the repository-owned circular dependency gate with six approved legacy cycles and zero new cycles, forbidden-import audit, and `git diff --check` passed.
+
+### Phase 3D — Deterministic Provider Resolution Execution
+
+Status:
+COMPLETE
+
+Next:
+Phase 3E — Adapter Composition and Adversarial Fallback Proof
+
+Architecture decision:
+ADR-034 accepted.
+
+Contracts and execution:
+- One synchronous deterministic provider-resolution executor was added.
+- Catalog, exact binding, policy factor, bound-provider, and health-assessment lineage are defensively validated without calling earlier validation services.
+- Exactly one health assessment is required per bound provider; duplicate, missing, and unexpected assessments fail closed.
+- Providers are evaluated strictly in Phase 3A order and resolution stops at the first usable provider.
+- Preferred direct, degraded-primary, direct fallback, manual, and proxy outcomes remain explicitly distinguished.
+- Rejected preferred health, fallback, proxy, manual, degraded selection, no-provider, and manual-intervention warnings are derived as frozen typed codes in deterministic order.
+- Confidence adjustment is copied from the exact Phase 3C status mapping and is not applied.
+- Attempts preserve exact binding order with `SELECTED`, `REJECTED_HEALTH`, and `NOT_ATTEMPTED` outcomes.
+- Manual-required and unresolved no-provider outcomes are supported.
+- Execution wrappers, results, failures, warnings, attempts, and attempt objects are detached and deeply frozen.
+
+Runtime integration:
+None. Phase 3D recalculates no health, executes no provider or adapter, performs no retry or fetch, creates no Evidence, applies no confidence adjustment, invokes no Phase 2 service, persists no result, and adds no API, controller, scheduler, frontend, or MCP implementation.
+
+Authority and flags:
+Provider order remains owned by Phase 3A, health by Phase 3B, and selection rules by Phase 3C. Legacy scoring remains unchanged and authoritative. `EVIDENCE_PIPELINE_ENABLED` remains default `false` and disconnected.
+
+Verification:
+Focused Phase 3D tests passed 15/15, Phase 3C regression passed 17/17, Phase 3B regression passed 18/18, and Phase 3A regression passed 21/21. Combined Phase 2 regression passed 213/213, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 739/739. Typecheck, the repository-owned circular dependency gate with six approved legacy cycles and zero new cycles, forbidden-import audit, and `git diff --check` passed.
