@@ -5,13 +5,13 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-No active implementation phase; Phase 2 deterministic functional architecture through Phase 2P is complete.
+No active implementation phase; Phase 3A provider definition and factor binding contract is complete.
 
 Last completed acceptance gate:
-Phase 2P — End-to-End Deterministic Pipeline Composition
+Phase 3A — Provider Definition and Factor Binding Contract
 
 Next smallest task:
-Define any runtime activation or authority migration only through a separately approved ADR and implementation prompt.
+Phase 3B — Provider Health, only through a separately approved ADR and implementation prompt.
 
 Phase 0 status:
 COMPLETE
@@ -1086,3 +1086,35 @@ COMPLETE through explicit end-to-end shadow composition. Production activation, 
 
 Verification:
 Focused Phase 2P tests passed 9/9. Combined Phase 2 regression passed 213/213, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 668/668. Typecheck, the repository-owned circular dependency gate with six approved legacy cycles and zero new cycles, forbidden-import and duplicated-logic audits, and `git diff --check` passed.
+
+### Phase 3A — Provider Definition and Factor Binding Contract
+
+Status:
+COMPLETE
+
+Next:
+Phase 3B — Provider Health
+
+Architecture decision:
+ADR-031 accepted.
+
+Contracts:
+- Provider definition and stable provider identity are frozen.
+- Provider type, descriptive authority metadata, and descriptive cost metadata are frozen.
+- Licensing, production-use suitability, proxy approval, cost, and other commercial decisions remain human-owned.
+- Supported factors reuse the canonical `FactorKey`; enabled status is explicit.
+- Factor-provider bindings record one exact factor and an explicit ordered provider list.
+- Position zero is the preferred provider; remaining providers are fallback candidates in exact declared order.
+- Proxy and manual provider status remain explicit and are never hidden.
+- Duplicate provider keys, duplicate supported factors, duplicate factor bindings, and duplicate bound providers are rejected.
+- Unknown, disabled, and factor-incompatible bound providers are rejected.
+- Successful catalogs are detached, deeply frozen snapshots that preserve caller order.
+
+Runtime integration:
+None. Phase 3A calculates no provider health, selects no provider, executes no fallback or adapter, creates no Evidence, invokes no Phase 2 service, persists no configuration, and adds no API, controller, scheduler, frontend, or MCP implementation. It generates no warnings, confidence adjustment, IDs, timestamps, or runtime activation.
+
+Authority and flags:
+Legacy scoring remains unchanged and authoritative. `EVIDENCE_PIPELINE_ENABLED` remains default `false` and disconnected.
+
+Verification:
+Focused Phase 3A tests passed 21/21. Combined Phase 2 regression passed 213/213, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 689/689. Typecheck, the repository-owned circular dependency gate with six approved legacy cycles and zero new cycles, forbidden-import audit, and `git diff --check` passed.
