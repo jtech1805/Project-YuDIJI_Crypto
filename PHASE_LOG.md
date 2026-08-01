@@ -5,13 +5,13 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-No active implementation phase; Phase 3A provider definition and factor binding contract is complete.
+No active implementation phase; Phase 3B provider health state and assessment is complete.
 
 Last completed acceptance gate:
-Phase 3A — Provider Definition and Factor Binding Contract
+Phase 3B — Provider Health State and Assessment
 
 Next smallest task:
-Phase 3B — Provider Health, only through a separately approved ADR and implementation prompt.
+Phase 3C — Provider Resolution Policy, only through a separately approved ADR and implementation prompt.
 
 Phase 0 status:
 COMPLETE
@@ -1118,3 +1118,35 @@ Legacy scoring remains unchanged and authoritative. `EVIDENCE_PIPELINE_ENABLED` 
 
 Verification:
 Focused Phase 3A tests passed 21/21. Combined Phase 2 regression passed 213/213, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 689/689. Typecheck, the repository-owned circular dependency gate with six approved legacy cycles and zero new cycles, forbidden-import audit, and `git diff --check` passed.
+
+### Phase 3B — Provider Health State and Assessment
+
+Status:
+COMPLETE
+
+Next:
+Phase 3C — Provider Resolution Policy
+
+Architecture decision:
+ADR-032 accepted.
+
+Contracts:
+- Frozen `HEALTHY`, `DEGRADED`, `UNAVAILABLE`, and `UNKNOWN` provider-health states were added.
+- One bounded caller-supplied aggregate telemetry contract records explicit window dates, attempt counts, consecutive failures, average/maximum latency, latest success/failure, and runtime operator disablement.
+- One explicit caller-supplied threshold policy controls telemetry freshness, error rate, consecutive failures, average latency, and required recent success.
+- Assessment uses an explicit `asOf`; no system clock is read.
+- Operator disablement has highest assessment precedence after validation.
+- Missing or empty telemetry and stale telemetry produce typed unknown health.
+- Unavailable conditions take precedence over degraded conditions.
+- Multiple typed reasons are returned in frozen deterministic order.
+- Error rates retain native precision without rounding or percentage conversion.
+- Assessment results, metrics, and reason arrays are detached and deeply frozen.
+
+Runtime integration:
+None. Provider health remains separate from Evidence freshness. Phase 3B selects no provider, executes no fallback, inspects no provider binding, calculates no confidence adjustment or resolution status, invokes no adapter, creates no Evidence, invokes no Phase 2 service, persists no telemetry or result, and adds no monitoring runtime, API, controller, scheduler, frontend, or MCP implementation.
+
+Authority and flags:
+Provider type, authority, and cost do not affect health. Legacy scoring remains unchanged and authoritative. `EVIDENCE_PIPELINE_ENABLED` remains default `false` and disconnected.
+
+Verification:
+Focused Phase 3B tests passed 18/18 and Phase 3A regression passed 21/21. Combined Phase 2 regression passed 213/213, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 707/707. Typecheck, the repository-owned circular dependency gate with six approved legacy cycles and zero new cycles, forbidden-import audit, and `git diff --check` passed.
