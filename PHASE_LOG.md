@@ -5,13 +5,13 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-Phase 2G — Deterministic Evaluator Execution Foundation
+No active implementation phase; Phase 2J acceptance is complete.
 
 Last completed acceptance gate:
-Phase 2F — Deterministic Factor Evaluator Registry
+Phase 2J — Deterministic Contribution Aggregation Contract
 
 Next smallest task:
-Define explicit evaluator execution orchestration under a separate ADR without score aggregation or runtime integration.
+Define actual contribution aggregation through a separately approved ADR and implementation prompt.
 
 Phase 0 status:
 COMPLETE
@@ -785,4 +785,148 @@ Focused Phase 2F tests, combined Phase 2 regression, Phase 1 regression, trace r
 ### Phase 2G — Deterministic Evaluator Execution Foundation
 
 Status:
-PENDING
+COMPLETE
+
+Objective:
+Execute exactly one caller-selected Phase 2E evaluator against one caller-supplied assembled factor input through a deterministic, sanitized, fail-closed boundary.
+
+Artifacts:
+- `docs/adr/ADR-021-explicit-deterministic-evaluator-execution-boundary.md`
+- `yujidi-server/src/types/factor-evaluator-execution.types.ts`
+- `yujidi-server/src/services/explicit-factor-evaluator-execution.service.ts`
+- focused explicit evaluator execution tests
+
+Request and lookup:
+The caller supplies an exact non-empty pre-trimmed evaluator ID and an already assembled input. Phase 2G validates only the safe boundary shape and calls Phase 2F `getById()` exactly once without normalization, version fallback, factor-based selection, or default selection.
+
+Execution:
+Exact factor support is verified before execution. One synchronous `evaluate()` call is permitted, with no retry. Unexpected thrown values are reduced to `EVALUATOR_EXECUTION_FAILED`; Promise-like returns are rejected without awaiting.
+
+Result validation:
+Every ordinary evaluator return is delegated exactly once to Phase 2E `validateResult()`. Invalid output fails closed without repair or leakage. Valid normal results and typed `evaluated: false` failures are preserved as successful boundary executions using Phase 2E's defensive result.
+
+Immutability and determinism:
+Requests, assembled inputs, evaluator declarations, supported factors, raw output, and validated output are not mutated. Boundary objects are frozen, no clock or randomness is read, and no execution ID or duration is generated.
+
+Runtime integration:
+None. Phase 2G does not call Factor Input Assembly, read Evidence, access a provider or database, persist results, run multiple evaluators, aggregate or weight contributions, calculate a score or decision band, modify legacy execution, or add an API, scheduler, frontend, LLM, or runtime path.
+
+Authority and flags:
+Legacy scoring remains unchanged and authoritative. No BUY, SELL, or HOLD decision is produced. Evidence remains disconnected from production decisions, and `EVIDENCE_PIPELINE_ENABLED` remains default `false`.
+
+Verification:
+Focused Phase 2G tests passed 11/11. Combined Phase 2 regression passed 110/110, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 565/565. Typecheck, the repository-owned circular dependency gate with zero new cycles, and `git diff --check` passed.
+
+### Phase 2H — Explicit Multi-Evaluator Execution Plan Contract
+
+Status:
+COMPLETE
+
+Objective:
+Validate one caller-supplied, single-factor multi-evaluator plan as a bounded, deterministic, immutable contract without executing evaluators or introducing aggregation.
+
+Artifacts:
+- `docs/adr/ADR-022-explicit-multi-evaluator-execution-plan-contract.md`
+- `yujidi-server/src/types/factor-evaluator-execution-plan.types.ts`
+- `yujidi-server/src/services/factor-evaluator-execution-plan.service.ts`
+- focused execution-plan validation tests
+
+Plan identity and scope:
+The caller supplies an exact uppercase plan ID, a positive integer plan version, one registered factor key, one explicit failure policy, and 1–20 evaluator steps. A plan targets one future assembled factor input and never contains input data, Evidence references, weights, contributions, or results.
+
+Ordering and uniqueness:
+Every step carries an explicit positive order. Array order must agree with contiguous `1..N` order, no sorting or repair occurs, and duplicate step orders or exact evaluator IDs fail closed.
+
+Registry and factor validation:
+After all structural checks pass, Phase 2F `getById()` resolves every exact evaluator ID once in plan order. Every evaluator must exist and support the plan factor. Safe evaluator identity, evaluator version, configuration version, and supported-factor metadata are snapshotted without retaining or invoking implementations.
+
+Failure policies:
+`STOP_ON_ANY_FAILURE` stops a future runner after any Phase 2G boundary or typed evaluator failure. `CONTINUE_ON_EVALUATOR_FAILURE` continues only after typed evaluator failures. `CONTINUE_ALWAYS` attempts all remaining steps. Phase 2H records these semantics but performs no execution or retry.
+
+Immutability and determinism:
+Validated plans, steps, and supported-factor arrays are defensively cloned and frozen. Validation preserves caller order, returns the first failure in a fixed order, and reads no clock, randomness, generated ID, persistence, or I/O.
+
+Runtime integration:
+None. Phase 2H does not call Phase 2G, Factor Input Assembly, Evidence, providers, repositories, legacy evaluators, scoring, APIs, schedulers, frontend, LLMs, RAG, or MCP. It performs no weighting, contribution aggregation, final scoring, decision-band calculation, or BUY, SELL, or HOLD decision.
+
+Authority and flags:
+Legacy scoring remains unchanged and authoritative. Evidence remains disconnected from production decisions, and `EVIDENCE_PIPELINE_ENABLED` remains default `false`.
+
+Verification:
+Focused Phase 2H tests passed 13/13. Combined Phase 2 regression passed 123/123, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 578/578. Typecheck, the repository-owned circular dependency gate with six approved legacy cycles and zero new cycles, and `git diff --check` passed.
+
+### Phase 2I — Bounded Multi-Evaluator Execution Runner
+
+Status:
+COMPLETE
+
+Objective:
+Run one already validated Phase 2H plan against one already assembled Phase 2D input through ordered Phase 2G delegation and return a safe categorical execution report without aggregating contributions.
+
+Artifacts:
+- `docs/adr/ADR-023-bounded-multi-evaluator-execution-runner.md`
+- `yujidi-server/src/types/factor-evaluator-plan-runner.types.ts`
+- `yujidi-server/src/services/factor-evaluator-plan-runner.service.ts`
+- focused multi-evaluator runner tests
+
+Input boundary:
+The synchronous runner accepts only one defensively checked validated plan and one already assembled input. Plan and input factor keys must match exactly before execution. Raw-plan validation, Factor Input Assembly, registry access, evaluator selection, Evidence reads, providers, and persistence are excluded.
+
+Sequential delegation:
+At most 20 validated steps are attempted in exact plan order. Each attempted step calls Phase 2G exactly once with the step evaluator ID and unchanged input. No evaluator is called directly, no retry exists, and skipped steps never call Phase 2G.
+
+Failure behavior:
+`STOP_ON_ANY_FAILURE` stops before remaining steps after typed evaluator or boundary failure. `CONTINUE_ON_EVALUATOR_FAILURE` continues after typed evaluator failures and stops after boundary failures. `CONTINUE_ALWAYS` attempts every step. Unexpected Phase 2G throws and malformed results become sanitized boundary failures.
+
+Report behavior:
+Typed evaluator and boundary failures remain distinct. Early termination emits explicit metadata-only skipped-step reports and `STOPPED` termination metadata. A failure on the final step remains `COMPLETED` because every step was attempted. Summary counts are categorical only and satisfy attempted/skipped and disposition invariants.
+
+Immutability and determinism:
+Reports, termination metadata, summaries, step arrays, step reports, and copied Phase 2G results are defensively cloned and frozen. The runner reads no clock or randomness and generates no ID, timestamp, or duration.
+
+Runtime integration:
+None. Phase 2I does not inspect contributions for control flow, aggregate or weight points, calculate a total or final score, map decision bands, produce BUY, SELL, or HOLD, persist reports, or add APIs, schedulers, frontend, LLMs, RAG, MCP, or runtime composition.
+
+Authority and flags:
+Legacy scoring remains unchanged and authoritative. Evidence remains disconnected from production decisions, and `EVIDENCE_PIPELINE_ENABLED` remains default `false`.
+
+Verification:
+Focused Phase 2I tests passed 14/14. Combined Phase 2 regression passed 137/137, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 592/592. Typecheck, the repository-owned circular dependency gate with six approved legacy cycles and zero new cycles, and `git diff --check` passed.
+
+### Phase 2J — Deterministic Contribution Aggregation Contract
+
+Status:
+COMPLETE
+
+Objective:
+Validate an immutable, versioned contribution-aggregation policy for one factor and one exact validated execution plan without reading a report or performing aggregation.
+
+Artifacts:
+- `docs/adr/ADR-024-deterministic-contribution-aggregation-contract.md`
+- `yujidi-server/src/types/factor-contribution-aggregation.types.ts`
+- `yujidi-server/src/services/factor-contribution-aggregation-policy.service.ts`
+- focused aggregation-policy validation tests
+
+Identity and scope:
+The caller supplies an exact uppercase policy ID, positive integer policy version, exact plan ID/version reference, one matching factor key, explicit method, bounds, and entries. The policy does not discover a plan or evaluator and does not contain report or contribution values.
+
+Coverage and ordering:
+Policy entries exactly cover all 1–20 validated plan steps in the same contiguous array order. Evaluator IDs, evaluator versions, and configuration versions must match index-by-index. Duplicate orders and evaluator IDs fail closed.
+
+Method, weights, and bounds:
+`WEIGHTED_SUM` is the only approved method, but Phase 2J does not execute it. Every entry requires an explicit finite weight satisfying `0 < weight <= 100`, without rounding, normalization, percentage interpretation, or total-weight constraint. Caller-declared finite aggregate minimum and maximum bounds must be ordered and include zero.
+
+Eligibility:
+Successfully evaluated `PASS`, `FAIL`, and `NEUTRAL` results are eligible for future numeric aggregation. `UNAVAILABLE`, typed evaluator failures, Phase 2G boundary failures, and Phase 2I skipped steps are ineligible and are never substituted with zero.
+
+Immutability and determinism:
+Validated policies defensively clone and freeze bounds, outcome eligibility, entries, and entry arrays. Validation returns the first failure in a fixed order and reads no clock, randomness, generated identity, report, persistence, or external state.
+
+Runtime integration:
+None. Phase 2J does not call Phase 2I, inspect execution reports, multiply or sum contributions, normalize percentages, calculate a final score, create a decision band, produce BUY, SELL, or HOLD, persist policies, or add APIs, schedulers, frontend, LLMs, RAG, MCP, or runtime composition.
+
+Authority and flags:
+Legacy scoring, its 0–100 conventions, weights, normalization, and decisions remain unchanged and authoritative. Evidence remains disconnected from production decisions, and `EVIDENCE_PIPELINE_ENABLED` remains default `false`.
+
+Verification:
+Focused Phase 2J tests passed 13/13. Combined Phase 2 regression passed 150/150, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 605/605. Typecheck, the repository-owned circular dependency gate with six approved legacy cycles and zero new cycles, and `git diff --check` passed.
