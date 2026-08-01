@@ -5,13 +5,13 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-No active implementation phase; Phase 3B provider health state and assessment is complete.
+No active implementation phase; Phase 3C provider resolution policy is complete.
 
 Last completed acceptance gate:
-Phase 3B — Provider Health State and Assessment
+Phase 3C — Provider Resolution Policy
 
 Next smallest task:
-Phase 3C — Provider Resolution Policy, only through a separately approved ADR and implementation prompt.
+Phase 3D — Provider Resolution Execution, only through a separately approved ADR and implementation prompt.
 
 Phase 0 status:
 COMPLETE
@@ -1150,3 +1150,36 @@ Provider type, authority, and cost do not affect health. Legacy scoring remains 
 
 Verification:
 Focused Phase 3B tests passed 18/18 and Phase 3A regression passed 21/21. Combined Phase 2 regression passed 213/213, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 707/707. Typecheck, the repository-owned circular dependency gate with six approved legacy cycles and zero new cycles, forbidden-import audit, and `git diff --check` passed.
+
+### Phase 3C — Provider Resolution Policy
+
+Status:
+COMPLETE
+
+Next:
+Phase 3D — Provider Resolution Execution
+
+Architecture decision:
+ADR-033 accepted.
+
+Contracts:
+- The provider-resolution policy contract and frozen typed resolution statuses were added.
+- Frozen warning codes define future Phase 3D output requirements without generating runtime warnings.
+- Each policy has an explicit uppercase identity, positive version, and one canonical factor.
+- Preferred and fallback provider health-acceptance rules are explicit and preserve caller order.
+- `UNKNOWN` and `UNAVAILABLE` are never usable.
+- Degraded preferred use requires both explicit health acceptance and the degraded-primary flag.
+- Degraded fallback use may be independently permitted.
+- The no-usable-provider outcome is explicitly `MANUAL_REQUIRED` or `UNRESOLVED`.
+- `RESOLVED` confidence adjustment is exactly zero; all exceptional adjustments are finite and non-positive.
+- Proxy, manual, fallback, and degraded-primary outcome transparency is frozen in ADR-033.
+- Validated policies and all nested structures are detached and deeply frozen.
+
+Runtime integration:
+None. Phase 3C duplicates no provider order, calculates or inspects no provider health, selects no provider, executes no fallback, applies no confidence adjustment, generates no runtime warning, invokes no adapter, creates no Evidence, invokes no Phase 2 service, persists no policy, and adds no API, controller, scheduler, frontend, or MCP implementation.
+
+Authority and flags:
+Provider ordering remains owned by Phase 3A. Health assessment remains owned by Phase 3B. Legacy scoring remains unchanged and authoritative. `EVIDENCE_PIPELINE_ENABLED` remains default `false` and disconnected.
+
+Verification:
+Focused Phase 3C tests passed 17/17, Phase 3B regression passed 18/18, and Phase 3A regression passed 21/21. Combined Phase 2 regression passed 213/213, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 724/724. Typecheck, the repository-owned circular dependency gate with six approved legacy cycles and zero new cycles, forbidden-import audit, and `git diff --check` passed.
