@@ -5,13 +5,13 @@ This file tracks approved migration phases for the production-grade evolution of
 ## Project Operating Rules
 
 Current active phase:
-No active implementation phase; Phase 2J acceptance is complete.
+No active implementation phase; Phase 2 deterministic functional architecture through Phase 2P is complete.
 
 Last completed acceptance gate:
-Phase 2J — Deterministic Contribution Aggregation Contract
+Phase 2P — End-to-End Deterministic Pipeline Composition
 
 Next smallest task:
-Define actual contribution aggregation through a separately approved ADR and implementation prompt.
+Define any runtime activation or authority migration only through a separately approved ADR and implementation prompt.
 
 Phase 0 status:
 COMPLETE
@@ -930,3 +930,159 @@ Legacy scoring, its 0–100 conventions, weights, normalization, and decisions r
 
 Verification:
 Focused Phase 2J tests passed 13/13. Combined Phase 2 regression passed 150/150, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 605/605. Typecheck, the repository-owned circular dependency gate with six approved legacy cycles and zero new cycles, and `git diff --check` passed.
+
+### Phase 2K — Deterministic Contribution Aggregation Execution
+
+Status:
+COMPLETE
+
+Objective:
+Aggregate eligible contributions from one successful Phase 2I report under one exact validated Phase 2J policy into a finite, bounded raw weighted contribution without normalization or decisions.
+
+Artifacts:
+- `docs/adr/ADR-025-deterministic-contribution-aggregation-execution.md`
+- `yujidi-server/src/types/factor-contribution-aggregation-execution.types.ts`
+- `yujidi-server/src/services/factor-contribution-aggregation-execution.service.ts`
+- focused aggregation-execution tests
+
+Input and identity boundary:
+The synchronous dependency-free service accepts only one defensively safe validated policy and one `ran: true` report. Plan ID/version, factor, step count, order, evaluator ID, evaluator version, and configuration version must align exactly before classification or arithmetic.
+
+Eligibility:
+Evaluated `PASS`, `FAIL`, and `NEUTRAL` contributions are eligible. `UNAVAILABLE`, typed evaluator failures, Phase 2G boundary failures, and Phase 2I skipped steps are explicitly projected as ineligible and excluded rather than assigned synthetic zero contributions.
+
+Arithmetic and bounds:
+Eligible contribution points and minimum/maximum bounds are multiplied by raw positive policy weights with native JavaScript arithmetic and no rounding. Theoretical weighted bounds and actual points are summed sequentially in report order, must remain finite, and must fit inclusively within declared policy bounds. All-ineligible reports validly produce aggregate and theoretical bounds of zero.
+
+Report behavior:
+Success exposes only policy/plan/factor identity, raw aggregate points, declared and theoretical bounds, categorical summary counts, and minimized immutable step projections. It omits raw policies, reports, execution objects, Evidence, diagnostics, provider data, exceptions, and legacy scoring data.
+
+Immutability and determinism:
+The service does not mutate policy or report inputs. Result bounds, summaries, contributions, weighted contributions, step projections, arrays, and outer results are newly created and frozen. No clock, randomness, generated ID, timestamp, duration, parallel reduction, or external state is used.
+
+Runtime integration:
+None. Phase 2K does not call Phase 2I or Phase 2J services, execute evaluators, access registries, query Evidence, fetch providers, normalize weights or scores, round results, calculate percentages or final scores, create decision bands, produce BUY, SELL, or HOLD, persist results, or add APIs, schedulers, frontend, LLMs, RAG, MCP, or runtime composition.
+
+Authority and flags:
+Legacy scoring, weighted averages, normalization, rounding, templates, and decisions remain unchanged and authoritative. Evidence remains disconnected from production decisions, and `EVIDENCE_PIPELINE_ENABLED` remains default `false`.
+
+Verification:
+Focused Phase 2K tests passed 14/14. Combined Phase 2 regression passed 164/164, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 619/619. Typecheck, the repository-owned circular dependency gate with six approved legacy cycles and zero new cycles, and `git diff --check` passed.
+
+### Phase 2L — Deterministic Raw Aggregate Normalization Contract
+
+Status:
+COMPLETE
+
+Objective:
+Define an immutable normalization-policy contract for a future deterministic mapping of one bounded raw aggregate into an explicit normalized numeric range without executing normalization or producing decisions.
+
+Artifacts:
+- `docs/adr/ADR-026-deterministic-raw-aggregate-normalization-contract.md`
+- `yujidi-server/src/types/factor-aggregate-normalization.types.ts`
+- `yujidi-server/src/services/factor-aggregate-normalization-policy.service.ts`
+- focused normalization-policy validation tests
+
+Identity and scope:
+The caller supplies an uppercase normalization-policy ID, positive integer version, one exact Phase 2J aggregation-policy ID/version, and the same single factor. No latest-version resolution, generated identity, cross-factor mapping, policy registry, or persistence exists.
+
+Ranges and neutral anchor:
+The caller explicitly declares finite source bounds that exactly match the aggregation policy, with a negative minimum, literal zero neutral, positive maximum, and non-zero capacity on both sides. The finite target range is strictly ordered around an explicit neutral score. Raw zero maps to normalized neutral, and asymmetric source and target ranges are supported without a fixed 0–100 convention or midpoint assumption.
+
+Method and future behavior:
+`PIECEWISE_LINEAR_ZERO_ANCHORED` is the only method. It defines independent future lower and upper linear segments around zero. `FAIL` is the only out-of-range policy, so future execution must fail closed; clamping, saturation, and extrapolation are forbidden. `PRESERVE_NATIVE` is the only precision policy, with no rounding, truncation, decimal-place configuration, or epsilon adjustment.
+
+Validation, immutability, and determinism:
+The synchronous pure service validates the runtime aggregation-policy boundary and returns only the first failure in a fixed order. Successful policies defensively clone and freeze both ranges and the outer policy. Validation reads no Phase 2K result, clock, randomness, generated ID, external state, or I/O.
+
+Runtime integration:
+None. Phase 2L performs no normalization arithmetic, normalized-score calculation, decision-band evaluation, confidence calculation, BUY, SELL, HOLD, or NO_TRADE output. It adds no API, controller, scheduler, frontend, provider, LLM, RAG, MCP, persistence, or runtime activation.
+
+Authority and flags:
+Legacy scoring, normalization, rounding, templates, thresholds, and decisions remain unchanged and authoritative. Evidence remains disconnected from production decisions, and `EVIDENCE_PIPELINE_ENABLED` remains default `false`.
+
+Verification:
+Focused Phase 2L tests passed 13/13. Combined Phase 2 regression passed 177/177, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 632/632. Typecheck, the repository-owned circular dependency gate with six approved legacy cycles and zero new cycles, and `git diff --check` passed.
+
+### Phase 2M — Deterministic Raw Aggregate Normalization Execution
+
+Status:
+COMPLETE
+
+Objective:
+Map one bounded Phase 2K raw aggregate through one exact Phase 2L policy into an immutable normalized numeric result.
+
+Contract and execution:
+The independent synchronous service requires exact aggregation policy ID/version, factor, and declared source bounds. Source minimum, zero (including negative zero), and source maximum map exactly to target minimum, neutral, and maximum. Interior values use independent lower and upper piecewise-linear segments.
+
+Safety and scope:
+Raw and normalized values must remain finite and inclusively bounded. `FAIL` prohibits clamping or extrapolation and `PRESERVE_NATIVE` prohibits rounding or truncation. No band, permission, confidence, persistence, API, or runtime activation exists.
+
+Verification:
+Focused Phase 2M tests passed 10/10 and typecheck passed before Phase 2N began.
+
+### Phase 2N — Deterministic Decision-Band Contract
+
+Status:
+COMPLETE
+
+Objective:
+Validate one immutable policy that completely partitions an exact normalized range into five semantic analytical bands without classifying a runtime score.
+
+Contract:
+The policy targets one exact normalization policy ID/version and factor. It requires `STRONG_NEGATIVE`, `NEGATIVE`, `NEUTRAL`, `POSITIVE`, and `STRONG_POSITIVE` in exact order with caller-defined finite thresholds, contiguous orders, unique labels, positive widths, complete endpoint coverage, no gaps, and no overlaps.
+
+Boundary convention:
+Every minimum is inclusive. The first four maxima are exclusive and the final maximum is inclusive, producing `[min,max)` intervals followed by `[min,max]`.
+
+Verification:
+Focused Phase 2N tests passed 9/9 and typecheck passed before Phase 2O began.
+
+### Phase 2O — Deterministic Decision-Band Execution
+
+Status:
+COMPLETE
+
+Objective:
+Classify one successful Phase 2M normalized result through one exact validated Phase 2N policy into exactly one semantic analytical band.
+
+Classification:
+Normalization identity, factor, and normalized range must match exactly. Scores must be finite and inclusively bounded. Shared boundaries map to the later band, the final maximum maps to `STRONG_POSITIVE`, and zero or multiple matches fail closed.
+
+Semantic limitation and authority:
+Band labels describe score position only and are not BUY, SELL, HOLD, broker, order, position, confidence, or risk instructions. No persistence, API, scheduler, frontend, LLM, provider, or runtime composition is added. Legacy scoring remains unchanged and authoritative, Evidence remains disconnected from production decisions, and `EVIDENCE_PIPELINE_ENABLED` remains default `false`.
+
+Phase 2 functional architecture:
+COMPLETE through deterministic semantic classification. Runtime activation and authority migration remain unapproved and deferred.
+
+Verification:
+Focused Phase 2O tests passed 8/8. Combined Phase 2 regression passed 204/204, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 659/659. Typecheck, the repository-owned circular dependency gate with six approved legacy cycles and zero new cycles, forbidden-import audits, and `git diff --check` passed.
+
+### Phase 2P — End-to-End Deterministic Pipeline Composition
+
+Status:
+COMPLETE
+
+Objective:
+Compose one already assembled factor input and validated evaluator-plan, aggregation, normalization, and decision-band contracts through the completed deterministic stages as an explicit caller-triggered shadow pipeline.
+
+Input and preflight boundary:
+The service accepts assembled and validated contracts only. Defensive runtime checks precede exact factor, plan, evaluator-entry, aggregation-policy, source-bound, normalization-policy, target-range, and decision-band lineage checks. It calls no raw-policy validator and performs no Factor Input Assembly.
+
+Sequential delegation:
+Phase 2I is invoked exactly once after successful preflight. Phase 2K, Phase 2M, and Phase 2O are each invoked at most once and only after the preceding stage succeeds. No business logic from those stages is duplicated, and no retry, fallback, policy discovery, evaluator selection, or alternate ordering exists.
+
+Failure and trace behavior:
+The first typed downstream failure stops all later stages and preserves only its sanitized categorical code. Unexpected dependency exceptions become `UNEXPECTED_STAGE_EXCEPTION` without exposing thrown data. Every success and failure contains the same five-stage trace in exact order with `COMPLETED`, `FAILED`, or `SKIPPED` status.
+
+Success, immutability, and determinism:
+Success retains complete plan and policy version lineage and the four already sanitized immutable downstream outputs. New identity, subject, trace, and outer structures are frozen. No clock, random value, pipeline ID, timestamp, duration, persistence, or external state is used.
+
+Shadow-only scope and authority:
+The pipeline is not registered in production runtime. It does not read Evidence, execute providers or evaluators directly, access registries, persist output, expose an API, schedule work, emit WebSockets, modify legacy scoring, or translate semantic bands into BUY, SELL, HOLD, or broker instructions. Legacy scoring remains authoritative and `EVIDENCE_PIPELINE_ENABLED` remains default `false`.
+
+Phase 2 deterministic functional architecture:
+COMPLETE through explicit end-to-end shadow composition. Production activation, persistence, monitoring, and authority migration remain unapproved and deferred.
+
+Verification:
+Focused Phase 2P tests passed 9/9. Combined Phase 2 regression passed 213/213, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 668/668. Typecheck, the repository-owned circular dependency gate with six approved legacy cycles and zero new cycles, forbidden-import and duplicated-logic audits, and `git diff --check` passed.
