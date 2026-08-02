@@ -1215,3 +1215,47 @@ Provider order remains owned by Phase 3A, health by Phase 3B, and selection rule
 
 Verification:
 Focused Phase 3D tests passed 15/15, Phase 3C regression passed 17/17, Phase 3B regression passed 18/18, and Phase 3A regression passed 21/21. Combined Phase 2 regression passed 213/213, Phase 1 regression passed 113/113, trace regression passed 55/55, and the full backend suite passed 739/739. Typecheck, the repository-owned circular dependency gate with six approved legacy cycles and zero new cycles, forbidden-import audit, and `git diff --check` passed.
+
+### Phase 3E — Provider Resolution Composition and Adversarial Proof
+
+Status:
+COMPLETE
+
+Next:
+Phase 4
+
+Architecture decision:
+ADR-035 accepted.
+
+Composition and proof:
+- Explicit immutable provider-runner registration and exact provider-key lookup were added with an empty default production registry.
+- Provider key, runner identity, adapter identity, and Evidence provenance remain separate explicit namespaces; no identity is inferred.
+- Only the already-selected Phase 3D provider can execute, exactly once.
+- Rejected and `NOT_ATTEMPTED` provider runners remain uncalled in adversarial invocation-count tests.
+- No-provider results short-circuit before lookup and execute zero runners.
+- Missing registrations, identity mismatches, typed runner failures, runner exceptions, malformed results, and contained Evidence-ingestion failures fail closed with sanitized typed codes.
+- Phase 1's canonical runner remains the sole ingestion boundary; Phase 3E performs no second ingestion, normalization, deduplication, lifecycle resolution, or persistence path.
+- Rejected-only partial and valid zero-candidate Phase 1 outcomes retain their existing semantics.
+- Fallback, proxy, manual, and degraded-primary resolution status and warnings remain visible.
+- Factor, requested and selected provider, provider type, warning order, and confidence-adjustment metadata are preserved without application.
+- Fixed immutable composition stages make reached, failed, and skipped work explicit.
+- Composition results and nested safe projections are detached and frozen.
+
+Runtime integration:
+None. Phase 3E recalculates no health, performs no provider reselection, retry, second fallback, or alternate runner execution, invokes no Phase 2 or legacy scoring service, applies no confidence adjustment, persists no resolution result, and adds no API, controller, scheduler, frontend, MCP, dependency injection, or production provider registration.
+
+Authority and flags:
+Phase 3A remains authoritative for provider order, Phase 3B for health, Phase 3C for rules and adjustment metadata, and Phase 3D for selection. Legacy scoring remains authoritative. `EVIDENCE_PIPELINE_ENABLED` remains default `false` and disconnected.
+
+Verification:
+Focused Phase 3E tests, Phase 3A–3D regressions, Phase 2, Phase 1, trace regression, the full backend suite, typecheck, circular dependency gate, forbidden-import audit, dependency audit, and `git diff --check` passed.
+
+### Phase 3 — Provider Resolution Foundation
+
+Status:
+COMPLETE
+
+Next:
+Phase 4
+
+Phases 3A through 3E are complete. Provider definition, health assessment, resolution policy, deterministic selection, and selected-runner shadow composition are frozen without production activation or any change to authoritative legacy scoring.
