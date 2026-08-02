@@ -1259,3 +1259,39 @@ Next:
 Phase 4
 
 Phases 3A through 3E are complete. Provider definition, health assessment, resolution policy, deterministic selection, and selected-runner shadow composition are frozen without production activation or any change to authoritative legacy scoring.
+
+### Phase 3R-A — Foundation Roadmap Reconciliation and Execution-Flow Freeze
+
+Status:
+COMPLETE
+
+Next:
+Phase 3R-B — ScoreCheck Orchestration Contract
+
+Architecture decision:
+ADR-036 accepted.
+
+Reconciliation:
+- The original foundation roadmap was reconciled with the actual Phase 1–3 implementation and explicit remaining backlog.
+- The existing template-driven ScoreCheck flow, template model, versioning, resource snapshots, evaluator dispatch, persistence, and APIs were documented from repository evidence.
+- Templates remain the user-facing starting point and declare what must be monitored.
+- Compiled rulebooks are frozen as future immutable executable projections of exact template versions.
+- Factor definitions remain separate from factor instances and subject resolution.
+- A future bounded subject-resolution boundary was documented without implementation.
+- Provider resolution and selected-provider execution retain Phase 3 ownership and transparent fallback lineage.
+- Evidence remains the append-only provider-independent observation boundary.
+- Phase 2 remains the single-factor compatibility, selection, assembly, evaluation, aggregation, normalization, and classification boundary.
+- Future cross-factor cluster/conflict and decision-axis responsibilities remain separate and deferred.
+- A future thin ScoreCheck orchestrator was scoped, and a dedicated orchestration-contract ADR is required before runtime work.
+- Target ScoreCheck persistence and potential API touchpoints were documented conceptually without approving schema or API changes.
+- Phase 4 compiled-rulebook entry conditions were frozen.
+- Remaining factor, relationship, compatibility, MCP, and evaluation-harness work was recorded explicitly.
+
+Runtime integration:
+None. Phase 3R-A adds no runtime code, schema, model, service, API, controller, route, scheduler, feature flag, dependency, module wiring, provider registration, or production activation.
+
+Authority and flags:
+Legacy scoring remains authoritative. Phase 1–3 composition remains shadow-only. `EVIDENCE_PIPELINE_ENABLED`, `GENERIC_EVALUATOR_ENABLED`, and `COMPILED_RULEBOOK_EXECUTION` remain default OFF and disconnected from ScoreCheck execution.
+
+Verification:
+Documentation-only diff passed `git diff --check`. No source, test, dependency, feature-flag, schema, API, or runtime-wiring file changed.
