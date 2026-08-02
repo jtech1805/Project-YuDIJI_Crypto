@@ -1295,3 +1295,37 @@ Legacy scoring remains authoritative. Phase 1–3 composition remains shadow-onl
 
 Verification:
 Documentation-only diff passed `git diff --check`. No source, test, dependency, feature-flag, schema, API, or runtime-wiring file changed.
+
+### Phase 3R-B — ScoreCheck Orchestration Contract
+
+Status:
+COMPLETE
+
+Next:
+Phase 3R-C — BTC_ETF_NET_FLOW Mocked-Evidence Proof
+
+Architecture decision:
+ADR-037 accepted.
+
+Contracts:
+- The current production ScoreCheck controller, request, template/Symbol/geometry validation, context, legacy scoring, persistence, audit, snapshot, update/delete, and trade-setup conversion paths were inspected.
+- `LEGACY`, `SHADOW`, and `COMPILED` execution modes were frozen without implementation or silent mode fallback.
+- One explicit fixed `asOf`, immutable template/rulebook/instrument/trade lineage, and user-scoped idempotency direction were frozen.
+- The complete orchestration stage/state model and sanitized stage reports were frozen.
+- Legacy execution remains authoritative; shadow execution follows authoritative legacy execution and cannot change its result.
+- Compiled execution fails closed and remains unavailable until cross-factor and decision contracts exist.
+- Narrow template, rulebook, subject, Evidence, factor, cross-factor, decision, legacy, persistence, audit, and snapshot ports were defined as pure contracts only.
+- Mandatory and optional factor requirement levels and non-zero-default partial behavior were frozen.
+- Provider fallback/proxy/manual/degraded-primary metadata, Evidence IDs, and evaluator/configuration lineage must be persisted by future implementations.
+- ScoreCheck persistence, mandatory audit consistency, versioned snapshot ownership, and trade-setup compatibility were frozen.
+- Current sequential non-transactional writes, best-effort audit behavior, rollback gaps, and migration risk were documented accurately.
+- Bounded recovery may retry only missing idempotent writes and may not rerun providers, evaluators, or execution modes.
+
+Runtime integration:
+None. Phase 3R-B adds no orchestrator, controller, service, model, schema, repository, route, adapter, registry, scheduler, feature-flag wiring, dependency, or production activation.
+
+Authority and flags:
+Legacy `ScoringEngineService` and its evaluator registry remain authoritative. `EVIDENCE_PIPELINE_ENABLED`, `COMPILED_RULEBOOK_EXECUTION`, and `DECISION_AXES_ENABLED` remain default OFF and unchanged.
+
+Verification:
+Pure contract typecheck, circular dependency gate, protected-file audit, dependency audit, and `git diff --check` passed. No constant-only type test was added because the repository has no `tests/unit/types` convention.
