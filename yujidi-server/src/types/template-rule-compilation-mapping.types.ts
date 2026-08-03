@@ -4,6 +4,7 @@ import type {
   CompiledFactorDefinitionLineage,
   CompiledProviderLineage,
   CompiledSubjectBinding,
+  CompiledOptionalFactorBehavior,
   FactorRequirementLevel,
 } from "./compiled-rulebook.types.js";
 import type { GenericFactorRelationshipType } from "./generic-factor-relationship.types.js";
@@ -16,9 +17,6 @@ import type { VersionedProviderResolutionPolicyRegistry } from "./versioned-prov
 import type { VersionedAggregationPolicyRegistry } from "./versioned-aggregation-policy.types.js";
 import type { VersionedNormalizationPolicyRegistry } from "./versioned-normalization-policy.types.js";
 import type { VersionedDecisionBandPolicyRegistry } from "./versioned-decision-band-policy.types.js";
-
-export const COMPILED_OPTIONAL_FACTOR_BEHAVIORS = Object.freeze(["PARTIAL", "OMIT"] as const);
-export type CompiledOptionalFactorBehavior = (typeof COMPILED_OPTIONAL_FACTOR_BEHAVIORS)[number];
 
 export type TemplateRuleSourceCoordinate = Readonly<{
   sectionIndex: number;

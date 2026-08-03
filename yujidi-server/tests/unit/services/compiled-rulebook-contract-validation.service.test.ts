@@ -20,6 +20,7 @@ const binding = (overrides: Record<string, unknown> = {}) => ({
   },
   relationshipType: "DIRECT",
   requirementLevel: "OPTIONAL",
+  optionalBehavior: "PARTIAL",
   weight: 1,
   provider: {
     providerBindingId: "BTC_ETF_FLOW_PROVIDER_BINDING",
@@ -161,6 +162,15 @@ test("rejects invalid evaluator, relationship, requirement, and weight", () => {
   expectFailure(rulebook({ factorBindings: [binding({ evaluator: { ...base, configurationVersion: 0 } })] }), "INVALID_CONFIGURATION_VERSION");
   expectFailure(rulebook({ factorBindings: [binding({ relationshipType: "CORRELATED" })] }), "UNKNOWN_RELATIONSHIP_TYPE");
   expectFailure(rulebook({ factorBindings: [binding({ requirementLevel: "REQUIRED" })] }), "UNKNOWN_REQUIREMENT_LEVEL");
+  expectFailure(rulebook({ factorBindings: [binding({ optionalBehavior: "UNKNOWN" })] }), "INVALID_OPTIONAL_BEHAVIOR");
+  expectFailure(rulebook({ factorBindings: [binding({ optionalBehavior: "" })] }), "INVALID_OPTIONAL_BEHAVIOR");
+  expectFailure(rulebook({ factorBindings: [binding({ optionalBehavior: "partial" })] }), "INVALID_OPTIONAL_BEHAVIOR");
+  expectFailure(rulebook({ factorBindings: [binding({ optionalBehavior: "omit" })] }), "INVALID_OPTIONAL_BEHAVIOR");
+  expectFailure(rulebook({ factorBindings: [binding({ requirementLevel: "MANDATORY", optionalBehavior: "PARTIAL" })] }), "MANDATORY_BINDING_HAS_OPTIONAL_BEHAVIOR");
+  expectFailure(rulebook({ factorBindings: [binding({ requirementLevel: "MANDATORY", optionalBehavior: "OMIT" })] }), "MANDATORY_BINDING_HAS_OPTIONAL_BEHAVIOR");
+  expectFailure(rulebook({ factorBindings: [binding({ requirementLevel: "OPTIONAL", optionalBehavior: null })] }), "OPTIONAL_BINDING_MISSING_BEHAVIOR");
+  const absent = binding(); delete (absent as Record<string, unknown>).optionalBehavior;
+  expectFailure(rulebook({ factorBindings: [absent] }), "INVALID_OPTIONAL_BEHAVIOR");
   for (const weight of [0, -1, 101, Number.NaN, Infinity]) {
     expectFailure(rulebook({ factorBindings: [binding({ weight })] }), "INVALID_WEIGHT");
   }
@@ -192,6 +202,25 @@ test("rejects exact semantic duplicates but not merely repeated factors", () => 
     binding(),
     binding({ bindingId: "SECOND", order: 1 }),
   ] }), "DUPLICATE_SEMANTIC_BINDING");
+});
+
+test("accepts every valid requirement/behavior pair and preserves immutable behavior", () => {
+  for (const [requirementLevel, optionalBehavior] of [["MANDATORY", null], ["OPTIONAL", "PARTIAL"], ["OPTIONAL", "OMIT"]] as const) {
+    const input = rulebook({ factorBindings: [binding({ requirementLevel, optionalBehavior })] });
+    const result = validate(input); assert.equal(result.valid, true);
+    if (result.valid) {
+      assert.equal(result.rulebook.factorBindings[0]!.optionalBehavior, optionalBehavior);
+      assert.equal(Object.isFrozen(result.rulebook.factorBindings[0]), true);
+    }
+  }
+});
+
+test("optional behavior participates in semantic duplicate identity", () => {
+  const result = validate(rulebook({ factorBindings: [
+    binding({ optionalBehavior: "PARTIAL" }),
+    binding({ bindingId: "SECOND", order: 1, optionalBehavior: "OMIT" }),
+  ] }));
+  assert.equal(result.valid, true);
 });
 
 test("rejects malformed optional future policy lineage", () => {

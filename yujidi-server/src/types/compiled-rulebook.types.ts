@@ -17,6 +17,13 @@ export const FACTOR_REQUIREMENT_LEVELS = Object.freeze([
 export type FactorRequirementLevel =
   (typeof FACTOR_REQUIREMENT_LEVELS)[number];
 
+export const COMPILED_OPTIONAL_FACTOR_BEHAVIORS = Object.freeze([
+  "PARTIAL",
+  "OMIT",
+] as const);
+export type CompiledOptionalFactorBehavior =
+  (typeof COMPILED_OPTIONAL_FACTOR_BEHAVIORS)[number];
+
 export const MIN_COMPILED_RULEBOOK_FACTOR_BINDINGS = 1;
 export const MAX_COMPILED_RULEBOOK_FACTOR_BINDINGS = 100;
 export const MAX_COMPILED_RULEBOOK_IDENTIFIER_LENGTH = 120;
@@ -97,6 +104,7 @@ export type CompiledFactorBinding = Readonly<{
   evaluator: CompiledEvaluatorBinding;
   relationshipType: GenericFactorRelationshipType;
   requirementLevel: FactorRequirementLevel;
+  optionalBehavior: CompiledOptionalFactorBehavior | null;
   weight: number;
   provider: CompiledProviderLineage;
   executionPolicies: CompiledExecutionPolicyLineage;
@@ -141,6 +149,9 @@ export const COMPILED_RULEBOOK_VALIDATION_FAILURE_CODES = Object.freeze([
   "INVALID_CONFIGURATION_VERSION",
   "UNKNOWN_RELATIONSHIP_TYPE",
   "UNKNOWN_REQUIREMENT_LEVEL",
+  "INVALID_OPTIONAL_BEHAVIOR",
+  "MANDATORY_BINDING_HAS_OPTIONAL_BEHAVIOR",
+  "OPTIONAL_BINDING_MISSING_BEHAVIOR",
   "INVALID_WEIGHT",
   "INVALID_PROVIDER_BINDING_ID",
   "INVALID_PROVIDER_BINDING_VERSION",

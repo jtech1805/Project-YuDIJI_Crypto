@@ -169,3 +169,19 @@ Rejected: treating latest template as lineage; random compiler IDs; embedding li
 ## Consequences
 
 The repository gains an honest immutable executable-projection contract and deterministic validator without activating it. Real lineage is reused where present, missing lineage is visible rather than fabricated, and later compiler/runtime work has explicit prerequisites and fail-closed boundaries.
+
+## Phase 4D1 Amendment — Optional Missing-Data Behavior
+
+Status: Accepted
+
+Date: 2026-08-03
+
+The Phase 4E pre-coding audit found that `requirementLevel` alone could not preserve the materially different Phase 4D results OPTIONAL/PARTIAL and OPTIONAL/OMIT. Collapsing both to OPTIONAL would make compiled replay ambiguous.
+
+The compiled factor-binding contract therefore adds a required `optionalBehavior` field with the closed compiled vocabulary PARTIAL and OMIT plus null. MANDATORY requires null. OPTIONAL requires exactly PARTIAL or OMIT. Missing, unknown, lowercase, or inconsistent values fail structural validation at the optional-behavior path.
+
+This is direct per-binding missing-data behavior. Aggregation policy lineage does not own it and cannot restore a discarded distinction. Optional behavior participates in compiled semantic identity, survives detached cloning and freezing, and remains visible for future compiler and runtime interpretation.
+
+Phase 4C translations remain BLOCK → MANDATORY/null, PARTIAL → OPTIONAL/PARTIAL, IGNORE → OPTIONAL/OMIT, and ZERO unsupported. Phase 4D already resolves this exact pair and needs no behavioral change. Phase 4E must preserve both fields without inference.
+
+Existing compiled fixtures migrate by adding an explicit field; there is no production default. Runtime interpretation, execution, persistence, and activation remain deferred. Rejected alternatives were collapsing both behaviors to OPTIONAL, making the field optional, inferring a default, or moving the distinction into aggregation policy. The consequence is additive contract precision without runtime behavior.

@@ -1576,3 +1576,26 @@ Contracts:
 
 Runtime integration:
 None. No rulebook/compiler identity, compiled-rulebook generation, persistence, template reads or mutation, subject resolution, Evidence, ScoreCheck, provider/evaluator/policy execution, runtime registration, feature-flag change, dependency, API, or production activation was added. Legacy scoring remains authoritative and compiled execution remains OFF.
+
+### Phase 4D1 — Compiled Optional Missing-Data Behavior Contract Amendment
+
+Status:
+COMPLETE
+
+Next:
+Phase 4E — Deterministic compiled-rulebook compiler
+
+Architecture decision:
+ADR-043 additive Phase 4D1 amendment accepted.
+
+Contracts:
+- The compiled optional-behavior gap is closed with the canonical PARTIAL/OMIT vocabulary.
+- Every compiled binding contains optionalBehavior explicitly.
+- MANDATORY requires null; OPTIONAL requires PARTIAL or OMIT.
+- Missing, unknown, lowercase, and inconsistent behaviors fail deterministically.
+- Optional behavior participates in compiled semantic duplicate identity and survives detached clone/freeze validation.
+- Phase 4C translation and Phase 4D resolved-specification semantics remain unchanged.
+- Aggregation policies do not own or infer per-binding optional behavior.
+
+Runtime integration:
+None. Phase 4E is unblocked as the next phase. No compiler, hash generation, binding-ID generation, persistence, repository, runtime interpretation, ScoreCheck wiring, feature-flag change, dependency, API, or production activation was added. Legacy scoring remains authoritative and compiled execution remains OFF.

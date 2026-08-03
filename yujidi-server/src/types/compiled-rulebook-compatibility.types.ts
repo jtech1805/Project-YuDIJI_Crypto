@@ -1,9 +1,9 @@
-import type { CompiledEvaluatorBinding, CompiledExecutionPolicyLineage, CompiledFactorDefinitionLineage, CompiledProviderLineage, CompiledSubjectBinding, FactorRequirementLevel } from "./compiled-rulebook.types.js";
+import type { CompiledEvaluatorBinding, CompiledExecutionPolicyLineage, CompiledFactorDefinitionLineage, CompiledOptionalFactorBehavior, CompiledProviderLineage, CompiledSubjectBinding, FactorRequirementLevel } from "./compiled-rulebook.types.js";
 import type { EvaluatorConfigurationRegistry } from "./evaluator-configuration-registry.types.js";
 import type { GenericFactorRelationshipType } from "./generic-factor-relationship.types.js";
 import type { MissingDataPolicy, ScoringTemplateStatus, ScoringTemplateVisibility } from "./scoring.types.js";
 import type { TemplateCompilationSnapshotInput } from "./canonical-template-snapshot.types.js";
-import type { CompiledOptionalFactorBehavior, TemplateRuleCompilationMappingRegistry, TemplateRuleSourceCoordinate } from "./template-rule-compilation-mapping.types.js";
+import type { TemplateRuleCompilationMappingRegistry, TemplateRuleSourceCoordinate } from "./template-rule-compilation-mapping.types.js";
 import type { VersionedAggregationPolicyRegistry } from "./versioned-aggregation-policy.types.js";
 import type { VersionedDecisionBandPolicyRegistry } from "./versioned-decision-band-policy.types.js";
 import type { VersionedEvaluatorDeclarationRegistry } from "./versioned-evaluator-declaration.types.js";

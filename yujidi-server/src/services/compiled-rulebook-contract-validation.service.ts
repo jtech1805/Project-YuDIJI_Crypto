@@ -6,6 +6,7 @@ import { FACTOR_KEYS, type FactorKey } from "../types/factor-registry.types.js";
 import { GENERIC_FACTOR_RELATIONSHIP_TYPES } from "../types/generic-factor-relationship.types.js";
 import {
   COMPILED_SUBJECT_BINDING_TYPES,
+  COMPILED_OPTIONAL_FACTOR_BEHAVIORS,
   FACTOR_REQUIREMENT_LEVELS,
   MAX_COMPILED_RULEBOOK_FACTOR_BINDINGS,
   MAX_COMPILED_RULEBOOK_IDENTIFIER_LENGTH,
@@ -131,6 +132,16 @@ const validateBinding = (value: unknown, path: string): CompiledRulebookValidati
   if (!FACTOR_REQUIREMENT_LEVELS.includes(value.requirementLevel as never)) {
     return failure("UNKNOWN_REQUIREMENT_LEVEL", `${path}.requirementLevel`);
   }
+  if (value.optionalBehavior !== null
+    && !COMPILED_OPTIONAL_FACTOR_BEHAVIORS.includes(value.optionalBehavior as never)) {
+    return failure("INVALID_OPTIONAL_BEHAVIOR", `${path}.optionalBehavior`);
+  }
+  if (value.requirementLevel === "MANDATORY" && value.optionalBehavior !== null) {
+    return failure("MANDATORY_BINDING_HAS_OPTIONAL_BEHAVIOR", `${path}.optionalBehavior`);
+  }
+  if (value.requirementLevel === "OPTIONAL" && value.optionalBehavior === null) {
+    return failure("OPTIONAL_BINDING_MISSING_BEHAVIOR", `${path}.optionalBehavior`);
+  }
   if (typeof value.weight !== "number" || !Number.isFinite(value.weight)
     || value.weight <= 0 || value.weight > MAX_COMPILED_RULEBOOK_WEIGHT) {
     return failure("INVALID_WEIGHT", `${path}.weight`);
@@ -190,6 +201,8 @@ const semanticBindingIdentity = (binding: CompiledFactorBinding): string => JSON
   binding.evaluator.configurationId,
   binding.evaluator.configurationVersion,
   binding.relationshipType,
+  binding.requirementLevel,
+  binding.optionalBehavior,
 ]);
 
 const cloneRulebook = (rulebook: CompiledRulebookDefinition): CompiledRulebookDefinition => Object.freeze({
