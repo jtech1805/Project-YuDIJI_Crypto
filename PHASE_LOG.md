@@ -1524,3 +1524,28 @@ Contracts:
 
 Runtime integration:
 None. No compiler, template mapping, rulebook generation, persistence, ScoreCheck wiring, policy/evaluator/provider execution, runtime evaluator registration, feature-flag change, dependency, API, or production activation was added. Legacy scoring remains authoritative and compiled execution remains OFF.
+
+### Phase 4C — Immutable Template-to-Factor and Subject-Binding Mapping Authority
+
+Status:
+COMPLETE
+
+Next:
+Phase 4D — Complete template compatibility validation
+
+Architecture decision:
+ADR-046 accepted.
+
+Contracts:
+- Mapping identity/version and authoritative exact historical lookup are frozen; latest remains convenience only.
+- Reusable mappings select candidates by normalized evaluator key, while exact template occurrences use a later snapshot-bound section/evaluator coordinate.
+- Duplicate source occurrences are independent; materially different eligible mapping definitions produce explicit AMBIGUOUS lookup rather than first-match selection.
+- Exact factor, evaluator, configuration, provider-binding, resolution, aggregation, normalization, and decision-band lineage is validated with getExact only.
+- FIXED, TRADED_INSTRUMENT, and UNDERLYING_ASSET instructions are preserved without subject resolution.
+- BLOCK, PARTIAL, and IGNORE compatibility is explicit; ZERO remains unsupported. Current legacy-effective behavior remains section-policy authoritative.
+- Weight ownership is USE_EFFECTIVE_TEMPLATE_WEIGHT; no arithmetic occurs in the mapping authority.
+- Compile eligibility and historical retention are immutable. Deferred relationships remain historical-only.
+- Production defaults remain empty; the complete ETF-flow mapping proof is test-local.
+
+Runtime integration:
+None. No template traversal or mutation, compatibility compiler, snapshot hash, rulebook compiler, persistence, subject resolution, ScoreCheck wiring, provider/evaluator/policy execution, runtime registration, feature-flag change, dependency, API, or production activation was added. Legacy scoring remains authoritative and compiled execution remains OFF.
