@@ -1625,3 +1625,29 @@ Contracts:
 
 Runtime integration:
 None. No persistence, repository, model, API, registry/latest lookup, subject resolution, Evidence, ScoreCheck, provider/evaluator/policy execution, feature-flag read, runtime registration, random ID, dependency, or production activation was added. Legacy scoring remains authoritative and compiled execution remains OFF.
+
+### Phase 4F — Immutable Compiled Rulebook Repository and Read Boundary
+
+Status:
+COMPLETE
+
+Next:
+Phase 4G — Shadow execution
+
+Architecture decision:
+ADR-050 accepted.
+
+Contracts:
+- A strict compiled-rulebook persistence schema and append-only repository are added.
+- rulebookId + rulebookVersion is authoritative and uniquely indexed; template identity/version remains non-unique.
+- Defensive Phase 4A/4D1 validation protects inserts and immutable domain projection protects reads.
+- Identical existing content returns DUPLICATE_RULEBOOK; any difference at one identity/version returns RULEBOOK_VERSION_CONFLICT.
+- Mongo duplicate-key races reread exact content and return the same deterministic duplicate/conflict result.
+- Exact historical reads never substitute latest.
+- Template-version listing is bounded, paginated, and deterministically ordered.
+- Most-recently-compiled lookup is explicitly convenience metadata only.
+- Dates, binding order, subject variants, optional behavior, exact lineage, and future placeholders round-trip without semantic transformation.
+- No update, replace, upsert, delete, archive, or activation operation exists.
+
+Runtime integration:
+None. No compiled execution, subject resolution, Evidence, ScoreCheck, provider/evaluator/policy execution, controller, route, API, production module wiring, feature-flag read/change, runtime registration, dependency, or activation state was added. Legacy scoring remains authoritative and compiled execution remains OFF.
