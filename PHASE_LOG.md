@@ -1477,3 +1477,28 @@ Contracts:
 
 Runtime integration:
 None. No compiler, canonicalizer, hash generator, subject resolver, repository, model, API, template migration, ScoreCheck wiring, provider/evaluator execution, registry registration, feature-flag change, dependency, or production activation was added. Legacy scoring remains authoritative and compiled execution remains OFF.
+
+### Phase 4B — Immutable Configuration and Provider-Binding Lineage Authorities
+
+Status:
+COMPLETE
+
+Next:
+Phase 4C — Compiled-rulebook reference validation
+
+Architecture decision:
+ADR-044 accepted.
+
+Contracts:
+- Evaluator-configuration and provider-binding identity/version are frozen as immutable historical lineage.
+- Closed constructor-built authorities provide exact lookup, greatest-version convenience lookup, and deterministic ascending version listing.
+- Exact lookup is authoritative; latest lookup never substitutes for a compiled historical reference.
+- Duplicate identity/version registration fails even for deep-equal content; no update, delete, or overwrite operation exists.
+- Compile eligibility is immutable versioned content. Deferred generic relationships may remain historically visible only when ineligible for compilation.
+- Compile-eligible generic configuration content delegates validation to the existing pure evaluator-specific validator.
+- Versioned provider bindings preserve exact Phase 3 provider order and validate provider existence, enabled state, and factor support against a supplied validated catalog without embedding provider definitions.
+- Both default production definition collections are empty and frozen; BTC ETF-flow proofs are test-local.
+- Full compiled-rulebook reference validation is deferred to Phase 4C because remaining evaluator, factor, and policy authorities do not consistently support exact historical lookup.
+
+Runtime integration:
+None. No compiler, rulebook repository, database model, template migration, subject resolution, ScoreCheck wiring, API, provider health/selection/execution, evaluator execution, production registration, feature-flag change, dependency, or activation was added. Legacy scoring remains authoritative and compiled execution remains OFF.
