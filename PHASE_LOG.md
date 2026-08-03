@@ -1502,3 +1502,25 @@ Contracts:
 
 Runtime integration:
 None. No compiler, rulebook repository, database model, template migration, subject resolution, ScoreCheck wiring, API, provider health/selection/execution, evaluator execution, production registration, feature-flag change, dependency, or activation was added. Legacy scoring remains authoritative and compiled execution remains OFF.
+
+### Phase 4C0 — Immutable Historical Authorities for Compiled References
+
+Status:
+COMPLETE
+
+Next:
+Phase 4C — Template-to-Factor and Subject-Binding Contract
+
+Architecture decision:
+ADR-045 accepted. Remaining planned Phase 4 ADRs advance to ADR-046 through ADR-050.
+
+Contracts:
+- Exact historical authorities now exist for factor definitions, evaluator declarations, provider-resolution policies, aggregation policies, normalization policies, and decision-band policies.
+- All authorities provide authoritative exact lookup, latest-version convenience only, and deterministic ascending historical version lists.
+- Historical versions and immutable compile eligibility are retained; duplicate identity/version registration fails even for deep-equal content.
+- Factor and policy authorities reuse canonical validators. Aggregation/normalization/decision validation context is supplied only during construction and is not stored as historical definition content.
+- Evaluator declarations are immutable data only; executable instances and functions remain exclusively in the unchanged runtime evaluator registry.
+- Audited factor definitions and the generic relationship evaluator declaration are available as metadata defaults. Policy defaults remain empty.
+
+Runtime integration:
+None. No compiler, template mapping, rulebook generation, persistence, ScoreCheck wiring, policy/evaluator/provider execution, runtime evaluator registration, feature-flag change, dependency, API, or production activation was added. Legacy scoring remains authoritative and compiled execution remains OFF.
