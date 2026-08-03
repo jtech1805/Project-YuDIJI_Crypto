@@ -16,6 +16,7 @@ export type EvidenceSourceType = (typeof EVIDENCE_SOURCE_TYPES)[number];
 
 export const EVIDENCE_SUBJECT_TYPES = [
   "INSTRUMENT",
+  "ASSET",
   "MARKET",
   "ECONOMY",
   "EVENT",

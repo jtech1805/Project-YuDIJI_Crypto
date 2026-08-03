@@ -48,7 +48,7 @@ export class FactorInputAssemblyService {
     }
 
     const definition = this.dependencies.factorRegistry.get(request.factorKey);
-    if (request.factorKey !== "MARKET.PRICE" || !definition) {
+    if (!definition) {
       return failure(request.factorKey, request.subject, evaluatedAt, "UNSUPPORTED_FACTOR");
     }
 

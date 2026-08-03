@@ -1329,3 +1329,128 @@ Legacy `ScoringEngineService` and its evaluator registry remain authoritative. `
 
 Verification:
 Pure contract typecheck, circular dependency gate, protected-file audit, dependency audit, and `git diff --check` passed. No constant-only type test was added because the repository has no `tests/unit/types` convention.
+
+### Phase 3R-C — Crypto ETF Net-Flow Mocked-Evidence Proof
+
+Status:
+COMPLETE
+
+Next:
+Phase 3R-D — Generic Factor Relationship Semantics
+
+Architecture decision:
+ADR-038 accepted.
+
+Contracts and proof:
+- Canonical `ASSET` subject identity was added without changing existing subject meanings.
+- `ASSET/BTC` denotes the underlying Bitcoin asset; `INSTRUMENT/BTCUSDT` remains a tradable instrument.
+- Roadmap label `BTC_ETF_NET_FLOW` was reconciled to canonical factor `CRYPTO.ETF_NET_FLOW` plus subject `ASSET/BTC`.
+- The closed Factor Registry now contains `MARKET.PRICE` and `CRYPTO.ETF_NET_FLOW`.
+- ETF net flow accepts numeric `USD` Evidence and uses explicit inclusive 24-hour freshness.
+- Phase 2C source resolution and Phase 2D assembly now accept exact registered factors instead of a `MARKET.PRICE` literal.
+- Mock positive, negative, and zero ETF flow passed canonical ingestion.
+- Deduplication, lifecycle-aware read, compatibility, test-local source authority, deterministic source resolution, and factor-input assembly were proven.
+- Existing `MARKET.PRICE` behavior remains unchanged.
+
+Runtime integration:
+None. No real provider, production authority rule, adapter, runner, registration, evaluator, scheduler, API, ScoreCheck wiring, or feature-flag change was added.
+
+Verification:
+Focused Phase 3R-C contract and proof tests passed. Phase 1, Phase 2, Phase 3, full backend, typecheck, circular dependency, and diff gates passed before Phase 3R-D began.
+
+### Phase 3R-D — Generic Factor Relationship Semantics
+
+Status:
+COMPLETE
+
+Next:
+Phase 3R-E — Relationship Evaluator and Golden Fixture Proof
+
+Architecture decision:
+ADR-039 accepted.
+
+Contracts:
+- Six exact immutable relationship types and deterministic support classifications are frozen.
+- DIRECT and INVERSE are executable single-factor directional arithmetic.
+- CONDITIONAL requires a caller-supplied compiled condition binding and remains validation-only.
+- CONFIRMATION_ONLY belongs to future cross-factor processing and cannot originate direction.
+- RISK_ONLY belongs to a future typed risk axis and produces no directional points.
+- VETO belongs to a future typed decision-blocking channel and is never an extreme numeric score.
+- Missing input remains explicitly unavailable and never silently neutral.
+
+Runtime integration:
+None. No evaluator, registry registration, legacy adapter, template, provider, ScoreCheck wiring, or feature-flag change was added.
+
+### Phase 3R-E — Relationship Evaluator and Golden Fixture Proof
+
+Status:
+COMPLETE
+
+Next:
+Phase 3R-F — Legacy GENERIC_FACTOR Compatibility and Draft-Template Proof
+
+Architecture decision:
+ADR-040 accepted.
+
+Implementation:
+- `GENERIC_RELATIONSHIP_FACTOR_EVALUATOR` v1/configuration v1 reuses the Phase 2 evaluator contract.
+- DIRECT and INVERSE execute five deterministic ETF-flow bands with bounded contributions.
+- CONDITIONAL remains binding-required; confirmation, risk, and veto remain explicitly deferred without directional points.
+- Golden tests cover all six relationships, exact boundaries, precision, validation order, immutability, deterministic reruns, and explicit registration.
+
+Runtime integration:
+None. The default deterministic evaluator registry remains empty and no production path imports or registers the evaluator.
+
+### Phase 3R-F — Legacy GENERIC_FACTOR Compatibility and Draft-Template Proof
+
+Status:
+COMPLETE
+
+Next:
+Phase 3R-G — MCP and Evaluation-Harness Decision
+
+Architecture decision:
+ADR-041 accepted.
+
+Implementation:
+- Exact `GENERIC_FACTOR:<factor-key>` parsing and closed-registry eligibility checks are frozen.
+- A separate adapter deterministically projects bounded DIRECT/INVERSE contributions to legacy 0–100 results.
+- Missing Evidence and conditional/confirmation/risk/veto semantics fail typed and are never flattened to score zero.
+- An isolated, explicitly enabled compatibility dispatcher proves routing without changing production legacy dispatch.
+- A private USER/DRAFT test fixture proves the canonical `GENERIC_FACTOR:CRYPTO.ETF_NET_FLOW` reference.
+
+Runtime integration:
+None. Generic execution remains default-off; no system template, active user template, production registry, ScoreCheck path, provider, or Evidence orchestration changed.
+
+### Phase 3R-G — MCP and Evaluation-Harness Decision
+
+Status:
+COMPLETE
+
+Next:
+Phase 4 — Compiled Rulebooks
+
+Architecture decision:
+ADR-042 accepted; Outcome B formal deferral.
+
+Decision:
+- No MCP or dedicated evaluation-harness infrastructure currently exists.
+- Read-only contracts are frozen for factor definition, templates, ScoreChecks, and trade journals, with factor definition as the minimum first tool.
+- Authentication, authorization, redaction, bounding, audit, transport, and production-exposure prerequisites are explicit.
+- A future network-free versioned foundation manifest must compare exact statuses, ordered reasons, and scores/contributions.
+- No dependency, package script, server, tool, runtime wiring, or production exposure was added.
+
+### Phase 3R — Foundation Roadmap Reconciliation
+
+Status:
+COMPLETE
+
+Next:
+Phase 4 — Compiled Rulebooks
+
+Summary:
+- `CRYPTO.ETF_NET_FLOW` plus `ASSET/BTC` is registered and proven with mocked canonical Evidence.
+- Relationship semantics are frozen; DIRECT/INVERSE evaluation and all-six-semantic golden proofs exist.
+- Isolated legacy generic-factor compatibility and a private DRAFT template reference are proven.
+- MCP/evaluation-harness contracts and prerequisites are formally deferred by accepted ADR.
+- Legacy scoring remains authoritative; Evidence, generic evaluator, and compiled execution flags remain default OFF.

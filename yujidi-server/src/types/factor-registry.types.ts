@@ -3,7 +3,7 @@ import type {
   EvidenceValueType,
 } from "./evidence.types.js";
 
-export const FACTOR_KEYS = ["MARKET.PRICE"] as const;
+export const FACTOR_KEYS = ["MARKET.PRICE", "CRYPTO.ETF_NET_FLOW"] as const;
 export type FactorKey = (typeof FACTOR_KEYS)[number];
 
 export const FACTOR_STATUSES = [

@@ -47,8 +47,7 @@ export class EvidenceSourceResolutionService {
     if (request.observations.length > MAX_EVIDENCE_SOURCE_CANDIDATES) {
       return noSelection(request.factorKey, request.subject, asOf, "TOO_MANY_CANDIDATES", []);
     }
-    if (request.factorKey !== "MARKET.PRICE"
-      || !this.dependencies.factorRegistry.get(request.factorKey)) {
+    if (!this.dependencies.factorRegistry.get(request.factorKey)) {
       return noSelection(request.factorKey, request.subject, asOf, "UNSUPPORTED_FACTOR", []);
     }
 

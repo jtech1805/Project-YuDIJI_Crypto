@@ -255,11 +255,30 @@ test("enforces optional, forbidden, and allow-list unit policies", () => {
   }, "USDT").valid, true);
 });
 
-test("default registry freezes the exact MARKET.PRICE definition", () => {
-  assert.deepEqual(DEFAULT_FACTOR_DEFINITIONS, [definition()]);
-  assert.deepEqual(factorRegistry.list(), [definition()]);
+test("default registry freezes MARKET.PRICE and CRYPTO.ETF_NET_FLOW definitions", () => {
+  const etfFlow: FactorDefinition = {
+    factorKey: "CRYPTO.ETF_NET_FLOW",
+    version: 1,
+    displayName: "Crypto ETF Net Flow",
+    description: "Net daily flow into exchange-traded funds for a crypto asset.",
+    status: "ACTIVE",
+    valueTypes: ["NUMBER"],
+    subjectTypes: ["ASSET"],
+    unit: { policy: "ALLOW_LIST", allowedUnits: ["USD"] },
+    freshness: { kind: "MAX_AGE", maxAgeMs: 86_400_000 },
+    scoringEligibility: "ELIGIBLE",
+  };
+  assert.deepEqual(DEFAULT_FACTOR_DEFINITIONS, [definition(), etfFlow]);
+  assert.deepEqual(factorRegistry.list(), [etfFlow, definition()]);
+  assert.equal(factorRegistry.validateCompatibility({ factorKey: "CRYPTO.ETF_NET_FLOW", valueType: "NUMBER", subjectType: "ASSET", unit: "USD" }).valid, true);
+  for (const input of [
+    { valueType: "BOOLEAN", subjectType: "ASSET", unit: "USD" },
+    { valueType: "NUMBER", subjectType: "INSTRUMENT", unit: "USD" },
+    { valueType: "NUMBER", subjectType: "ASSET", unit: "USDT" },
+  ] as const) assert.equal(factorRegistry.validateCompatibility({ factorKey: "CRYPTO.ETF_NET_FLOW", ...input }).valid, false);
   assert.equal(Object.isFrozen(DEFAULT_FACTOR_DEFINITIONS), true);
   assert.equal(Object.isFrozen(DEFAULT_FACTOR_DEFINITIONS[0]?.valueTypes), true);
+  assert.equal(Object.isFrozen(DEFAULT_FACTOR_DEFINITIONS[1]?.unit), true);
 });
 
 test("fixed definition sets produce deterministic results", () => {
