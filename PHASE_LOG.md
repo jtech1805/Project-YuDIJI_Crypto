@@ -1549,3 +1549,30 @@ Contracts:
 
 Runtime integration:
 None. No template traversal or mutation, compatibility compiler, snapshot hash, rulebook compiler, persistence, subject resolution, ScoreCheck wiring, provider/evaluator/policy execution, runtime registration, feature-flag change, dependency, API, or production activation was added. Legacy scoring remains authoritative and compiled execution remains OFF.
+
+### Phase 4D — Complete Compilation Compatibility and Reference-Graph Validation
+
+Status:
+COMPLETE
+
+Next:
+Phase 4E — Deterministic compiled-rulebook compiler
+
+Architecture decision:
+ADR-047 accepted.
+
+Contracts:
+- An exact caller-supplied detached template snapshot and material canonical projection are frozen.
+- Stable canonical serialization and SHA-256 snapshot hashing identify in-place draft authoring state.
+- Enabled sections/evaluators traverse deterministically into exact Phase 4C source-rule coordinates; disabled entries remain hash material only.
+- Every enabled occurrence requires exactly one eligible mapping; missing and ambiguous mappings fail closed.
+- All eight historical reference families are revalidated through getExact only, including compatibility and compile eligibility.
+- DIRECT/INVERSE remain executable; deferred relationships fail.
+- Section missing-data policy remains legacy-effective; evaluator override is metadata. BLOCK/PARTIAL/IGNORE translate explicitly and ZERO fails.
+- Configured effective weight is sectionWeight × evaluatorWeight / 100 with native precision; runtime renormalization is not executed.
+- Explicit WEIGHTED_SUM is supported. NORMALIZE_EXECUTED and omitted mode fail because template-level renormalization is not representable by current compiled lineage.
+- Semantic duplicates and same-semantics/different-weight conflicts fail.
+- Success is an immutable resolved compilation specification, not a compiled rulebook.
+
+Runtime integration:
+None. No rulebook/compiler identity, compiled-rulebook generation, persistence, template reads or mutation, subject resolution, Evidence, ScoreCheck, provider/evaluator/policy execution, runtime registration, feature-flag change, dependency, API, or production activation was added. Legacy scoring remains authoritative and compiled execution remains OFF.
