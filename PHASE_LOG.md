@@ -1454,3 +1454,26 @@ Summary:
 - Isolated legacy generic-factor compatibility and a private DRAFT template reference are proven.
 - MCP/evaluation-harness contracts and prerequisites are formally deferred by accepted ADR.
 - Legacy scoring remains authoritative; Evidence, generic evaluator, and compiled execution flags remain default OFF.
+
+### Phase 4A — Compiled Rulebook Contract, Identity, and Version Lineage
+
+Status:
+COMPLETE
+
+Next:
+Phase 4B — Compilation prerequisites and eligibility
+
+Architecture decision:
+ADR-043 accepted.
+
+Contracts:
+- The immutable compiled-rulebook purpose, identity, version, and exact source-template lineage are frozen.
+- Caller-supplied compiler identity/version, timestamp, and lowercase SHA-256 compilation-input hash shape are frozen.
+- Stable binding IDs, contiguous zero-based order, closed factor keys with real factor-definition versions, and the FIXED/TRADED_INSTRUMENT/UNDERLYING_ASSET subject vocabulary are frozen.
+- Evaluator, configuration, relationship, MANDATORY/OPTIONAL requirement, positive bounded weight, provider, resolution-policy, aggregation, normalization, and decision-band lineage are frozen.
+- Nullable future cross-factor and decision-policy lineage placeholders are frozen without implementing those policies.
+- Deterministic first-failure validation order, bounded 1..100 bindings, duplicate ID/order/semantic rejection, defensive cloning, and frozen outputs are frozen.
+- The Factor Registry has real definition versions; provider-resolution policies have real identity/version. Evaluator configurations lack configuration IDs, and Phase 3 factor-provider bindings lack identity/version, so those compiled fields remain future validated references pending immutable versioned authorities.
+
+Runtime integration:
+None. No compiler, canonicalizer, hash generator, subject resolver, repository, model, API, template migration, ScoreCheck wiring, provider/evaluator execution, registry registration, feature-flag change, dependency, or production activation was added. Legacy scoring remains authoritative and compiled execution remains OFF.
