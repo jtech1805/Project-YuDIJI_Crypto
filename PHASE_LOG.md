@@ -1599,3 +1599,29 @@ Contracts:
 
 Runtime integration:
 None. Phase 4E is unblocked as the next phase. No compiler, hash generation, binding-ID generation, persistence, repository, runtime interpretation, ScoreCheck wiring, feature-flag change, dependency, API, or production activation was added. Legacy scoring remains authoritative and compiled execution remains OFF.
+
+### Phase 4E — Deterministic Compiled Rulebook Compiler
+
+Status:
+COMPLETE
+
+Next:
+Phase 4F — Compiled-rulebook repository
+
+Architecture decision:
+ADR-049 accepted.
+
+Contracts:
+- The compiler request explicitly carries caller-owned rulebook identity/version, compiler identity/version, compiledAt, and a Phase 4D specification.
+- Canonical logical compilation projection and lowercase SHA-256 hashing are frozen.
+- Compiler identity/version, template provenance, mapping/coordinate provenance, all compiled semantics, optional behavior, effective weight, and binding order affect the hash.
+- compiledAt and rulebook identity/version do not affect the logical hash.
+- Binding IDs use BINDING_ plus the full uppercase SHA-256 of exact snapshot/coordinate/mapping lineage; collisions fail.
+- Phase 4D source traversal order becomes contiguous compiled order without sorting.
+- MANDATORY/null, OPTIONAL/PARTIAL, and OPTIONAL/OMIT are preserved exactly.
+- Effective weight and every exact provider/policy lineage field are copied without inference.
+- Future policy placeholders remain exact and null by default.
+- Phase 4A/4D1 structural validation owns the detached deeply frozen compiler success result.
+
+Runtime integration:
+None. No persistence, repository, model, API, registry/latest lookup, subject resolution, Evidence, ScoreCheck, provider/evaluator/policy execution, feature-flag read, runtime registration, random ID, dependency, or production activation was added. Legacy scoring remains authoritative and compiled execution remains OFF.
