@@ -1791,3 +1791,22 @@ Contracts:
 
 Runtime integration:
 None. Phase 4G4-C performs no scoring and adds no repository, model, persistence, shadow orchestration, observation assembly, feature-flag change, ScoreCheck integration, API, route, controller, metrics, traces, system clock, randomness, or production registration. Legacy scoring remains authoritative and compiled execution remains default OFF.
+
+### Phase A2 — Immutable Exact Template-to-Rulebook Execution Binding
+
+Status:
+COMPLETE
+
+Next:
+Publication-time eligibility architecture checkpoint
+
+Contracts:
+- A dedicated persisted append-only authority maps one exact system-template identity to one exact compiled-rulebook identity.
+- Exact template identity uses `templateId`, `templateVersion`, and the existing `SYSTEM` scope; user-template eligibility is not implemented.
+- Candidate insertion loads only the exact rulebook ID/version and validates its exact source-template lineage before persistence.
+- Exact duplicates are deterministic, source and binding identity conflicts fail closed, and no update, delete, replacement, upsert, activation, or supersession behavior exists.
+- Exact reads require the complete system-template identity, reject corrupted duplicate storage, and never sort or select latest, most recent, or highest versions.
+- Inputs remain unchanged and returned bindings are detached, deeply frozen, and contain cloned Dates.
+
+Runtime integration:
+None. No observation assembly, shadow orchestration, Phase 4G3 invocation, parity invocation, ScoreCheck integration, API, controller, route, feature-flag change, runtime registration, dependency, or production activation was added. Compiled execution remains default OFF and legacy scoring remains authoritative.
