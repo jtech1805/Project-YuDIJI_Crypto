@@ -1771,3 +1771,23 @@ Contracts:
 
 Runtime integration:
 None. Production implementation has not started. `COMPILED_RULEBOOK_EXECUTION` remains default OFF, no runtime registration exists, and compiled execution remains non-authoritative. The next task is parity contracts and pure comparison.
+
+### Phase 4G4-C — Versioned Parity Contracts and Pure Comparison
+
+Status:
+COMPLETE
+
+Next:
+Phase 4G4 — Exact source-template-to-compiled-rulebook execution-binding authority
+
+Contracts:
+- One explicit immutable policy ID/version governs every comparison; no discovery, environment selection, latest lookup, or timestamp selection exists.
+- Numeric parity compares the legacy score and compiled normalized score only when enabled and explicitly eligible, after one configured canonical decimal projection and exact equality.
+- Original and canonical numeric values are preserved; no epsilon, tolerance, fuzzy equality, scale inference, or forced-value inference is permitted.
+- Semantic parity uses explicit per-dimension legacy/compiled source mappings and keeps permission-to-band separate from status-to-execution comparisons.
+- Match, mismatch, unmappable, and unavailable remain distinct; comparability is derived mechanically from requested dimension results.
+- ADR-055 non-comparable fields are emitted as deterministic diagnostic-only inventory without copying or falsely comparing large envelopes.
+- Validation and comparison results are detached and deeply frozen, included dates are cloned, and neither input nor policy is mutated.
+
+Runtime integration:
+None. Phase 4G4-C performs no scoring and adds no repository, model, persistence, shadow orchestration, observation assembly, feature-flag change, ScoreCheck integration, API, route, controller, metrics, traces, system clock, randomness, or production registration. Legacy scoring remains authoritative and compiled execution remains default OFF.

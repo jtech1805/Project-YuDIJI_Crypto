@@ -1,0 +1,20 @@
+import type { ScoringEngineResult } from "../services/scoring-engine.service.js";
+import type { CompiledExecutionResult } from "./compiled-rulebook-execution.types.js";
+
+export type CompiledLegacyParityPolicyIdentity = Readonly<{ policyId: string; policyVersion: number }>;
+export type ParityNumericPolicy = Readonly<{ enabled: boolean; legacySource: "SCORE"; compiledSource: "NORMALIZED_SCORE"; canonicalization: Readonly<{ method: "DECIMAL_PLACES"; decimalPlaces: number }>; comparison: "EXACT"; forcedLegacyValueHandling: "REQUIRE_EXPLICIT_ELIGIBILITY" }>;
+export type ParitySemanticMapping = Readonly<{ legacyValue: string; compiledValue: string; outcome: "MATCH" | "MISMATCH" }>;
+export type ParitySemanticDimensionPolicy = Readonly<{ dimensionId: string; legacySource: "PERMISSION" | "SCORE_STATUS"; compiledSource: "DECISION_BAND" | "EXECUTION_STATUS"; mappings: readonly ParitySemanticMapping[] }>;
+export type CompiledLegacyParityPolicy = CompiledLegacyParityPolicyIdentity & Readonly<{ numeric: ParityNumericPolicy; semanticDimensions: readonly ParitySemanticDimensionPolicy[] }>;
+export type CompiledLegacyParityPolicyFailureCode = "INVALID_PARITY_POLICY" | "INVALID_POLICY_ID" | "INVALID_POLICY_VERSION" | "INVALID_NUMERIC_POLICY" | "INVALID_NUMERIC_CANONICALIZATION" | "UNSUPPORTED_NUMERIC_COMPARISON" | "INVALID_SEMANTIC_DIMENSION" | "DUPLICATE_SEMANTIC_DIMENSION" | "INVALID_SEMANTIC_MAPPING" | "DUPLICATE_SEMANTIC_MAPPING" | "CONTRADICTORY_SEMANTIC_MAPPING";
+export type CompiledLegacyParityPolicyValidationResult = Readonly<{ valid: true; policy: CompiledLegacyParityPolicy }> | Readonly<{ valid: false; code: CompiledLegacyParityPolicyFailureCode }>;
+
+export type LegacyParityInput = Pick<ScoringEngineResult, "score" | "permission" | "scoreStatus" | "dataConfidence" | "reasonCodes" | "warnings" | "breakdown">;
+export type CompiledLegacyParityComparisonRequest = Readonly<{ policy: unknown; legacy: LegacyParityInput; compiled: CompiledExecutionResult; legacyNumericEligibility: Readonly<{ eligible: boolean; reasonCode: string | null }> }>;
+export type NumericParityResult = Readonly<{ status: "MATCH" | "MISMATCH" | "UNAVAILABLE"; reasonCode: string; legacyOriginal: number | null; compiledOriginal: number | null; legacyCanonical: string | null; compiledCanonical: string | null }>;
+export type SemanticParityDimensionResult = Readonly<{ dimensionId: string; legacySource: ParitySemanticDimensionPolicy["legacySource"]; compiledSource: ParitySemanticDimensionPolicy["compiledSource"]; legacyValue: string | null; compiledValue: string | null; status: "MATCH" | "MISMATCH" | "UNMAPPABLE" | "UNAVAILABLE"; reasonCode: string }>;
+export const PARITY_DIAGNOSTIC_FIELDS = Object.freeze(["REASON_CODE_ORDER", "WARNING_ORDER", "BREAKDOWN_HIERARCHY", "PROVIDER_LINEAGE", "POLICY_LINEAGE", "GENERATED_IDS", "PERSISTENCE_TIMESTAMPS", "COMPILED_COUNTS", "COMPILED_BINDING_TRACES", "LEGACY_SECTION_SCORES"] as const);
+export type ParityDiagnosticField = (typeof PARITY_DIAGNOSTIC_FIELDS)[number];
+export type ParityDiagnostic = Readonly<{ field: ParityDiagnosticField; classification: "DIAGNOSTIC_ONLY"; reasonCode: "STRUCTURALLY_OR_SEMANTICALLY_NON_COMPARABLE" }>;
+export type CompiledLegacyParityResult = Readonly<{ policy: CompiledLegacyParityPolicyIdentity; overallComparability: "FULLY_COMPARABLE" | "PARTIALLY_COMPARABLE" | "NOT_COMPARABLE"; legacyProjection: Readonly<{ score: number; permission: string; scoreStatus: string; dataConfidence: string }>; compiledProjection: Readonly<{ normalizedScore: number | null; executionStatus: string; decisionBand: string | null; evaluatedAt: Date | null }>; numeric: NumericParityResult; semanticDimensions: readonly SemanticParityDimensionResult[]; nonComparableDiagnostics: readonly ParityDiagnostic[]; warnings: readonly string[]; reasonCodes: readonly string[] }>;
+export type CompiledLegacyParityComparisonResult = Readonly<{ compared: true; result: CompiledLegacyParityResult }> | Readonly<{ compared: false; code: "INVALID_PARITY_POLICY" | "INVALID_COMPARISON_REQUEST" | "INVALID_LEGACY_RESULT" | "INVALID_COMPILED_RESULT" }>;
