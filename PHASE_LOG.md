@@ -1747,3 +1747,27 @@ Contracts:
 
 Runtime integration:
 None. Phase 4G3 adds only dependency-injected, test-local whole-rulebook execution components. The executor accepts an already-loaded compiled definition, resolves exact policies, traverses Phase 4G1/4G2 sequentially, reuses ADR-051 aggregation, and applies compiled normalization and classification projections. No repository, model, controller, route, API, persistence, feature flag, production registration, ScoreCheck integration, Evidence read, provider execution, compiler/template change, dependency, or activation was added. Compiled execution remains OFF and legacy scoring remains authoritative.
+
+### Phase 4G4 — Compiled Shadow Execution and Parity Boundary
+
+Status:
+ARCHITECTURE_ACCEPTED
+
+Next:
+Phase 4G4 — Define versioned parity contracts and implement pure comparison
+
+Architecture decision:
+ADR-055 accepted. Phase 4G4-A repository audit complete.
+
+Contracts:
+- Legacy scoring remains authoritative; compiled execution is a read-only shadow and cannot alter score, permission, status, confidence, diagnostics, persistence, errors, or public responses.
+- An explicit immutable authority must map one exact source-template identity to one exact compiled-rulebook identity; latest, most-recent, highest-version, and timestamp inference are forbidden.
+- Initial eligibility is restricted to explicitly bound system-template versions; user-template rollout requires a later approval.
+- Shadow observations may come only from canonical Evidence or an explicit approved adapter that proves complete `CompiledShadowObservation` lineage.
+- The future orchestrator must isolate completed, skipped, and failed shadow outcomes from authoritative behavior and expose explicit skip reasons and failure stages.
+- Versioned parity projection separates numeric and semantic comparison, preserves non-comparable diagnostics, and authorizes no tolerance or inferred semantic equivalence.
+- Initial production integration is limited to default-OFF ScoreCheck creation after all authoritative legacy writes and side effects.
+- No domain or business-state persistence is approved; only structured logs, operational traces, metrics, and telemetry may carry shadow diagnostics.
+
+Runtime integration:
+None. Production implementation has not started. `COMPILED_RULEBOOK_EXECUTION` remains default OFF, no runtime registration exists, and compiled execution remains non-authoritative. The next task is parity contracts and pure comparison.
