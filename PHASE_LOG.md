@@ -1697,3 +1697,29 @@ Contracts:
 
 Runtime integration:
 None. No evaluator execution, aggregation, normalization, decision classification, Evidence import/read/write, persistence, ScoreCheck wiring, controller, route, API, feature-flag change, production registration, dependency, or activation was added. Compiled execution remains OFF and legacy scoring remains authoritative.
+
+### Phase 4G2 — Compiled Binding Execution Runtime
+
+Status:
+COMPLETE
+
+Next:
+Phase 4G3 architecture audit — Compiled rulebook execution
+
+Architecture decision:
+ADR-053 accepted.
+
+Contracts:
+- A parallel Evidence-independent compiled evaluator port consumes `CompiledFactorInput`; it never manufactures `AssembledFactorInput` or Evidence provenance.
+- Legacy and compiled generic evaluators must share one pure DIRECT/INVERSE calculation core so threshold, contribution, outcome, reason, and diagnostic behavior cannot fork.
+- Evaluator declaration, immutable configuration, and executable implementation resolve through exact identity/version lookups only.
+- Exact compatibility checks bind evaluator, configuration, factor, relationship, implementation, prepared input, and provider-attested lineage before one synchronous execution.
+- Raw evaluator contribution is projected to a zero-anchored `[0, 100]` binding score with native precision and without weight, confidence, or policy arithmetic.
+- Every Phase 4G1 preparation failure maps explicitly to MISSING or INVALID; existing Phase 4G0 disposition semantics remain authoritative.
+- One immutable binding result preserves complete lineage and mechanically projects to the Phase 4G0 binding outcome without performing aggregation.
+- The legacy generic evaluator and compiled evaluator delegate to one shared pure relationship calculation core; characterization tests preserve legacy output behavior.
+- A caller-supplied exact implementation registry has empty production defaults and exposes no latest lookup.
+- Binding execution resolves exact declarations, configurations, and implementations, validates raw output, projects score, and returns one detached immutable result.
+
+Runtime integration:
+None. Phase 4G2 adds only dependency-injected compiled binding components with empty production defaults. No repository, model, controller, route, API, persistence, feature flag, production registration, ScoreCheck integration, provider execution, aggregation, normalization, classification, dependency, or activation was added. Compiled execution remains OFF and legacy scoring remains authoritative.
