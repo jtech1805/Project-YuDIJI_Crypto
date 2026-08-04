@@ -1723,3 +1723,27 @@ Contracts:
 
 Runtime integration:
 None. Phase 4G2 adds only dependency-injected compiled binding components with empty production defaults. No repository, model, controller, route, API, persistence, feature flag, production registration, ScoreCheck integration, provider execution, aggregation, normalization, classification, dependency, or activation was added. Compiled execution remains OFF and legacy scoring remains authoritative.
+
+### Phase 4G3 Architecture — Compiled Rulebook Runtime Execution
+
+Status:
+COMPLETE
+
+Next:
+Future explicit compiled-runtime activation architecture; compiled execution remains OFF
+
+Architecture decision:
+ADR-054 accepted.
+
+Contracts:
+- Execution accepts an already loaded validated rulebook; exact repository loading, when needed, is caller-owned and occurs before the pure executor.
+- Request and rulebook identities must match exactly, and bindings traverse once in stored compiled order without sorting or parallelism.
+- Domain binding outcomes always continue for complete traces; only an unrepresentable preparation/execution invariant failure stops traversal.
+- Phase 4G2 results project mechanically into ADR-051 outcomes, and `CompiledRulebookAggregationService` remains the sole arithmetic owner.
+- The compiled weighted mean is already in `[0,100]`; compiled normalization is an explicit identity projection validated against exact compatible normalization lineage, never a synthetic Phase 2 plan adapter.
+- Decision classification reuses one shared band-matching core without manufacturing Phase 2 plan or factor-aggregation envelopes.
+- The initial classifier requires one factor lineage across the rulebook because existing normalization and decision policies remain factor-scoped; mixed providers, subjects, relationships, and configurations remain supported.
+- Final COMPLETED, PARTIAL, BLOCKED, INSUFFICIENT_INPUT, and FAILED results preserve ordered traces, counts, policy lineage, stage results, and caller-owned evaluation time.
+
+Runtime integration:
+None. Phase 4G3 adds only dependency-injected, test-local whole-rulebook execution components. The executor accepts an already-loaded compiled definition, resolves exact policies, traverses Phase 4G1/4G2 sequentially, reuses ADR-051 aggregation, and applies compiled normalization and classification projections. No repository, model, controller, route, API, persistence, feature flag, production registration, ScoreCheck integration, Evidence read, provider execution, compiler/template change, dependency, or activation was added. Compiled execution remains OFF and legacy scoring remains authoritative.

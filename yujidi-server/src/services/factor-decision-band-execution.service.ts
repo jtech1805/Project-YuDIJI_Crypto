@@ -2,6 +2,7 @@ import { FACTOR_DECISION_BAND_LABELS, type FactorDecisionBandDefinition,
   type ValidatedFactorDecisionBandPolicy } from "../types/factor-decision-band.types.js";
 import type { FactorAggregateNormalizationExecutionSuccess } from "../types/factor-aggregate-normalization-execution.types.js";
 import type { FactorDecisionBandExecutionFailureCode, FactorDecisionBandExecutionResult } from "../types/factor-decision-band-execution.types.js";
+import { matchDecisionBands } from "./decision-band-classification-core.js";
 
 const ID = /^[A-Z0-9_]+$/;
 export class FactorDecisionBandExecutionService {
@@ -20,8 +21,7 @@ export class FactorDecisionBandExecutionService {
     const score = normalization.normalizedScore;
     if (!finite(score)) return failure("NON_FINITE_NORMALIZED_SCORE", policy.decisionBandPolicyId, normalization.normalizationPolicyId, normalization.factorKey);
     if (score < policy.normalizedRange.minimumScore || score > policy.normalizedRange.maximumScore) return failure("NORMALIZED_SCORE_OUT_OF_RANGE", policy.decisionBandPolicyId, normalization.normalizationPolicyId, normalization.factorKey);
-    const matches = policy.bands.filter((band, i) => band.minimumScore <= score
-      && (i === policy.bands.length - 1 ? score <= band.maximumScore : score < band.maximumScore));
+    const matches = matchDecisionBands(policy.bands, score);
     if (matches.length === 0) return failure("NO_MATCHING_BAND", policy.decisionBandPolicyId, normalization.normalizationPolicyId, normalization.factorKey);
     if (matches.length > 1) return failure("MULTIPLE_MATCHING_BANDS", policy.decisionBandPolicyId, normalization.normalizationPolicyId, normalization.factorKey);
     const band = matches[0]!;

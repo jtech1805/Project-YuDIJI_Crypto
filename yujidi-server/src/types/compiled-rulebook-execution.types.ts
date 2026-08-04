@@ -1,0 +1,21 @@
+import type { CompiledBindingExecutionResult } from "./compiled-binding-execution.types.js";
+import type { FactorDecisionBandDefinition } from "./factor-decision-band.types.js";
+import type { CompiledRulebookAggregationResult } from "./compiled-rulebook-runtime.types.js";
+import type { CompiledExecutionPolicyLineage, CompiledFactorDefinitionLineage, CompiledRulebookCompilationLineage, CompiledRulebookIdentity, CompiledRulebookSourceLineage } from "./compiled-rulebook.types.js";
+
+export const COMPILED_EXECUTION_STATUSES = Object.freeze(["COMPLETED", "PARTIAL", "BLOCKED", "INSUFFICIENT_INPUT", "FAILED"] as const);
+export type CompiledExecutionStatus = (typeof COMPILED_EXECUTION_STATUSES)[number];
+export const COMPILED_EXECUTION_FAILURE_CODES = Object.freeze([
+  "INVALID_COMPILED_RULEBOOK", "INVALID_EXECUTION_REQUEST", "RULEBOOK_IDENTITY_MISMATCH", "INVALID_BINDING_COLLECTION", "INVALID_BINDING_ORDER", "DUPLICATE_BINDING_ID",
+  "INCONSISTENT_AGGREGATION_POLICY_LINEAGE", "INCONSISTENT_NORMALIZATION_POLICY_LINEAGE", "INCONSISTENT_DECISION_BAND_POLICY_LINEAGE", "MIXED_FACTOR_RULEBOOK_NOT_SUPPORTED",
+  "COMPILED_AGGREGATION_POLICY_NOT_FOUND", "COMPILED_AGGREGATION_POLICY_NOT_COMPILE_ELIGIBLE", "INVALID_COMPILED_AGGREGATION_POLICY",
+  "NORMALIZATION_POLICY_NOT_FOUND", "NORMALIZATION_POLICY_NOT_COMPILE_ELIGIBLE", "NORMALIZATION_POLICY_LINEAGE_MISMATCH", "NORMALIZATION_POLICY_FACTOR_MISMATCH", "NORMALIZATION_POLICY_TARGET_RANGE_MISMATCH", "NORMALIZATION_POLICY_RUNTIME_INCOMPATIBLE",
+  "DECISION_BAND_POLICY_NOT_FOUND", "DECISION_BAND_POLICY_NOT_COMPILE_ELIGIBLE", "DECISION_BAND_POLICY_LINEAGE_MISMATCH", "DECISION_BAND_POLICY_FACTOR_MISMATCH", "DECISION_BAND_POLICY_RANGE_MISMATCH", "DECISION_BAND_POLICY_RUNTIME_INCOMPATIBLE",
+  "BINDING_PREPARATION_INVARIANT_FAILED", "BINDING_EXECUTION_INVARIANT_FAILED", "BINDING_RESULT_RULEBOOK_MISMATCH", "BINDING_RESULT_IDENTITY_MISMATCH", "BINDING_RESULT_ORDER_MISMATCH", "BINDING_RESULT_LINEAGE_MISMATCH", "BINDING_RESULT_DISPOSITION_MISMATCH", "BINDING_RESULT_SCORE_MISMATCH",
+  "COMPILED_AGGREGATION_FAILED", "COMPILED_NORMALIZATION_INVALID_AGGREGATE", "COMPILED_NORMALIZATION_OUT_OF_RANGE", "COMPILED_NORMALIZATION_FAILED", "COMPILED_DECISION_INVALID_NORMALIZATION", "COMPILED_DECISION_NO_MATCHING_BAND", "COMPILED_DECISION_MULTIPLE_MATCHING_BANDS", "COMPILED_DECISION_FAILED",
+] as const);
+export type CompiledExecutionFailureCode = (typeof COMPILED_EXECUTION_FAILURE_CODES)[number];
+export type CompiledExecutionCounts = Readonly<{ totalBindings: number; executedBindings: number; includedBindings: number; partialBindings: number; omittedBindings: number; blockingBindings: number; missingBindings: number; invalidBindings: number }>;
+export type CompiledRulebookNormalizationResult = Readonly<{ normalizationPolicyId: string; normalizationPolicyVersion: number; aggregationPolicyId: string; aggregationPolicyVersion: number; factor: CompiledFactorDefinitionLineage; inputRange: Readonly<{ minimumScore: 0; maximumScore: 100 }>; outputRange: Readonly<{ minimumScore: 0; maximumScore: 100 }>; aggregateScore: number; normalizedScore: number; method: "ALREADY_NORMALIZED_WEIGHTED_MEAN"; precisionPolicy: "PRESERVE_NATIVE" }>;
+export type CompiledRulebookDecisionResult = Readonly<{ decisionBandPolicyId: string; decisionBandPolicyVersion: number; normalizationPolicyId: string; normalizationPolicyVersion: number; factor: CompiledFactorDefinitionLineage; normalizedScore: number; band: FactorDecisionBandDefinition }>;
+export type CompiledExecutionResult = Readonly<{ status: CompiledExecutionStatus; rulebook: Readonly<{ identity: CompiledRulebookIdentity; source: CompiledRulebookSourceLineage; compilation: CompiledRulebookCompilationLineage }> | null; requestRulebook: CompiledRulebookIdentity | null; evaluatedAt: Date | null; bindingTraces: readonly CompiledBindingExecutionResult[]; counts: CompiledExecutionCounts; policyLineage: CompiledExecutionPolicyLineage | null; aggregation: CompiledRulebookAggregationResult | null; aggregateScore: number | null; normalization: CompiledRulebookNormalizationResult | null; normalizedScore: number | null; decision: CompiledRulebookDecisionResult | null; decisionBand: FactorDecisionBandDefinition | null; includedWeight: number; failedBindingOrder: number | null; failureCode: CompiledExecutionFailureCode | null; stageFailureCode: string | null }>;
