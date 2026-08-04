@@ -1675,3 +1675,25 @@ Contracts:
 
 Runtime integration:
 None. No compiled executor, subject resolver, evaluator, normalization, decision classification, persistence, Mongo model, Evidence read, provider call, ScoreCheck wiring, controller, route, API, feature-flag change, production registration, dependency, or activation was added. Compiled execution remains OFF and legacy scoring remains authoritative.
+
+### Phase 4G1 — Compiled Runtime Execution Preparation
+
+Status:
+COMPLETE
+
+Next:
+Phase 4G2 — Isolated single compiled-binding execution
+
+Architecture decision:
+ADR-052 accepted.
+
+Contracts:
+- One explicit execution request carries exact rulebook identity, caller-controlled `asOf`, nullable dynamic-subject context, and a bounded dense observation collection.
+- FIXED, TRADED_INSTRUMENT, and UNDERLYING_ASSET resolve without inference; irrelevant subject context is ignored.
+- Observation matching uses exact factor, subject, provider-binding, and resolution-policy lineage and rejects missing, duplicate, or ambiguous matches without ordering selection.
+- Exact historical factor lookup supplies subject, unit, compile-eligibility, and freshness policy checks; no latest lookup is permitted.
+- `CompiledFactorInput` is a new Evidence-independent immutable runtime model whose authoritative provenance is provider attestation.
+- Successful resolved inputs preserve exact binding and rulebook lineage and are detached and deeply frozen.
+
+Runtime integration:
+None. No evaluator execution, aggregation, normalization, decision classification, Evidence import/read/write, persistence, ScoreCheck wiring, controller, route, API, feature-flag change, production registration, dependency, or activation was added. Compiled execution remains OFF and legacy scoring remains authoritative.
