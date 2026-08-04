@@ -1810,3 +1810,27 @@ Contracts:
 
 Runtime integration:
 None. No observation assembly, shadow orchestration, Phase 4G3 invocation, parity invocation, ScoreCheck integration, API, controller, route, feature-flag change, runtime registration, dependency, or production activation was added. Compiled execution remains default OFF and legacy scoring remains authoritative.
+
+### Phase A3 — Evidence Publication-Time Eligibility
+
+Status:
+ARCHITECTURE_ACCEPTED
+
+Next:
+Phase A4 — Canonical Evidence to Compiled Shadow Observation Assembly
+
+Architecture decision:
+ADR-056 accepted.
+
+Contracts:
+- Publication eligibility is evaluated in canonical Evidence assembly before lifecycle resolution, provider lineage validation, freshness, and observation projection.
+- Initial historical execution uses system-known replay: both `provenance.sourcePublishedAt` and persisted Evidence `createdAt` must be at or before request `asOf`.
+- Missing or invalid publication time fails closed; no exact provider timestamp policy currently authorizes `observedAt` substitution.
+- Missing or invalid `createdAt` also fails closed for system-known replay; the typed Evidence read boundary must expose persisted `createdAt` in Phase A4.
+- Availability filtering applies to observations, revocations, and superseding records so late-ingested relationships cannot alter earlier replay state.
+- Publication eligibility and ingestion eligibility remain separate from ADR-052 freshness, which continues to use `observedAt`.
+- `CompiledShadowObservation` remains unchanged; immutable assembly diagnostics will retain Evidence, publication, ingestion, request, provider, and policy lineage.
+- Source-available replay is deferred pending a separate explicit policy.
+
+Runtime integration:
+None. No source, test, model, persistence, feature-flag, runtime registration, observation assembly, ScoreCheck integration, dependency, or production behavior was changed. Compiled execution remains default OFF and legacy scoring remains authoritative.
