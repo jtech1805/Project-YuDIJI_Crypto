@@ -1651,3 +1651,27 @@ Contracts:
 
 Runtime integration:
 None. No compiled execution, subject resolution, Evidence, ScoreCheck, provider/evaluator/policy execution, controller, route, API, production module wiring, feature-flag read/change, runtime registration, dependency, or activation state was added. Legacy scoring remains authoritative and compiled execution remains OFF.
+
+### Phase 4G0 — Compiled Rulebook Runtime Aggregation and Observation-Attestation Contract
+
+Status:
+COMPLETE
+
+Next:
+Phase 4G — Isolated compiled-rulebook shadow execution proof
+
+Architecture decision:
+ADR-051 accepted. Phase 4G was blocked by its runtime semantic audit.
+
+Contracts:
+- The compiled binding input-state and disposition vocabularies are frozen.
+- MANDATORY missing/invalid blocks; OPTIONAL/PARTIAL retains denominator weight; OPTIONAL/OMIT removes denominator weight.
+- No missing binding receives a synthetic evaluator score.
+- A separate exact versioned compiled weighted-mean policy authority is added with empty production defaults.
+- Empty included weight returns INSUFFICIENT_INPUT without division or decision.
+- Rulebook aggregation, normalization, and decision-band lineage must each be uniform across bindings.
+- Direct shadow observations attest exact factor, subject, provider binding, resolution policy, selected provider, and automated outcome.
+- Historical validation uses exact lookups only and returns detached immutable results.
+
+Runtime integration:
+None. No compiled executor, subject resolver, evaluator, normalization, decision classification, persistence, Mongo model, Evidence read, provider call, ScoreCheck wiring, controller, route, API, feature-flag change, production registration, dependency, or activation was added. Compiled execution remains OFF and legacy scoring remains authoritative.
