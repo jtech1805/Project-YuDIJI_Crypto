@@ -2136,3 +2136,38 @@ Verification:
 
 Runtime integration:
 No production source, public template exposure, ScoreCheck integration, provider runner, adapter, network call, provider resolution, Evidence ingestion, production Evidence or attestation write, execution-binding or compiled-rulebook write, replay persistence, API, controller, route, bootstrap registration, dependency, feature-default change, or runtime activation was added. Generic and compiled flags remain default OFF, legacy scoring remains authoritative, and Track A is complete.
+
+### Track B1-B — AI Template Draft Candidate Architecture
+
+Status:
+ARCHITECTURE_ACCEPTED
+
+Next:
+Track B1-CD — Candidate Contracts, Deterministic Validator and Compact Registry Knowledge Projection
+
+Contracts:
+- ADR-059 freezes a dedicated versioned `TemplateDraftCandidate` as a transient, non-authoritative proposal rather than a template, compiled artifact, or executable input.
+- The first MVP persists no candidate, prompt body, model response, validation report, review report, or template. Existing metadata-only LLM tracing remains the only permitted operational record.
+- A compact immutable versioned registry projection supplies a closed vocabulary; exact runtime authorities are re-resolved by deterministic validation and remain authoritative.
+- Every requested concept remains visible as a supported binding, unresolved concept, clarification question, or warning. No unsupported concept may be dropped or silently substituted.
+- Multiple deterministic requirements may apply to one concept, including new-factor, new-relationship, provider, and clarification requirements.
+- Exact factor versions, relationship support, subject compatibility, units, provider requirements, compilation support, duplicates, bounds, and projection lineage are validator-owned decisions.
+- Partial success is approved when valid bindings coexist with explicit unresolved concepts and no fabricated authority is accepted.
+- AI-generated weights are disabled initially; no equal-weight default is inferred and `WEIGHT_PROPOSALS_ENABLED` remains default OFF and unwired.
+- The initial workflow uses no document ingestion, chunking, embeddings, vector storage, retrieval, reranking, or RAG. Track B2 owns those future capabilities.
+- Human review and explicit confirmation are mandatory before future USER/DRAFT projection. Confirmation does not imply activation, compilation, execution, or public listing.
+- B1-G must address DRAFT ScoreCheck eligibility, ACTIVE duplication, approval/activation, immutable approved versions, and material-edit behavior before persistence is introduced.
+- All future drafting integration remains default OFF. Existing template, ScoreCheck, compiler, persistence, legacy scoring, and compiled runtime behavior remains unchanged.
+
+Optimized Track B plan:
+```text
+B1-B  — COMPLETE after this phase
+B1-CD — Candidate contracts, validator and registry projection
+B1-EF — Structured generation and review report
+B1-G  — Safe USER/DRAFT lifecycle and projection
+B1-H  — End-to-end drafting proof
+B2    — Document corpus, chunking, embeddings, retrieval and RAG
+```
+
+Runtime integration:
+Documentation only. No source, test, configuration, dependency, feature flag, LLM call, prompt implementation, candidate persistence, template persistence, ScoreCheck behavior, lifecycle behavior, compilation behavior, retrieval infrastructure, API, controller, route, bootstrap registration, runtime activation, or deployment was changed.
