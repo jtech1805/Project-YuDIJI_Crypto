@@ -19,6 +19,14 @@ import {
   type ScoringEvaluatorInput,
 } from "./scoring-rule-evaluator-registry.service.js";
 import { ScoringTemplateRegistryService } from "./scoring-template-registry.service.js";
+import type { AssembledFactorInput } from "../types/factor-input-assembly.types.js";
+import type { FactorEvaluatorExecutionResult } from "../types/factor-evaluator.types.js";
+import type { FactorKey } from "../types/factor-registry.types.js";
+import type { GenericFactorRelationshipType } from "../types/generic-factor-relationship.types.js";
+import { GENERIC_FACTOR_EVALUATOR_PREFIX, type GenericFactorCompatibilityDispatchRequest, type GenericFactorLegacyTranslationResult } from "../types/generic-factor-legacy-compatibility.types.js";
+import { factorRegistry } from "../registries/factor.registry.js";
+import { sharedFeatureFlagService, type FeatureFlagService } from "../config/feature-flags.js";
+import { GenericFactorCompatibilityDispatcher, GenericFactorLegacyResultAdapter, parseGenericFactorEvaluatorKey } from "./generic-factor-legacy-compatibility.service.js";
 
 export type ScoringEngineInput = {
   scoringTemplateKey: string;
@@ -44,7 +52,19 @@ export type ScoringEngineInput = {
   sectorSnapshot?: MarketSnapshot | null;
   vixSnapshot?: MarketSnapshot | null;
   marketBreadthPositivePercent?: number;
+  genericFactorInputs?: Readonly<Partial<Record<FactorKey, Readonly<{
+    relationshipType: GenericFactorRelationshipType;
+    input: AssembledFactorInput;
+  }>>>>;
 };
+
+export type ScoringEngineGenericFactorDependencies = Readonly<{
+  featureFlags: Pick<FeatureFlagService, "isEnabled">;
+  genericCompatibility: Pick<GenericFactorCompatibilityDispatcher, "dispatch">;
+  genericExecution: Readonly<{
+    execute(request: Readonly<{ relationshipType: GenericFactorRelationshipType; input: AssembledFactorInput }>): FactorEvaluatorExecutionResult;
+  }>;
+}>;
 
 export type ScoringEngineBreakdown = {
   templateKey: string;
@@ -143,10 +163,19 @@ const normalizeSystemTemplate = (
 });
 
 export class ScoringEngineService {
+  private readonly generic: ScoringEngineGenericFactorDependencies;
+
   public constructor(
     private readonly templateRegistry = new ScoringTemplateRegistryService(),
     private readonly evaluatorRegistry = new ScoringRuleEvaluatorRegistryService(),
-  ) {}
+    generic: Partial<ScoringEngineGenericFactorDependencies> = {},
+  ) {
+    this.generic = {
+      featureFlags: generic.featureFlags ?? sharedFeatureFlagService,
+      genericCompatibility: generic.genericCompatibility ?? new GenericFactorCompatibilityDispatcher({ enabled: true, factorRegistry, adapter: new GenericFactorLegacyResultAdapter() }),
+      genericExecution: generic.genericExecution ?? { execute: ({ input }) => Object.freeze({ evaluated: false, evaluatorId: null, factorKey: input.factorKey, code: "INVALID_CONFIGURATION" }) },
+    };
+  }
 
   public score(input: ScoringEngineInput): ScoringEngineResult {
     if (!Number.isFinite(input.rewardRiskRatio) || input.rewardRiskRatio <= 0) {
@@ -200,7 +229,7 @@ export class ScoringEngineService {
     for (const definition of template.sections.filter((section) => section.enabled)) {
       const enabledEvaluators = definition.evaluators.filter((evaluator) => evaluator.enabled);
       const evaluatorResults = enabledEvaluators.map((evaluator) =>
-        this.evaluatorRegistry.evaluate(evaluator.evaluatorKey, evaluatorInput));
+        this.evaluateRule(evaluator.evaluatorKey, evaluatorInput, input.genericFactorInputs));
       const executed = evaluatorResults.filter((item) => item.status === "EXECUTED");
       const scoredEvaluators = template.aggregationMode === "WEIGHTED_SUM"
         || definition.missingDataPolicy !== "IGNORE"
@@ -299,6 +328,39 @@ export class ScoringEngineService {
     };
   }
 
+  private evaluateRule(
+    evaluatorKey: string,
+    evaluatorInput: ScoringEvaluatorInput,
+    genericInputs: ScoringEngineInput["genericFactorInputs"],
+  ): ScoringRuleEvaluationResult {
+    if (!evaluatorKey.startsWith(GENERIC_FACTOR_EVALUATOR_PREFIX)) {
+      return this.evaluatorRegistry.evaluate(evaluatorKey, evaluatorInput);
+    }
+    const factorKey = parseGenericFactorEvaluatorKey(evaluatorKey);
+    if (!factorKey || !this.generic.featureFlags.isEnabled("GENERIC_EVALUATOR_ENABLED")) {
+      return this.evaluatorRegistry.evaluate(evaluatorKey, evaluatorInput);
+    }
+    const supplied = genericInputs?.[factorKey as FactorKey];
+    let execution: FactorEvaluatorExecutionResult;
+    if (!supplied) {
+      execution = Object.freeze({ evaluated: false, evaluatorId: null, factorKey, code: "INVALID_INPUT" });
+    } else {
+      try {
+        execution = this.generic.genericExecution.execute({ relationshipType: supplied.relationshipType, input: supplied.input });
+      } catch {
+        execution = Object.freeze({ evaluated: false, evaluatorId: null, factorKey, code: "EVALUATION_FAILED" });
+      }
+    }
+    let translated: GenericFactorLegacyTranslationResult;
+    try {
+      const compatibilityRequest: GenericFactorCompatibilityDispatchRequest = { evaluatorKey, relationshipType: supplied?.relationshipType ?? "DIRECT", execution };
+      translated = this.generic.genericCompatibility.dispatch(compatibilityRequest);
+    } catch {
+      translated = Object.freeze({ translated: false, evaluatorKey, code: "INVALID_EXECUTION_RESULT" });
+    }
+    return translated.translated ? translated.result : genericFailureResult(evaluatorKey, translated.code);
+  }
+
   private weightedEvaluatorAverage(
     results: ScoringRuleEvaluationResult[],
     definitions: EditableScoringSectionDefinition["evaluators"],
@@ -312,3 +374,17 @@ export class ScoringEngineService {
     }, 0);
   }
 }
+
+const genericFailureResult = (
+  evaluatorKey: string,
+  code: Extract<GenericFactorLegacyTranslationResult, { translated: false }>["code"],
+): ScoringRuleEvaluationResult => ({
+  evaluatorKey,
+  status: "BLOCKED",
+  score: 0,
+  maxScore: 100,
+  reasonCodes: [code],
+  warnings: ["Generic factor evaluation is unavailable."],
+  dataConfidence: "LOW",
+  metadata: { genericFactorFailureCode: code },
+});

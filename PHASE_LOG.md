@@ -1957,3 +1957,28 @@ Verification:
 
 Runtime integration:
 None. No ScoreCheck integration, legacy scoring invocation, provider call, compiler call, persistence write, feature-flag change, controller, route, API, bootstrap wiring, dependency, or production registration was added. Compiled execution remains default OFF and legacy scoring remains authoritative.
+
+### Phase A5.5-B1 — Authoritative Generic-Factor Legacy Scoring Integration
+
+Status:
+COMPLETE
+
+Next:
+Phase A5.5-B2 — BTC ETF-Flow System Template and Immutable Compilation Authorities
+
+Contracts:
+- `ScoringEngineService` recognizes only the exact existing `GENERIC_FACTOR:<registered-factor-key>` syntax and preserves the existing evaluator registry path for every non-generic or malformed key.
+- `GENERIC_EVALUATOR_ENABLED` remains default OFF; while disabled, generic keys preserve the prior unknown-evaluator result and neither generic execution nor compatibility dispatch runs.
+- Enabled generic evaluation consumes only an explicitly supplied caller-resolved `AssembledFactorInput` and relationship type through an injected deterministic executor; it performs no Evidence, provider, persistence, compiled-runtime, or snapshot read.
+- The existing generic compatibility dispatcher projects the deterministic evaluator result into the authoritative legacy evaluator result shape exactly once, with no fallback, retry, inferred factor, or alternate evaluator.
+- Missing input remains `BLOCKED` with typed `MISSING_EVIDENCE`, unsupported relationships and factors remain explicit, and the template missing-data policy retains aggregation authority.
+- Existing global reward-risk forced rejection remains after evaluator dispatch and all seven existing system-template results remain unchanged.
+
+Verification:
+- Focused generic/scoring characterization: 46 passed.
+- Protected scoring, ScoreCheck, Evidence/provider-resolution, and compiled-runtime regression selection: 370 passed.
+- Full backend: 941 passed.
+- Typecheck passed; circular dependency gate passed with zero new cycles; `git diff --check` passed.
+
+Runtime integration:
+No new system template, provider, Evidence read, evaluator configuration, compilation mapping, compiled authority, rulebook, execution binding, A4/A5 change, ScoreCheck integration, controller, route, API, feature-default change, or production activation was added. Generic evaluation remains default OFF.
