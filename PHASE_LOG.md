@@ -1931,3 +1931,29 @@ Contracts:
 
 Runtime integration:
 None. No provider calls, legacy snapshot conversion, A5 orchestration, Phase 4G3 invocation, parity invocation, ScoreCheck integration, feature-flag change, controller, route, API, dependency, persistence write, or production registration was added. Compiled execution remains default OFF and legacy scoring remains authoritative.
+
+### Phase A5 — Standalone Compiled Shadow Orchestrator
+
+Status:
+COMPLETE
+
+Next:
+Phase A6 — System-Template Replay and Legacy/Compiled Parity Proof
+
+Contracts:
+- One caller-supplied immutable request carries exact system-template identity, explicit `asOf`, canonical subject context, deterministic shadow identity, and optional all-or-none legacy parity inputs.
+- Exact execution-binding and exact compiled-rulebook reads occur once and validate the complete request/binding/rulebook/compiler lineage chain without latest, most-recent, version inference, or compilation.
+- Canonical Evidence histories are read for each distinct compiled factor/subject tuple, incomplete histories fail closed, and exact attestations are read once for every reached Evidence ID without provider execution or fallback.
+- Phase A4 assembly runs exactly once even when no Evidence is reached; only completed or partial assembly with observations may invoke Phase 4G3, exactly once and without retry or observation reordering.
+- Representable compiled `BLOCKED` and `INSUFFICIENT_INPUT` results remain completed shadow outcomes; compiled `FAILED` is a typed shadow failure and never affects authoritative scoring.
+- Optional parity requires an explicit accepted policy, authoritative legacy projection, and explicit numeric eligibility; invalid policy or comparison remains nested unavailable while mismatch remains a valid completed comparison.
+- Completed, skipped, and failed outcomes preserve all reached immutable diagnostics and lineage, clone Dates, expose no raw exceptions, and perform no writes or production side effects.
+
+Verification:
+- Focused A5 tests: 15 passed.
+- Protected A2/A4/Phase 4, Evidence/attestation/provider-resolution, ScoreCheck, and legacy scoring regressions: 355 passed.
+- Full backend: 931 passed.
+- Typecheck passed; circular dependency gate passed with zero new cycles; `git diff --check` passed.
+
+Runtime integration:
+None. No ScoreCheck integration, legacy scoring invocation, provider call, compiler call, persistence write, feature-flag change, controller, route, API, bootstrap wiring, dependency, or production registration was added. Compiled execution remains default OFF and legacy scoring remains authoritative.
