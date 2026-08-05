@@ -2310,3 +2310,53 @@ B2-G — PENDING
 
 Runtime integration:
 Documentation only. No source, test, model, schema, parser, ingestion, chunking implementation, embedding model, vector database, index, retrieval, reranking, citation implementation, RAG prompt integration, market-research extraction, private-document ingestion, feature change, dependency, API, template, ScoreCheck, Evidence, scoring, compiler, compiled runtime, registration, activation, deployment, or commit was added.
+
+### Track B2-BC — Immutable Platform-Knowledge Document Authority, Admission and Structure-Aware Chunking
+
+Status:
+COMPLETE
+
+Next:
+Track B2-DE — Embedding, Vector Index, Bounded Retrieval and Citation Context
+
+Contracts:
+- Exact corpus, platform-document-type, trust, ownership, normalized-block, source-span, document, chunk, admission, and chunking contracts are implemented.
+- Initial admission accepts only `PLATFORM_KNOWLEDGE` owned by `SYSTEM` with `AUTHORITATIVE`, `APPROVED_GUIDANCE`, or `EXPLANATORY` trust. Market research, private documents, USER/ORGANIZATION ownership, and unverified trust fail closed.
+- The pure admission service validates bounded identity, source, parser and policy lineage, half-open effective time (`effectiveFrom < effectiveUntil`), direct supersession, dense normalized blocks, exact spans, tables, labels, references, and repository safety bounds without using system time.
+- Canonical SHA-256 document digests include material identity, structure, source, trust, parser/policy, effective-time, block order/content, spans, labels, and references while excluding database creation time and object key order.
+- Mongoose controls append-only document/chunk `createdAt`; `updatedAt` is disabled. Exact compound identities and document/strategy ordinals have uniqueness indexes.
+- Document persistence exposes append-only insert and exact identity read only. Exact duplicates return `ALREADY_EXISTS`; identity/content conflicts, duplicate-key races, corrupted duplicates, and persistence errors are typed and sanitized.
+- The exact chunking registry supports immutable ID/version registration, deterministic listing, exact lookup, compatibility checks, and no latest lookup.
+- Versioned factor, relationship, ADR-summary, template-example, and validation-guidance strategies operate only on approved normalized text. Factor identity/constraints/limitations/examples, relationship restrictions, ADR decisions/consequences, complete examples, and validation-code guidance remain coherent.
+- Chunk candidates preserve exact document and strategy lineage, stable identity/version, ordinal, bounded content, exact merged source span, deterministic bounded metadata, optional direct parent, and canonical SHA-256 digest.
+- Complete chunk sets fail before persistence on empty output, duplicate identity/ordinal, non-dense order, lineage mismatch, invalid span/content/metadata, missing parent, parent cycles, incompatible comparable spans, bounds, or digest mismatch.
+- Chunk persistence exposes append-only set insertion, exact chunk read, and exact document/version plus strategy/version read in deterministic ordinal order. No update, delete, upsert, latest-document, or latest-strategy authority exists.
+- A pure citation-source projection proves every persisted chunk can later expose exact document/chunk identities, digests, source identity/title/span, corpus/trust, parser lineage, and strategy lineage without creating user-visible citation handles.
+- All service and repository outputs detach nested values, clone Dates, deep-freeze arrays/objects, preserve deterministic order, and leave inputs unchanged.
+- Initial fixtures characterize `CRYPTO.ETF_NET_FLOW`, DIRECT/INVERSE guidance, ADR-060, approved and negative example semantics, and `FACTOR_NOT_REGISTERED` correction guidance without ingesting files.
+
+Progress:
+```text
+Track A — COMPLETE
+Track B1 — COMPLETE
+
+Track B2:
+B2-A  — ARCHITECTURE_ACCEPTED
+B2-BC — COMPLETE
+B2-DE — NEXT
+B2-FG — PENDING
+```
+
+Verification:
+- Focused B2-BC admission, repository, registry, strategy, validation, orchestration, and citation-readiness tests: 17 passed.
+- B2-BC, canonicalization, B1, template, ScoreCheck, legacy, Track A, compiled-shadow, trace, and feature regression selection: 185 passed.
+- Full backend: 1,015 passed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- Dependency, feature, protected-file, prohibited-boundary, and git diff checks passed.
+
+Known persistence limitation:
+The repository performs complete-set validation and preflight before one ordered `insertMany`, but no transaction is opened by this test-local authority. A database failure after a partial server-side bulk write could require invariant diagnosis; production registration should require transaction-backed atomicity or a single immutable chunk-set manifest decision.
+
+Runtime integration:
+No raw PDF/DOCX/HTML/URL/upload parser, OCR, file crawler, embedding, vector store, retrieval, reranking, RAG context, LLM call, market-research ingestion, private-document ingestion, API, controller, route, prompt, template, ScoreCheck, Factor Registry, evaluator, provider, Evidence, compiler, compiled runtime, feature, dependency, bootstrap registration, scheduled job, activation, deployment, or commit was added.
