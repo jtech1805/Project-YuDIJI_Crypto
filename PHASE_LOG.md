@@ -2171,3 +2171,35 @@ B2    — Document corpus, chunking, embeddings, retrieval and RAG
 
 Runtime integration:
 Documentation only. No source, test, configuration, dependency, feature flag, LLM call, prompt implementation, candidate persistence, template persistence, ScoreCheck behavior, lifecycle behavior, compilation behavior, retrieval infrastructure, API, controller, route, bootstrap registration, runtime activation, or deployment was changed.
+
+### Track B1-CD — Candidate Contracts, Deterministic Validator and Compact Registry Knowledge Projection
+
+Status:
+COMPLETE
+
+Next:
+Track B1-EF — Structured Generation, Prompt Orchestration and Candidate Review Report
+
+Contracts:
+- Transient drafting-request, untrusted model-candidate, validated-candidate, validation-report, issue, requirement, policy, and registry-projection contracts are implemented without persistence models.
+- The original model proposal and detached validated result remain separate immutable values.
+- The compact registry projection contains exact versioned factors, relationship classifications, subject/value/unit constraints, bounded provider capability summaries, compilation-mapping summaries, missing-data policies, validation constraints, and sorted exact-member lineage.
+- Projection lineage uses sorted exact member identities because the existing registries expose no single global registry version. SHA-256 canonical hashing includes all material generation constraints and excludes clocks, functions, runtime metadata, and insertion order.
+- The deterministic validator reconstructs the projection from caller-supplied current exact authorities and fails closed when supplied projection lineage is stale or inconsistent.
+- Exact factor version, relationship execution support, subject, value type, unit, provider availability, compilation mapping, missing-data policy, disabled weights, and concept accounting are validated in fixed order.
+- Draft support and compilation support remain separate. A valid legacy-draft binding may report `REQUIRES_COMPILATION_MAPPING` without invoking the compiler.
+- Multiple unresolved requirement codes are preserved per concept, deferred relationships are never converted, and partial success remains explicit.
+- Model-proposed weights are never accepted or normalized; no equal-weight default is assigned and future projection still requires user weight input.
+- The exact ETF-flow characterization proves DIRECT `CRYPTO.ETF_NET_FLOW` v1 with `ASSET/BTC`, USD, replay-only provider capability, and exact compilation-mapping visibility without execution.
+- The Tata Steel characterization preserves long buildup, short buildup, quarterly results, and broker research as unsupported concepts requiring new factors/providers without inventing factors, substituting `MARKET.PRICE`, or claiming report access.
+- Outputs are deterministically ordered, detached, deeply frozen, repeatable, and use no system clock or random identity.
+
+Verification:
+- Focused B1-CD projection and validator tests: 12 passed.
+- Factor, relationship/evaluator, provider, template, compilation, compiled-shadow, and Track A regression selection: 123 passed.
+- Full backend: 979 passed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+
+Runtime integration:
+No LLM client, generation port, prompt, model selection, operational trace integration, review presentation, candidate/template persistence, database model, repository, template lifecycle, ScoreCheck, compiler invocation, scoring execution, compiled execution, Evidence read, provider call, document, chunk, embedding, vector storage, retrieval, citation, RAG, controller, route, API, bootstrap, dependency, feature-default change, activation, deployment, or commit was added.
