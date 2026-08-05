@@ -2103,3 +2103,36 @@ Verification:
 
 Runtime integration:
 No production source, provider runner, adapter, network access, scheduler, health polling, Evidence ingestion, production Evidence or attestation write, production execution-binding persistence, legacy scoring invocation, parity invocation, ScoreCheck integration, public template exposure, feature-default change, API, controller, route, dependency, bootstrap registration, or compiled-runtime activation was added. Fixtures and exact readers remain test owned; compiled execution remains default OFF and legacy scoring remains authoritative.
+
+### Phase A6 — System-Template Legacy/Compiled Replay and Parity Proof
+
+Status:
+COMPLETE
+
+Next:
+Track B1 — AI Template Draft Candidate and Legacy DRAFT Projection Architecture
+
+Track A milestone:
+COMPLETE
+
+Contracts:
+- The real internal `CRYPTO_BTC_ETF_FLOW_DAILY_V1` SYSTEM template executes through the authoritative `ScoringEngineService` using its exact hidden registration and a deterministic test-injected generic evaluator flag.
+- Explicit `AssembledFactorInput` values use `CRYPTO.ETF_NET_FLOW` v1, `ASSET/BTC`, DIRECT relationship, numeric USD, and fixed deterministic lineage; the legacy scorer executes the evaluator rather than receiving a compiled contribution.
+- The exact B3 compiled rulebook, execution binding, canonical Evidence, historical attestation, A4 assembler, A5 orchestrator, and Phase 4G3 executor are reused without alternate authority identities.
+- Test-owned parity policy `BTC_ETF_FLOW_LEGACY_COMPILED_PARITY` v1 compares legacy score to compiled normalized score using exact two-decimal canonicalization and explicit permission/band and score-status/execution-status mappings.
+- Positive, neutral, and negative literal inputs `200/0/-200 USD` produce equal legacy and compiled scores `75/50/25`, matching semantic outcomes, and `FULLY_COMPARABLE` results.
+- A deliberately asymmetric explicit-input scenario proves a numeric mismatch remains a completed comparable diagnostic; an intentionally absent semantic mapping remains `UNMAPPABLE` and yields mechanical partial comparability.
+- Missing legacy generic input preserves typed `MISSING_EVIDENCE`, zero score, `UNAVAILABLE` status, and explicit numeric ineligibility while the compiled side may complete.
+- Missing compiled Evidence, missing attestation, and future publication preserve the complete authoritative legacy result while compiled execution is skipped and parity is `NOT_COMPARABLE` without fabricated compiled fields.
+- Reward-risk ratio below one preserves the existing forced legacy score `30` and `REJECT` permission after the evaluator produces `75`; numeric parity is explicitly unavailable as a forced legacy value.
+- The immutable replay report contains bounded identity, input, legacy, compiled, parity, lineage, and diagnostic projections; repeated runs are deeply equal and clone all Dates.
+- Thresholds and values remain characterization-only literal USD units and are not production calibrated.
+
+Verification:
+- Focused A6 replay proof: 10 passed.
+- Track A, Phase 3/4, Evidence/provider, legacy, and ScoreCheck regression selection: 328 passed.
+- Full backend clean rerun: 967 passed.
+- Typecheck, circular-dependency, dependency, protected-boundary, and final diff audits recorded at phase handoff.
+
+Runtime integration:
+No production source, public template exposure, ScoreCheck integration, provider runner, adapter, network call, provider resolution, Evidence ingestion, production Evidence or attestation write, execution-binding or compiled-rulebook write, replay persistence, API, controller, route, bootstrap registration, dependency, feature-default change, or runtime activation was added. Generic and compiled flags remain default OFF, legacy scoring remains authoritative, and Track A is complete.
