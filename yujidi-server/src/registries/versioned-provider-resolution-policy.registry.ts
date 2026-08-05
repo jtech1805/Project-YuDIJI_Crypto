@@ -14,7 +14,9 @@ export class StaticVersionedProviderResolutionPolicyRegistry implements Versione
       const result = validator.validate(value.definition); if (!result.valid) throw new VersionedProviderResolutionPolicyRegistryError("INVALID_POLICY");
       if (typeof value.compileEligible !== "boolean") throw new VersionedProviderResolutionPolicyRegistryError("INVALID_COMPILE_ELIGIBILITY");
       const key = `${result.policy.policyId}:${result.policy.policyVersion}`; if (seen.has(key)) throw new VersionedProviderResolutionPolicyRegistryError("DUPLICATE_VERSION"); seen.add(key);
-      entries.push({ id: result.policy.policyId, version: result.policy.policyVersion, value: { definition: result.policy, compileEligible: value.compileEligible } });
+      if (value.liveExecutionEligible !== undefined && typeof value.liveExecutionEligible !== "boolean") throw new VersionedProviderResolutionPolicyRegistryError("INVALID_POLICY");
+      if (value.replayFixtureEligible !== undefined && typeof value.replayFixtureEligible !== "boolean") throw new VersionedProviderResolutionPolicyRegistryError("INVALID_POLICY");
+      entries.push({ id: result.policy.policyId, version: result.policy.policyVersion, value: { definition: result.policy, compileEligible: value.compileEligible, liveExecutionEligible: value.liveExecutionEligible ?? true, replayFixtureEligible: value.replayFixtureEligible ?? false } });
     } this.authority = new ImmutableHistoricalAuthority(entries);
   }
   public getExact(id: string, version: number) { return identifier(id) && positive(version) ? this.authority.getExact(id, version) : null; }

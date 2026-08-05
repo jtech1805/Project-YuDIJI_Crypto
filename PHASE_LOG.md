@@ -1982,3 +1982,69 @@ Verification:
 
 Runtime integration:
 No new system template, provider, Evidence read, evaluator configuration, compilation mapping, compiled authority, rulebook, execution binding, A4/A5 change, ScoreCheck integration, controller, route, API, feature-default change, or production activation was added. Generic evaluation remains default OFF.
+
+### Phase A5.5-B1.5 — Internal Template Exposure and Non-Live Provider Authority
+
+Status:
+ARCHITECTURE_ACCEPTED
+
+Next:
+Phase A5.5-B2 — Internal BTC ETF-Flow System Template and Compilation Authorities
+
+Architecture decision:
+ADR-058 accepted.
+
+Track A:
+- A1–A5 — COMPLETE
+- A5.5-B1 — COMPLETE
+- A5.5-B1.5 — ARCHITECTURE_ACCEPTED
+- A5.5-B2 — NEXT
+- A5.5-B3 — PENDING
+- A6 — BLOCKED
+
+Contracts:
+- The B2 blockers are confirmed: current system registration grants public listing, ScoreCheck selection, and duplication, while compiled mappings require exact provider binding and resolution-policy lineage.
+- One system-template identity registry gains independent immutable `listable`, `scoreCheckSelectable`, `duplicable`, and `compileEligible` capabilities; existing templates preserve their current public behavior.
+- The future ETF template may be a real SYSTEM identity while remaining non-listable, non-selectable, non-duplicable, and compile eligible.
+- Provider authority gains independent compile, live-execution, and replay-fixture capabilities; none implies another.
+- One honestly labelled internal characterization provider, exact binding, and exact policy may be compile/replay eligible while live execution remains forbidden.
+- No live runner, network adapter, health polling, provider selection, mock promotion, automatic Evidence production, or public provider claim is authorized.
+- Exact compiled provider lineage and ADR-057 attestation matching remain mandatory; deterministic replay fixtures may not enter production persistence.
+- Future real-provider approval creates new provider, binding, policy, compiled-rulebook, and execution-binding versions without mutating characterization history.
+- Existing generic and compiled feature flags remain default OFF; capability enforcement does not depend on them.
+
+Runtime integration:
+None. This phase changes documentation only. No source, test, template, provider, runner, feature flag, API, ScoreCheck, dependency, compilation authority, execution binding, A5 registration, B2 implementation, or A6 replay was added. Legacy scoring remains authoritative and compiled execution remains OFF.
+
+### Phase A5.5-B2 — Internal BTC ETF-Flow System Template and Compilation Authorities
+
+Status:
+COMPLETE
+
+Next:
+Phase A5.5-B3 — Test-Owned ETF Evidence, Exact Execution Binding, and Compiled Runtime Proof
+
+Contracts:
+- System-template registrations now carry independent immutable listing, ScoreCheck-selection, duplication, and compilation capabilities.
+- All seven existing public system templates retain listing, ScoreCheck-selection, and duplication behavior.
+- `CRYPTO_BTC_ETF_FLOW_DAILY_V1` is an internal SYSTEM v1 template that is hidden, ScoreCheck-ineligible, non-duplicable, and compile eligible.
+- The template contains one DIRECT `GENERIC_FACTOR:CRYPTO.ETF_NET_FLOW` rule fixed to `ASSET/BTC`; no input inference, provider read, Evidence read, or public integration was added.
+- Provider authorities now carry independent compilation, live-execution, and replay-fixture capabilities.
+- `YUDIJI_CHARACTERIZATION_BTC_ETF_FLOW` is explicitly internal, non-network, non-live, compilation eligible, and replay-fixture eligible.
+- Phase 3 resolution and composition reject the characterization provider before selection or runner lookup. No runner, adapter, scheduler, health source, network URL, authentication, or production Evidence source exists for it.
+- Exact v1 provider binding, provider-resolution policy, DIRECT evaluator configuration, template mapping, compiled weighted-mean policy, normalization policy, and five-band decision policy are defined without latest lookup.
+- Characterization thresholds `-300/-100/100/300 USD` and contributions `-2/-1/0/1/2` are deterministic characterization-only values and are not production calibrated or claims of trading efficacy.
+- The existing compiled generic relationship implementation is reused without arithmetic changes.
+- Deterministic compiler proof preserves exact factor, evaluator, provider, aggregation, normalization, and decision lineage and produces an equal canonical hash on repeated compilation.
+- Existing global reward-risk forced rejection remains authoritative for direct test-only legacy generic execution.
+- `GENERIC_EVALUATOR_ENABLED` and `COMPILED_RULEBOOK_EXECUTION` remain default OFF. Legacy scoring remains authoritative.
+
+Verification:
+- Focused B2 capability and compilation proof: 5 passed.
+- Focused template/provider/generic regression selection: 53 passed.
+- Registry regressions: 93 passed.
+- Full backend: 946 passed.
+- Typecheck passed; circular-dependency and final diff audits recorded at phase handoff.
+
+Runtime integration:
+No execution binding, A5 invocation, A6 replay, production persistence, Evidence or attestation creation, provider runner, network integration, API exposure, controller change, route change, ScoreCheck eligibility, feature-default change, dependency, bootstrap registration, or compiled-runtime activation was added.

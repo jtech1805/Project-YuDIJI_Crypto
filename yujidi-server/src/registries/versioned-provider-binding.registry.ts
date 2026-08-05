@@ -102,7 +102,9 @@ const validateDefinition = (
     }
   }
   if (typeof raw.compileEligible !== "boolean") throw registryError("INVALID_COMPILE_ELIGIBILITY", raw.providerBindingId, raw.providerBindingVersion);
-  return raw as unknown as VersionedProviderBindingDefinition;
+  if (raw.liveExecutionEligible !== undefined && typeof raw.liveExecutionEligible !== "boolean") throw registryError("INVALID_BINDING_DEFINITION", raw.providerBindingId, raw.providerBindingVersion);
+  if (raw.replayFixtureEligible !== undefined && typeof raw.replayFixtureEligible !== "boolean") throw registryError("INVALID_BINDING_DEFINITION", raw.providerBindingId, raw.providerBindingVersion);
+  return raw as VersionedProviderBindingDefinition;
 };
 
 const validCatalog = (catalog: unknown): boolean => record(catalog)

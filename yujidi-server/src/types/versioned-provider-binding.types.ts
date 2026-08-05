@@ -16,6 +16,8 @@ export type VersionedProviderBindingDefinition = Readonly<{
   factorVersion: number;
   orderedProviderKeys: readonly ProviderKey[];
   compileEligible: boolean;
+  liveExecutionEligible?: boolean;
+  replayFixtureEligible?: boolean;
 }>;
 
 export const VERSIONED_PROVIDER_BINDING_REGISTRY_ERROR_CODES = Object.freeze([

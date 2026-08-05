@@ -136,6 +136,15 @@ const validateReferences = (m: TemplateRuleCompilationMapping, d: TemplateRuleCo
   if (binding.factorKey !== m.factor.factorKey || binding.factorVersion !== m.factor.factorVersion) fail("PROVIDER_BINDING_FACTOR_INCOMPATIBLE");
   const resolution = d.resolutionPolicies.getExact(m.provider.resolutionPolicyId, m.provider.resolutionPolicyVersion);
   ensure(resolution !== null, "RESOLUTION_POLICY_NOT_FOUND");
+  if (d.providerAuthorities) {
+    for (const providerKey of binding.orderedProviderKeys) {
+      const authority = d.providerAuthorities.getExact(providerKey);
+      ensure(authority !== null, "PROVIDER_AUTHORITY_NOT_FOUND");
+      if (!authority.capabilities.compileEligible) fail("PROVIDER_AUTHORITY_NOT_COMPILE_ELIGIBLE");
+    }
+    if (binding.liveExecutionEligible !== resolution.liveExecutionEligible
+      || binding.replayFixtureEligible !== resolution.replayFixtureEligible) fail("PROVIDER_CAPABILITY_MISMATCH");
+  }
   const aggregation = d.aggregationPolicies.getExact(m.executionPolicies.aggregationPolicyId, m.executionPolicies.aggregationPolicyVersion);
   ensure(aggregation !== null, "AGGREGATION_POLICY_NOT_FOUND");
   const normalization = d.normalizationPolicies.getExact(m.executionPolicies.normalizationPolicyId, m.executionPolicies.normalizationPolicyVersion);

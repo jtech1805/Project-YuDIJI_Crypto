@@ -3,10 +3,14 @@ import { EVIDENCE_PROVIDER_RUN_FAILURE_CODES } from "../types/evidence-provider-
 import { PROVIDER_TYPES } from "../types/provider-definition.types.js";
 import { PROVIDER_RESOLUTION_WARNING_CODES } from "../types/provider-resolution-policy.types.js";
 import { PROVIDER_RESOLUTION_COMPOSITION_STAGES, type ProviderResolutionCompositionFailureCode, type ProviderResolutionCompositionRequest, type ProviderResolutionCompositionResult, type ProviderResolutionCompositionStageReport, type SafeEvidenceAttestationOutcome, type SafeEvidenceAttestationProjection, type SafeEvidenceIngestionProjection } from "../types/provider-resolution-composition.types.js";
+import type { ProviderAuthorityRegistry } from "../types/provider-authority-registration.types.js";
+import { createDefaultProviderAuthorityRegistry } from "../registries/provider-authority.registry.js";
 
 const ID = /^[A-Z0-9_]{1,120}$/;
 
 export class ProviderResolutionCompositionService {
+  public constructor(private readonly providerAuthorities: Pick<ProviderAuthorityRegistry, "getExact"> = createDefaultProviderAuthorityRegistry()) {}
+
   public async compose(request: ProviderResolutionCompositionRequest): Promise<ProviderResolutionCompositionResult> {
     if (!requestBoundary(request)) return failure("INVALID_REQUEST", request, stages("RESOLUTION_INPUT", "INVALID_REQUEST"));
     if (!resolutionBoundary(request.resolution)) return failure("INVALID_RESOLUTION_BOUNDARY", request, stages("RESOLUTION_INPUT", "INVALID_RESOLUTION_BOUNDARY"));
@@ -19,6 +23,9 @@ export class ProviderResolutionCompositionService {
     if (!inputBoundary(request.executionInput)) return failure("INVALID_EXECUTION_INPUT", request, stages("RESOLUTION_INPUT", "INVALID_EXECUTION_INPUT"));
     const lineage = lineageOf(request);
     if (!resolution.resolved) return deepFreeze({ composed: true as const, status: "FAILED" as const, resolved: false as const, ...lineage, selectedProviderKey: null, resolutionStatus: resolution.resolutionStatus, runnerId: null, providerExecutionStatus: "SKIPPED" as const, candidateCount: 0 as const, evidenceOutcome: null, attestationOutcome: null, stages: skippedRuntimeStages() });
+
+    const authority = this.providerAuthorities.getExact(resolution.selectedProviderKey);
+    if (authority && !authority.capabilities.liveExecutionEligible) return failure("PROVIDER_NOT_LIVE_EXECUTION_ELIGIBLE", request, stages("RUNNER_LOOKUP", "PROVIDER_NOT_LIVE_EXECUTION_ELIGIBLE"));
 
     const registration = request.runnerRegistry.get(resolution.selectedProviderKey);
     if (registration === null) return failure("RUNNER_NOT_REGISTERED", request, stages("RUNNER_LOOKUP", "RUNNER_NOT_REGISTERED"));

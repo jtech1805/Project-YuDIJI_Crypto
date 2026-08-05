@@ -17,6 +17,7 @@ import type { VersionedProviderResolutionPolicyRegistry } from "./versioned-prov
 import type { VersionedAggregationPolicyRegistry } from "./versioned-aggregation-policy.types.js";
 import type { VersionedNormalizationPolicyRegistry } from "./versioned-normalization-policy.types.js";
 import type { VersionedDecisionBandPolicyRegistry } from "./versioned-decision-band-policy.types.js";
+import type { ProviderAuthorityRegistry } from "./provider-authority-registration.types.js";
 
 export type TemplateRuleSourceCoordinate = Readonly<{
   sectionIndex: number;
@@ -72,6 +73,7 @@ export type TemplateRuleCompilationMappingRegistryDependencies = Readonly<{
   aggregationPolicies: Pick<VersionedAggregationPolicyRegistry, "getExact">;
   normalizationPolicies: Pick<VersionedNormalizationPolicyRegistry, "getExact">;
   decisionBandPolicies: Pick<VersionedDecisionBandPolicyRegistry, "getExact">;
+  providerAuthorities?: Pick<ProviderAuthorityRegistry, "getExact">;
 }>;
 
 export const TEMPLATE_RULE_COMPILATION_MAPPING_ERROR_CODES = Object.freeze([
@@ -92,6 +94,8 @@ export const TEMPLATE_RULE_COMPILATION_MAPPING_ERROR_CODES = Object.freeze([
   "DECISION_BAND_POLICY_NOT_FOUND", "REFERENCE_NOT_COMPILE_ELIGIBLE",
   "DEFERRED_RELATIONSHIP_NOT_COMPILE_ELIGIBLE", "DUPLICATE_MAPPING_VERSION",
   "SEMANTIC_MAPPING_CONFLICT",
+  "PROVIDER_AUTHORITY_NOT_FOUND", "PROVIDER_AUTHORITY_NOT_COMPILE_ELIGIBLE",
+  "PROVIDER_CAPABILITY_MISMATCH",
 ] as const);
 export type TemplateRuleCompilationMappingErrorCode =
   (typeof TEMPLATE_RULE_COMPILATION_MAPPING_ERROR_CODES)[number];

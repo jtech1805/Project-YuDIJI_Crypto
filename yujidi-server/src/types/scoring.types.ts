@@ -35,6 +35,9 @@ export const SCORING_TEMPLATE_KEYS = [
   "INDIA_FNO_OPTION_INTRADAY_V1",
 ] as const;
 export type ScoringTemplateKey = (typeof SCORING_TEMPLATE_KEYS)[number];
+export const INTERNAL_SYSTEM_TEMPLATE_KEYS = ["CRYPTO_BTC_ETF_FLOW_DAILY_V1"] as const;
+export type InternalSystemTemplateKey = (typeof INTERNAL_SYSTEM_TEMPLATE_KEYS)[number];
+export type SystemTemplateKey = ScoringTemplateKey | InternalSystemTemplateKey;
 
 export type ScoringSectionDefinition = {
   key: string;
@@ -45,7 +48,7 @@ export type ScoringSectionDefinition = {
 };
 
 export type ScoringTemplateDefinition = {
-  key: ScoringTemplateKey;
+  key: SystemTemplateKey;
   version: number;
   marketType: MarketType;
   tradeStyle: string;
@@ -54,6 +57,18 @@ export type ScoringTemplateDefinition = {
   aggregationMode?: "NORMALIZE_EXECUTED" | "WEIGHTED_SUM";
   sections: ScoringSectionDefinition[];
 };
+
+export type SystemTemplateCapabilities = Readonly<{
+  listable: boolean;
+  scoreCheckSelectable: boolean;
+  duplicable: boolean;
+  compileEligible: boolean;
+}>;
+
+export type SystemTemplateRegistration = Readonly<{
+  template: ScoringTemplateDefinition;
+  capabilities: SystemTemplateCapabilities;
+}>;
 
 export const SCORING_TEMPLATE_SCOPES = ["SYSTEM", "USER"] as const;
 export type ScoringTemplateScope = (typeof SCORING_TEMPLATE_SCOPES)[number];

@@ -166,7 +166,7 @@ export class ScoringTemplateCrudService {
   }
 
   public getSystemTemplate(templateKey: ScoringTemplateKey): ResolvedScoringTemplateDefinition {
-    return this.systemToResolved(this.registry.get(templateKey, 1));
+    return this.systemToResolved(this.registry.getForScoreCheck(templateKey, 1));
   }
 
   public async getUserTemplate(userId: string, templateId: string): Promise<ResolvedScoringTemplateDefinition> {
@@ -180,7 +180,7 @@ export class ScoringTemplateCrudService {
     input: DuplicateScoringTemplateInput,
   ): Promise<ResolvedScoringTemplateDefinition> {
     const userObjectId = this.toObjectId(userId, "user id");
-    const system = this.registry.get(templateKey, 1);
+    const system = this.registry.getForDuplication(templateKey, 1);
     const sections = this.systemSectionsToEditable(system.sections);
     const templateName = input.templateName?.trim() || `${this.systemTemplateName(templateKey)} Copy`;
     const userTemplateKey = `USER_${templateKey}_${Date.now()}`;

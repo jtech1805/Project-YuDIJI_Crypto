@@ -3,11 +3,15 @@ import { PROVIDER_AUTHORITY_LEVELS, PROVIDER_COST_TIERS, PROVIDER_TYPES, type Fa
 import { PROVIDER_HEALTH_REASON_CODES, PROVIDER_HEALTH_STATES, type ProviderHealthAssessmentSuccess, type ProviderHealthState } from "../types/provider-health.types.js";
 import { PROVIDER_RESOLUTION_WARNING_CODES, type ProviderResolutionWarningCode, type ValidatedProviderResolutionPolicy } from "../types/provider-resolution-policy.types.js";
 import type { ProviderResolutionAttempt, ProviderResolutionExecutionFailureCode, ProviderResolutionExecutionRequest, ProviderResolutionExecutionResult } from "../types/provider-resolution-execution.types.js";
+import type { ProviderAuthorityRegistry } from "../types/provider-authority-registration.types.js";
+import { createDefaultProviderAuthorityRegistry } from "../registries/provider-authority.registry.js";
 
 const ID = /^[A-Z0-9_]+$/;
 type Safe = ProviderResolutionExecutionRequest;
 
 export class ProviderResolutionExecutionService {
+  public constructor(private readonly providerAuthorities: Pick<ProviderAuthorityRegistry, "getExact"> = createDefaultProviderAuthorityRegistry()) {}
+
   public execute(request: ProviderResolutionExecutionRequest): ProviderResolutionExecutionResult {
     if (!record(request) || !("catalog" in request) || !("binding" in request) || !("policy" in request) || !("healthAssessments" in request)) return failure("INVALID_REQUEST", request);
     if (!catalogBoundary(request.catalog)) return failure("INVALID_CATALOG_BOUNDARY", request);
@@ -19,6 +23,10 @@ export class ProviderResolutionExecutionService {
     const catalogBinding = safe.catalog.bindings.find((candidate) => bindingEqual(candidate, safe.binding));
     if (!catalogBinding) return failure("BINDING_NOT_IN_CATALOG", request);
     const providers = new Map(safe.catalog.providers.map((provider) => [provider.providerKey, provider]));
+    for (const key of safe.binding.orderedProviderKeys) {
+      const authority = this.providerAuthorities.getExact(key);
+      if (authority && !authority.capabilities.liveExecutionEligible) return failure("PROVIDER_NOT_LIVE_EXECUTION_ELIGIBLE", request);
+    }
     for (const key of safe.binding.orderedProviderKeys) if (!providers.has(key)) return failure("BOUND_PROVIDER_MISSING_FROM_CATALOG", request);
     const seen = new Set<string>();
     for (const assessment of safe.healthAssessments) { if (seen.has(assessment.providerKey)) return failure("DUPLICATE_HEALTH_ASSESSMENT", request); seen.add(assessment.providerKey); }

@@ -3,6 +3,9 @@ import type {
   ScoringSectionDefinition,
   ScoringTemplateDefinition,
   ScoringTemplateKey,
+  SystemTemplateKey,
+  SystemTemplateCapabilities,
+  SystemTemplateRegistration,
 } from "../types/scoring.types.js";
 import type { InstrumentType, MarketType } from "../types/market-data.types.js";
 
@@ -162,21 +165,73 @@ const templates: ScoringTemplateDefinition[] = [
       section("RISK_REWARD", "Risk and reward", 40, ["REWARD_RISK_RATIO"], "BLOCK"),
     ],
   },
+  {
+    key: "CRYPTO_BTC_ETF_FLOW_DAILY_V1",
+    version: 1,
+    marketType: "CRYPTO",
+    tradeStyle: "DAILY",
+    instrumentType: "SPOT",
+    maxScore: 100,
+    aggregationMode: "WEIGHTED_SUM",
+    sections: [
+      section("ETF_FLOW_CONTEXT", "BTC ETF-flow context", 100, [
+        "GENERIC_FACTOR:CRYPTO.ETF_NET_FLOW",
+      ], "BLOCK"),
+    ],
+  },
 ];
+
+const publicCapabilities: SystemTemplateCapabilities = Object.freeze({
+  listable: true,
+  scoreCheckSelectable: true,
+  duplicable: true,
+  compileEligible: false,
+});
+
+const registrations: readonly SystemTemplateRegistration[] = Object.freeze(templates.map((template) => Object.freeze({
+  template: structuredClone(template),
+  capabilities: template.key === "CRYPTO_BTC_ETF_FLOW_DAILY_V1"
+    ? Object.freeze({ listable: false, scoreCheckSelectable: false, duplicable: false, compileEligible: true })
+    : publicCapabilities,
+})));
 
 export class ScoringTemplateRegistryService {
   private readonly templates = new Map(
-    templates.map((template) => [`${template.key}:${template.version}`, template]),
+    registrations.map((registration) => [`${registration.template.key}:${registration.template.version}`, registration]),
   );
 
-  public get(key: ScoringTemplateKey, version = 1): ScoringTemplateDefinition {
-    const template = this.templates.get(`${key}:${version}`);
-    if (!template) throw new AppError("UNSUPPORTED_TEMPLATE", 400);
-    return structuredClone(template);
+  public get(key: ScoringTemplateKey, version = 1): ScoringTemplateDefinition & { key: ScoringTemplateKey } {
+    return this.getForScoreCheck(key, version);
   }
 
-  public list(): ScoringTemplateDefinition[] {
-    return [...this.templates.values()].map((template) => structuredClone(template));
+  public list(): Array<ScoringTemplateDefinition & { key: ScoringTemplateKey }> {
+    return [...this.templates.values()]
+      .filter((registration) => registration.capabilities.listable)
+      .map((registration) => structuredClone(registration.template) as ScoringTemplateDefinition & { key: ScoringTemplateKey });
+  }
+
+  public getExact(key: SystemTemplateKey, version = 1): SystemTemplateRegistration {
+    const registration = this.templates.get(`${key}:${version}`);
+    if (!registration) throw new AppError("UNSUPPORTED_TEMPLATE", 400);
+    return deepFreeze(structuredClone(registration));
+  }
+
+  public getForScoreCheck(key: ScoringTemplateKey, version = 1): ScoringTemplateDefinition & { key: ScoringTemplateKey } {
+    return this.getWithCapability(key, version, "scoreCheckSelectable") as ScoringTemplateDefinition & { key: ScoringTemplateKey };
+  }
+
+  public getForDuplication(key: ScoringTemplateKey, version = 1): ScoringTemplateDefinition & { key: ScoringTemplateKey } {
+    return this.getWithCapability(key, version, "duplicable") as ScoringTemplateDefinition & { key: ScoringTemplateKey };
+  }
+
+  public getForCompilation(key: SystemTemplateKey, version = 1): ScoringTemplateDefinition {
+    return this.getWithCapability(key, version, "compileEligible");
+  }
+
+  private getWithCapability(key: SystemTemplateKey, version: number, capability: keyof SystemTemplateCapabilities): ScoringTemplateDefinition {
+    const registration = this.getExact(key, version);
+    if (!registration.capabilities[capability]) throw new AppError("SCORING_TEMPLATE_NOT_ELIGIBLE", 400);
+    return structuredClone(registration.template);
   }
 
   public validateCompatibility(input: {
@@ -194,3 +249,11 @@ export class ScoringTemplateRegistryService {
     }
   }
 }
+
+const deepFreeze = <T>(value: T): T => {
+  if (value && typeof value === "object" && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const child of Object.values(value)) deepFreeze(child);
+  }
+  return value;
+};
