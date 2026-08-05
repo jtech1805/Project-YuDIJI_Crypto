@@ -106,6 +106,7 @@ export const updateScoringTemplateSchema = z.object({
 
 export type DuplicateScoringTemplateInput = z.infer<typeof duplicateScoringTemplateSchema>;
 export type UpdateScoringTemplateInput = z.infer<typeof updateScoringTemplateSchema>;
+export type CreateUserDraftTemplateInput = Readonly<{ userId: string; templateKey: string; baseTemplateKey: ScoringTemplateKey; templateName: string; description?: string; marketType: MarketType; tradeStyle: string; instrumentType: InstrumentType; sections: readonly EditableScoringSectionDefinition[] }>;
 
 export type ScoringTemplateSummary = {
   id?: string;
@@ -210,7 +211,7 @@ export class ScoringTemplateCrudService {
       isLatest: true,
       isReadonly: false,
       visibility: "PRIVATE",
-      status: "ACTIVE",
+      status: "DRAFT",
       maxScore: system.maxScore,
       ...(system.aggregationMode ? { aggregationMode: system.aggregationMode } : {}),
       sections,
@@ -224,6 +225,14 @@ export class ScoringTemplateCrudService {
     });
 
     return this.docToResolved(created.toObject());
+  }
+
+  public async createUserDraft(input: CreateUserDraftTemplateInput): Promise<ResolvedScoringTemplateDefinition> {
+    const userObjectId = this.toObjectId(input.userId, "user id");
+    const sections = this.normalizeSections(input.sections as EditableScoringSectionDefinition[]);
+    this.validator.validateTemplate({ sections, permissionThresholds: DEFAULT_SCORING_PERMISSION_THRESHOLDS });
+    const created = await ScoringTemplateModel.create({ scope: "USER", userId: userObjectId, templateKey: input.templateKey.trim().toUpperCase(), baseTemplateKey: input.baseTemplateKey, templateName: input.templateName.trim(), ...(input.description ? { description: input.description.trim() } : {}), marketType: input.marketType, tradeStyle: input.tradeStyle.trim().toUpperCase(), instrumentType: input.instrumentType, version: 1, isLatest: true, isReadonly: false, visibility: "PRIVATE", status: "DRAFT", maxScore: 100, aggregationMode: "WEIGHTED_SUM", sections, permissionThresholds: DEFAULT_SCORING_PERMISSION_THRESHOLDS, resourceConfig: {}, allowedTradableSymbols: [], sectionOverrides: [], snapshotPolicy: this.defaultSnapshotPolicy(), usedCount: 0, createdBy: userObjectId, updatedBy: userObjectId });
+    return this.docToResolved((created as unknown as { toObject: () => ScoringTemplate }).toObject());
   }
 
   public async updateUserTemplate(
@@ -322,7 +331,7 @@ export class ScoringTemplateCrudService {
   }): Promise<ResolvedScoringTemplateDefinition> {
     if (input.scoringTemplateId) {
       const template = await this.getOwnedTemplate(input.userId, input.scoringTemplateId);
-      if (!["ACTIVE", "DRAFT"].includes(template.status)) {
+      if (template.status !== "ACTIVE") {
         throw new AppError("SCORING_TEMPLATE_NOT_ACTIVE", 409);
       }
       return this.docToResolved(template);
@@ -338,7 +347,7 @@ export class ScoringTemplateCrudService {
     const template = await ScoringTemplateModel.findOne({
       userId: userObjectId,
       templateKey: key.trim().toUpperCase(),
-      status: { $in: ["ACTIVE", "DRAFT"] },
+      status: "ACTIVE",
       isLatest: true,
     }).lean().exec();
     if (!template) throw new AppError("SCORING_TEMPLATE_NOT_FOUND", 404);

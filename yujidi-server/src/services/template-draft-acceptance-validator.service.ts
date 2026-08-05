@@ -1,0 +1,16 @@
+import type { TemplateDraftAcceptanceValidationRequest, TemplateDraftAcceptanceValidationResult } from "../types/template-draft-acceptance.types.js";
+const ID=/^[A-Z0-9_.:-]{1,160}$/; const freeze=<T>(v:T):T=>deepFreeze(structuredClone(v)); const deepFreeze=<T>(v:T):T=>{if(v&&typeof v==="object"&&!Object.isFrozen(v)){for(const x of Object.values(v))deepFreeze(x);Object.freeze(v);}return v;};
+export class TemplateDraftAcceptanceValidatorService {
+  public validate(input: TemplateDraftAcceptanceValidationRequest): TemplateDraftAcceptanceValidationResult {
+    const a=input.acceptance,g=input.generation;if(!a||!ID.test(a.acceptanceId)||!Number.isSafeInteger(a.acceptanceVersion)||a.acceptanceVersion<1||!(a.acceptedAt instanceof Date)||!Number.isFinite(a.acceptedAt.getTime())||!user(a.authenticatedUserId)||!user(a.generatedForUserId)||!a.template?.templateName?.trim()||!a.template?.tradeStyle?.trim())return freeze({valid:false,code:"INVALID_ACCEPTANCE"});
+    if(a.authenticatedUserId!==a.generatedForUserId)return freeze({valid:false,code:"OWNERSHIP_FAILED"});
+    if(g.status!=="COMPLETED"&&g.status!=="PARTIAL")return freeze({valid:false,code:"GENERATION_NOT_ACCEPTABLE"});
+    if(a.requestId!==g.candidate.requestId||a.candidateId!==g.candidate.candidateId||a.expectedCandidateSchemaVersion!==g.candidate.candidateSchemaVersion)return freeze({valid:false,code:"INVALID_ACCEPTANCE"});
+    const l=g.validatedCandidate.validationLineage;if(a.expectedRegistryProjection.projectionId!==l.registryProjectionId||a.expectedRegistryProjection.projectionVersion!==l.registryProjectionVersion||a.expectedRegistryProjection.projectionDigest!==l.registryProjectionDigest||a.expectedValidation.validationPolicyId!==l.validationPolicyId||a.expectedValidation.validationPolicyVersion!==l.validationPolicyVersion)return freeze({valid:false,code:"STALE_CANDIDATE"});
+    if(!Array.isArray(a.acceptedBindingIds)||a.acceptedBindingIds.length===0)return freeze({valid:false,code:"INVALID_ACCEPTANCE"});if(new Set(a.acceptedBindingIds).size!==a.acceptedBindingIds.length)return freeze({valid:false,code:"DUPLICATE_BINDING"});
+    const supported=new Map(g.validatedCandidate.supportedBindings.map(b=>[b.bindingCandidateId,b]));if(a.acceptedBindingIds.some(id=>!supported.has(id)))return freeze({valid:false,code:"BINDING_NOT_SUPPORTED"});
+    if(!Array.isArray(a.userProvidedWeights)||new Set(a.userProvidedWeights.map(w=>w.bindingCandidateId)).size!==a.userProvidedWeights.length)return freeze({valid:false,code:"WEIGHT_REQUIRED"});const weights=new Map(a.userProvidedWeights.map(w=>[w.bindingCandidateId,w.weight]));if(a.acceptedBindingIds.some(id=>!weights.has(id))||a.userProvidedWeights.some(w=>!a.acceptedBindingIds.includes(w.bindingCandidateId)||!Number.isFinite(w.weight)||w.weight<0||w.weight>100))return freeze({valid:false,code:"WEIGHT_REQUIRED"});
+    const total=a.acceptedBindingIds.reduce((n,id)=>n+weights.get(id)!,0);if(total!==100)return freeze({valid:false,code:"INVALID_WEIGHT_TOTAL"});return freeze({valid:true,acceptedBindings:a.acceptedBindingIds.map(bindingCandidateId=>({bindingCandidateId,weight:weights.get(bindingCandidateId)!}))});
+  }
+}
+const user=(v:unknown):v is string=>typeof v==="string"&&v.length>0&&v.length<=160&&v.trim()===v;

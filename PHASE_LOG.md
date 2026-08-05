@@ -2235,3 +2235,78 @@ Verification:
 
 Runtime integration:
 No production provider adapter, model selection, retry, fallback, tool calling, candidate/review/template persistence, database model, repository, USER/DRAFT creation, approval, template lifecycle, ScoreCheck, compiler, scoring, compiled execution, Evidence read, market-data provider, document, chunk, embedding, vector storage, retrieval, citation, RAG, controller, route, API, UI, bootstrap, dependency, feature-default change, activation, deployment, or commit was added.
+
+### Track B1-GH — Safe USER/DRAFT Projection and End-to-End Drafting Proof
+
+Status:
+COMPLETE
+
+Next:
+Track B2-A — Document Corpus, Chunk Authority and RAG Architecture
+
+Contracts:
+- USER template duplication now creates an owner-scoped, PRIVATE, editable DRAFT; the source SYSTEM template remains unchanged.
+- ScoreCheck exact resolution now accepts only ACTIVE templates. USER/DRAFT remains persistable, owner-visible, owner-editable, and non-executable.
+- Explicit acceptance is bound to the authenticated owner and exact generation request, candidate, schema, registry projection, and validation lineage.
+- Acceptance re-resolves current authorities and reruns deterministic B1-CD validation before projection; stale authority or changed supported-binding results fail closed without persistence.
+- The acceptance validator requires a nonempty unique subset of supported bindings and exactly one explicit user weight per accepted binding. Weights must be finite, range from 0 through 100, and total exactly 100.
+- AI-proposed weights are never accepted, normalized, or substituted. The USER/DRAFT projection uses only explicitly accepted user weights.
+- The pure projector creates one deterministic weighted section from accepted supported bindings, preserves exact factor, relationship, subject, policy, provider-capability, compilation-mapping, candidate, projection, and validation lineage in the detached result, and introduces no execution semantics.
+- Partial generation may create a DRAFT from the explicitly accepted supported subset while all unsupported concepts remain visible in the review lineage and are not fabricated as rules.
+- The workflow separates generation from acceptance and persists only through the existing scoring-template service as USER/DRAFT. It does not activate, compile, score, execute, retrieve documents, or call a provider during acceptance.
+- Cross-user acceptance, stale authorities, unsupported binding selection, missing or duplicate weights, invalid totals, malformed acceptance, and persistence failures produce typed sanitized failures and no template write.
+- Repeated acceptance is deliberately characterized as non-idempotent because the existing template schema and authorities provide no durable acceptance identity or uniqueness contract. Durable idempotency requires a future explicit architecture decision.
+- Candidate acceptance lineage is returned immutably but is not stored in the existing template document because no approved metadata field exists; no schema change was introduced.
+- Outputs are detached and deeply frozen, and Dates are cloned.
+
+Verification:
+- Focused B1-GH and lifecycle tests: 14 passed.
+- B1, template, ScoreCheck, legacy scoring, Phase 4, shadow, trace, and feature regression selection: 165 passed.
+- Full backend: 998 passed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- Dependency, feature-flag, runtime-registration, protected-boundary, and git diff checks passed.
+
+Runtime integration:
+No activation service, compiler invocation, ScoreCheck execution of DRAFT, scoring execution, compiled execution, provider adapter, provider call during acceptance, candidate store, review store, new database model, schema change, RAG, document ingestion, embedding, retrieval, API, controller, route, UI, bootstrap registration, dependency, feature-default change, production wiring, deployment, or commit was added. Existing ACTIVE execution remains authoritative and drafting remains default OFF.
+
+### Track B2-A — Document Corpus, Chunk Authority and RAG Architecture
+
+Status:
+ARCHITECTURE_ACCEPTED
+
+Next:
+Track B2-B — Immutable Document and Chunk Authority
+
+Contracts:
+- ADR-060 approves distinct `PLATFORM_KNOWLEDGE`, `MARKET_RESEARCH`, and `USER_PRIVATE_DOCUMENTS` corpora with no implicit cross-corpus, trust, ownership, or tenant search.
+- Platform knowledge explains product and template semantics; market research contains attributed claims. Neither can assume the other's authority, and exact registries and Evidence remain authoritative.
+- Documents are immutable append-only versions with exact digest, source, ownership, trust, effective-time, parser, and supersession lineage.
+- Chunks are immutable citation-bearing projections of one exact document version with exact source spans, strategy lineage, stable digests, inherited access scope, and optional parent-child relationships.
+- Independently versioned document-specific strategies replace a universal semantic fixed-token chunker. Platform definitions, ADR summaries, examples, financial tables, broker research, and transcripts retain their distinct structures.
+- Every selected passage has an assembler-issued citation bound to exact document/chunk versions, digests, source identity, source span, corpus, and trust. Model-created citation identities are invalid.
+- Embeddings and vector indexes are derived versioned artifacts behind provider-neutral ports. No vector database, embedding model, parser, or provider is selected.
+- Bounded hybrid retrieval combines exact structured-authority lookup, metadata-filtered vector retrieval, optional lexical retrieval, deduplication, optional reranking, and deterministic context-budget assembly.
+- The B1 compact registry projection remains the authority for factor, relationship, subject, unit, provider, compilation, and validation identities. RAG is a separate explanatory envelope.
+- USER-private artifacts, indexes, caches, requests, and citations inherit exact authenticated tenant/owner scope and fail closed across tenants.
+- Retrieved text is untrusted data. Structured delimiting, instruction isolation, bounded influence, output validation, and citation validation are mandatory prompt-injection defenses.
+- The initial implementation rollout is limited to approved `PLATFORM_KNOWLEDGE`; market-research extraction and user-private ingestion are deferred.
+- `RAG_TEMPLATE_DRAFTING_ENABLED` remains default OFF and unchanged. Registry-only B1 drafting must survive retrieval rollback.
+
+Progress:
+```text
+Track A — COMPLETE
+Track B1 — COMPLETE
+
+Track B2:
+B2-A — ARCHITECTURE_ACCEPTED
+B2-B — NEXT
+B2-C — PENDING
+B2-D — PENDING
+B2-E — PENDING
+B2-F — PENDING
+B2-G — PENDING
+```
+
+Runtime integration:
+Documentation only. No source, test, model, schema, parser, ingestion, chunking implementation, embedding model, vector database, index, retrieval, reranking, citation implementation, RAG prompt integration, market-research extraction, private-document ingestion, feature change, dependency, API, template, ScoreCheck, Evidence, scoring, compiler, compiled runtime, registration, activation, deployment, or commit was added.
