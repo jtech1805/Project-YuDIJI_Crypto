@@ -5,6 +5,7 @@ import { cloneAndFreeze } from "./historical-authority.internal.js";
 export const BTC_ETF_FLOW_CHARACTERIZATION_PROVIDER_KEY = "YUDIJI_CHARACTERIZATION_BTC_ETF_FLOW";
 export const BTC_ETF_FLOW_CHARACTERIZATION_PROVIDER: ProviderAuthorityRegistration = cloneAndFreeze({
   providerDefinition: { providerKey: BTC_ETF_FLOW_CHARACTERIZATION_PROVIDER_KEY, displayName: "YUDIJI internal non-live BTC ETF-flow characterization fixture", providerType: "DIRECT", authorityLevel: "MANUAL_REVIEWED", costTier: "INTERNAL", supportedFactorKeys: ["CRYPTO.ETF_NET_FLOW"], enabled: true },
+  evidenceProvenanceProvider: "yudiji-internal-btc-etf-flow-characterization",
   capabilities: { compileEligible: true, liveExecutionEligible: false, replayFixtureEligible: true },
 });
 export const DEFAULT_PROVIDER_AUTHORITY_REGISTRATIONS: readonly ProviderAuthorityRegistration[] = Object.freeze([BTC_ETF_FLOW_CHARACTERIZATION_PROVIDER]);
@@ -33,6 +34,8 @@ const valid = (value: unknown): value is ProviderAuthorityRegistration => {
   return typeof provider.providerKey === "string" && /^[A-Z0-9_]{1,120}$/.test(provider.providerKey)
     && typeof provider.displayName === "string" && provider.displayName.trim() === provider.displayName
     && Array.isArray(provider.supportedFactorKeys) && provider.supportedFactorKeys.length > 0
+    && typeof value.evidenceProvenanceProvider === "string" && value.evidenceProvenanceProvider.length > 0
+    && value.evidenceProvenanceProvider.length <= 120 && value.evidenceProvenanceProvider.trim() === value.evidenceProvenanceProvider
     && typeof value.capabilities.compileEligible === "boolean" && typeof value.capabilities.liveExecutionEligible === "boolean"
     && typeof value.capabilities.replayFixtureEligible === "boolean";
 };

@@ -33,6 +33,7 @@ test("template capabilities preserve seven public templates and isolate exact in
 test("characterization provider is compile/replay eligible, non-live, and has no runner", () => {
   const authority = createDefaultProviderAuthorityRegistry().getExact(BTC_ETF_FLOW_CHARACTERIZATION_PROVIDER_KEY)!;
   assert.deepEqual(authority.capabilities, { compileEligible: true, liveExecutionEligible: false, replayFixtureEligible: true });
+  assert.equal(authority.evidenceProvenanceProvider, "yudiji-internal-btc-etf-flow-characterization");
   assert.match(authority.providerDefinition.displayName, /internal non-live.*characterization/i);
   assert.equal(new ProviderResolutionRunnerRegistry([]).get(BTC_ETF_FLOW_CHARACTERIZATION_PROVIDER_KEY), null);
   assert(Object.isFrozen(authority) && Object.isFrozen(authority.capabilities));

@@ -7,6 +7,7 @@ export type ProviderAuthorityCapabilities = Readonly<{
 }>;
 export type ProviderAuthorityRegistration = Readonly<{
   providerDefinition: ProviderDefinition;
+  evidenceProvenanceProvider: string;
   capabilities: ProviderAuthorityCapabilities;
 }>;
 export interface ProviderAuthorityRegistry { getExact(providerKey: ProviderKey): ProviderAuthorityRegistration | null }

@@ -2048,3 +2048,58 @@ Verification:
 
 Runtime integration:
 No execution binding, A5 invocation, A6 replay, production persistence, Evidence or attestation creation, provider runner, network integration, API exposure, controller change, route change, ScoreCheck eligibility, feature-default change, dependency, bootstrap registration, or compiled-runtime activation was added.
+
+### Phase A5.5-B2.5 — Decouple Evidence Provenance Authority from Live Provider Runner Registration
+
+Status:
+COMPLETE
+
+Next:
+Phase A5.5-B3 — Test-Owned ETF Evidence, Exact Execution Binding, and Compiled Runtime Proof
+
+Contracts:
+- Canonical `evidenceProvenanceProvider` now belongs to the immutable provider-authority registration alongside provider identity and independent compile/live/replay capabilities.
+- `YUDIJI_CHARACTERIZATION_BTC_ETF_FLOW` maps exactly to `yudiji-internal-btc-etf-flow-characterization` without acquiring a runner or live-execution eligibility.
+- A4 observation assembly resolves exact provider authority directly and requires `replayFixtureEligible === true` before accepting replay Evidence.
+- A4 no longer imports, receives, or queries `ProviderResolutionRunnerRegistryPort`; replay provenance validation cannot invoke a runner.
+- Existing live-provider provenance remains exact when migrated into provider authority; Binance characterization retains `binance-public-price`.
+- Phase 3 live resolution and composition retain independent `liveExecutionEligible` validation and runner registration requirements.
+- Missing authority, replay-ineligible authority, and provenance mismatch remain explicit fail-closed assembly outcomes.
+- No B3 Evidence, attestation, execution-binding, or runtime fixture was created in this phase.
+
+Verification:
+- Focused provider-authority, B2, A4, Phase 3, runner, and compiler regressions: 71 passed.
+- Typecheck passed before full regression execution.
+- Full backend, circular-dependency, and final diff audits recorded at phase handoff.
+
+Runtime integration:
+No provider runner, adapter, network access, scheduler, health integration, Evidence creation, attestation creation, execution binding, B3 fixture, A5 invocation, A6 replay, ScoreCheck integration, parity execution, feature-default change, API, controller, route, dependency, persistence, or bootstrap registration was added. Compiled execution remains default OFF and legacy scoring remains authoritative.
+
+### Phase A5.5-B3 — Test-Owned ETF Evidence, Exact Execution Binding, and Compiled Runtime Proof
+
+Status:
+COMPLETE
+
+Next:
+Phase A6 — System-Template Legacy/Compiled Replay and Parity Proof
+
+Contracts:
+- The real internal `CRYPTO_BTC_ETF_FLOW_DAILY_V1` SYSTEM template and complete B2 factor, evaluator, provider, subject, and policy authority chain are used unchanged.
+- The deterministic compiler produces the exact `CRYPTO_BTC_ETF_FLOW_DAILY_RULEBOOK` v1 projection with stable compiler lineage, canonical hash, and repeatable deep equality.
+- One immutable test-owned `BTC_ETF_FLOW_TEST_EXECUTION_BINDING` v1 binds the exact source template identity to the exact compiled rulebook identity through read-only exact readers.
+- Canonical test-owned Evidence uses `CRYPTO.ETF_NET_FLOW`, `ASSET/BTC`, numeric USD values, fixed UTC timestamps, and provenance `yudiji-internal-btc-etf-flow-characterization`.
+- Exact historical attestations preserve `BTC_ETF_FLOW_CHARACTERIZATION_BINDING` v1, `BTC_ETF_FLOW_CHARACTERIZATION_RESOLUTION` v1, selected provider `YUDIJI_CHARACTERIZATION_BTC_ETF_FLOW`, detailed resolution status, confidence adjustment, warnings, resolution time, and persistence time.
+- A4 validates provider authority provenance and replay eligibility without a provider runner lookup; A5 composes A4 with Phase 4G3 and returns parity `NOT_REQUESTED`.
+- Real positive, neutral, and negative characterization paths produce contributions `1/0/-1`, aggregate and normalized scores `75/50/25`, and bands `POSITIVE/NEUTRAL/NEGATIVE`.
+- Missing Evidence, missing attestation, future publication, future Evidence persistence, future attestation persistence, provider-binding mismatch, resolution-policy mismatch, provenance mismatch, replay-ineligible authority, and duplicate eligible Evidence all fail closed without compiled execution.
+- Repeated compilation, assembly, compiled execution, and A5 outcomes are deeply equal, detached, immutable, and leave test-owned inputs unchanged.
+
+Verification:
+- Focused B3 proof: 9 passed.
+- B2/B2.5, A2, A4, A5, and Phase 4 focused boundary selection: 63 passed.
+- Evidence, attestation, Phase 3 provider, system-template, legacy scoring, and ScoreCheck regression selection: 332 passed.
+- Full backend: 957 passed.
+- Typecheck passed; circular-dependency and final diff audits recorded at phase handoff.
+
+Runtime integration:
+No production source, provider runner, adapter, network access, scheduler, health polling, Evidence ingestion, production Evidence or attestation write, production execution-binding persistence, legacy scoring invocation, parity invocation, ScoreCheck integration, public template exposure, feature-default change, API, controller, route, dependency, bootstrap registration, or compiled-runtime activation was added. Fixtures and exact readers remain test owned; compiled execution remains default OFF and legacy scoring remains authoritative.

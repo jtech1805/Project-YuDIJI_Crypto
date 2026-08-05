@@ -4,7 +4,7 @@ import { CompiledSubjectResolutionService } from "./compiled-subject-resolution.
 import type { VersionedFactorDefinitionRegistry } from "../types/versioned-factor-definition.types.js";
 import type { VersionedProviderBindingRegistry } from "../types/versioned-provider-binding.types.js";
 import type { VersionedProviderResolutionPolicyRegistry } from "../types/versioned-provider-resolution-policy.types.js";
-import type { ProviderResolutionRunnerRegistryPort } from "../types/provider-resolution-composition.types.js";
+import type { ProviderAuthorityRegistry } from "../types/provider-authority-registration.types.js";
 import type { CompiledFactorBinding, CompiledFixedSubject, CompiledRulebookDefinition } from "../types/compiled-rulebook.types.js";
 import type { CompiledShadowObservation, CompiledShadowResolutionOutcome } from "../types/compiled-shadow-observation.types.js";
 import type { EvidenceProviderResolutionAttestation } from "../types/evidence-provider-resolution-attestation.types.js";
@@ -17,7 +17,7 @@ export type CompiledShadowObservationAssemblyDependencies = Readonly<{
   factorDefinitions: Pick<VersionedFactorDefinitionRegistry, "getExact">;
   providerBindings: Pick<VersionedProviderBindingRegistry, "getExact">;
   resolutionPolicies: Pick<VersionedProviderResolutionPolicyRegistry, "getExact">;
-  providerRegistrations: Pick<ProviderResolutionRunnerRegistryPort, "get">;
+  providerAuthorities: Pick<ProviderAuthorityRegistry, "getExact">;
   subjects?: CompiledSubjectResolutionService;
 }>;
 
@@ -98,9 +98,10 @@ export class CompiledShadowObservationAssemblyService {
     if (!resolutionPolicy) return reject("RESOLUTION_POLICY_NOT_FOUND");
     if (!providerBinding.compileEligible || !resolutionPolicy.compileEligible) return reject("PROVIDER_AUTHORITY_INELIGIBLE");
     if (!providerBinding.orderedProviderKeys.includes(attestation.selectedProviderKey)) return reject("SELECTED_PROVIDER_NOT_IN_BINDING");
-    const registration = this.dependencies.providerRegistrations.get(attestation.selectedProviderKey);
-    if (!registration) return reject("PROVIDER_REGISTRATION_MISSING");
-    if (registration.evidenceProvenanceProvider !== evidence.provenance.provider) return reject("PROVIDER_PROVENANCE_MISMATCH");
+    const authority = this.dependencies.providerAuthorities.getExact(attestation.selectedProviderKey);
+    if (!authority) return reject("PROVIDER_AUTHORITY_MISSING");
+    if (!authority.capabilities.replayFixtureEligible) return reject("PROVIDER_AUTHORITY_INELIGIBLE");
+    if (authority.evidenceProvenanceProvider !== evidence.provenance.provider) return reject("PROVIDER_PROVENANCE_MISMATCH");
     const exactFactor = this.dependencies.factorDefinitions.getExact(binding.factor.factorKey, binding.factor.factorVersion);
     if (!exactFactor || !exactFactor.compileEligible) return reject("FACTOR_VERSION_MISMATCH");
     const compatibility = this.dependencies.compatibility.evaluate({ evidence, asOf: request.asOf });
