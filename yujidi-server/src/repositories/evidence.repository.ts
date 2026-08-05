@@ -83,7 +83,8 @@ export class EvidenceRepository implements EvidenceRepositoryContract {
       .sort({ observedAt: 1, evidenceId: 1 })
       .limit(params.limit)
       .lean()
-      .exec();
+      .exec()
+      .then(cloneReadRecords);
   }
 
   public countHistory(params: EvidenceHistoryRepositoryParams): Promise<number> {
@@ -100,7 +101,8 @@ export class EvidenceRepository implements EvidenceRepositoryContract {
       .sort({ observedAt: 1, evidenceId: 1 })
       .limit(params.limit)
       .lean()
-      .exec();
+      .exec()
+      .then(cloneReadRecords);
   }
 
   public countRelationshipsTargeting(
@@ -135,3 +137,6 @@ const relationshipFilter = (
 });
 
 export const evidenceRepository = new EvidenceRepository();
+
+const cloneReadRecords = (records: readonly EvidenceReadRecord[]): EvidenceReadRecord[] =>
+  records.map((record) => structuredClone(record));

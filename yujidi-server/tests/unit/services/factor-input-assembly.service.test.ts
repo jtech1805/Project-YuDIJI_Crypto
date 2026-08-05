@@ -4,15 +4,17 @@ import test from "node:test";
 
 import { FactorInputAssemblyService } from "../../../src/services/factor-input-assembly.service.js";
 import type { EvidenceReadResult } from "../../../src/types/evidence-read.types.js";
-import type { EvidenceSourceResolutionResult } from "../../../src/types/evidence-source-resolution.types.js";
+import type { EvidenceReadRecord } from "../../../src/types/evidence-lifecycle.types.js";
 import type { CreateEvidenceObservationInput } from "../../../src/types/evidence.types.js";
+import type { EvidenceSourceResolutionResult } from "../../../src/types/evidence-source-resolution.types.js";
 
 const AS_OF = new Date("2026-07-30T14:00:10.000Z");
 const OBSERVED_AT = new Date("2026-07-30T14:00:09.000Z");
 
+type ObservationReadRecord = CreateEvidenceObservationInput & Readonly<{ createdAt: Date }>;
 const observation = (
-  overrides: Partial<CreateEvidenceObservationInput> = {},
-): CreateEvidenceObservationInput => ({
+  overrides: Partial<ObservationReadRecord> = {},
+): ObservationReadRecord => ({
   evidenceId: "E-1",
   recordType: "OBSERVATION",
   factorKey: "MARKET.PRICE",
@@ -25,13 +27,14 @@ const observation = (
   },
   value: { type: "NUMBER", numberValue: 65000.123456, unit: "USDT" },
   observedAt: OBSERVED_AT,
+  createdAt: new Date("2026-07-30T14:00:09.500Z"),
   confidence: 0.75,
   schemaVersion: "1.0",
   ...overrides,
 });
 
 const readResult = (
-  activeObservations: CreateEvidenceObservationInput[] = [observation()],
+  activeObservations: ObservationReadRecord[] = [observation()],
   overrides: Partial<EvidenceReadResult> = {},
 ): EvidenceReadResult => ({
   query: {
@@ -301,7 +304,7 @@ test("rejects mismatched, revoked, or malformed selected Evidence", async () => 
   ];
   for (const selected of invalidSelected) {
     const testHarness = harness({
-      read: readResult([selected as CreateEvidenceObservationInput]),
+      read: readResult([selected as ObservationReadRecord]),
     });
     const result = await testHarness.service.assemble(request());
     assert.equal(result.assembled, false);
@@ -387,7 +390,7 @@ test("does not mutate frozen inputs and returned dates cannot affect later resul
   Object.freeze(selected.provenance);
   Object.freeze(selected.value);
   Object.freeze(selected);
-  const active = Object.freeze([selected]) as unknown as CreateEvidenceObservationInput[];
+  const active = Object.freeze([selected]) as unknown as ObservationReadRecord[];
   const frozenRead = readResult(active);
   Object.freeze(frozenRead);
   const fixedResolution = selectedResult();

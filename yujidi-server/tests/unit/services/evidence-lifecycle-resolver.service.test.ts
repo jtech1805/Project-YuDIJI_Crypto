@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { EvidenceLifecycleResolverService } from "../../../src/services/evidence-lifecycle-resolver.service.js";
-import type { EvidenceReadRecord } from "../../../src/types/evidence-lifecycle.types.js";
+import type { EvidenceLifecycleInputRecord } from "../../../src/types/evidence-lifecycle.types.js";
 import type {
   CreateEvidenceObservationInput,
   CreateEvidenceRevocationInput,
@@ -47,7 +47,7 @@ const revocation = (
   ...overrides,
 });
 
-const stateMap = (records: readonly EvidenceReadRecord[], asOf = T3) => {
+const stateMap = (records: readonly EvidenceLifecycleInputRecord[], asOf = T3) => {
   const resolver = new EvidenceLifecycleResolverService();
   return Object.fromEntries(
     resolver.resolveAll({ evidence: records, asOf }).resolutions
@@ -293,7 +293,7 @@ test("returns deterministic ordering for permuted logical input", () => {
 });
 
 test("does not mutate arrays, records, or nested Evidence values", () => {
-  const records: EvidenceReadRecord[] = [
+  const records: EvidenceLifecycleInputRecord[] = [
     observation("B", { observedAt: T1 }),
     observation("A", { observedAt: T0 }),
   ];

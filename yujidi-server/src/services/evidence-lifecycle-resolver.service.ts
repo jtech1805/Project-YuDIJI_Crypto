@@ -2,7 +2,7 @@ import type {
   EvidenceLifecycleBatchResolution,
   EvidenceLifecycleDiagnostic,
   EvidenceLifecycleResolution,
-  EvidenceReadRecord,
+  EvidenceLifecycleInputRecord,
 } from "../types/evidence-lifecycle.types.js";
 import type {
   CreateEvidenceObservationInput,
@@ -10,7 +10,7 @@ import type {
 } from "../types/evidence.types.js";
 
 type CanonicalHistory = {
-  records: Map<string, EvidenceReadRecord>;
+  records: Map<string, EvidenceLifecycleInputRecord>;
   observations: CreateEvidenceObservationInput[];
   diagnostics: EvidenceLifecycleDiagnostic[];
   cycleEvidenceIds: Set<string>;
@@ -20,8 +20,8 @@ const compareText = (left: string, right: string): number =>
   left < right ? -1 : left > right ? 1 : 0;
 
 const compareRelationship = (
-  left: EvidenceReadRecord,
-  right: EvidenceReadRecord,
+  left: EvidenceLifecycleInputRecord,
+  right: EvidenceLifecycleInputRecord,
 ): number =>
   left.observedAt.getTime() - right.observedAt.getTime()
   || compareText(left.evidenceId, right.evidenceId);
@@ -47,7 +47,7 @@ const sortAndDedupeDiagnostics = (
   return [...unique.values()].sort(compareDiagnostic);
 };
 
-const validateRecord = (record: EvidenceReadRecord): void => {
+const validateRecord = (record: EvidenceLifecycleInputRecord): void => {
   if (
     typeof record !== "object"
     || record === null
@@ -68,9 +68,9 @@ const validateAsOf = (asOf: Date): void => {
 };
 
 const buildCanonicalHistory = (
-  evidence: readonly EvidenceReadRecord[],
+  evidence: readonly EvidenceLifecycleInputRecord[],
 ): CanonicalHistory => {
-  const records = new Map<string, EvidenceReadRecord>();
+  const records = new Map<string, EvidenceLifecycleInputRecord>();
   const diagnostics: EvidenceLifecycleDiagnostic[] = [];
 
   for (const record of evidence) {
@@ -239,8 +239,8 @@ const resolveObservation = (
 
 export class EvidenceLifecycleResolverService {
   public resolveOne(params: {
-    evidence: EvidenceReadRecord;
-    allEvidence: readonly EvidenceReadRecord[];
+    evidence: EvidenceLifecycleInputRecord;
+    allEvidence: readonly EvidenceLifecycleInputRecord[];
     asOf: Date;
   }): EvidenceLifecycleResolution {
     validateAsOf(params.asOf);
@@ -253,7 +253,7 @@ export class EvidenceLifecycleResolverService {
   }
 
   public resolveAll(params: {
-    evidence: readonly EvidenceReadRecord[];
+    evidence: readonly EvidenceLifecycleInputRecord[];
     asOf: Date;
   }): EvidenceLifecycleBatchResolution {
     validateAsOf(params.asOf);

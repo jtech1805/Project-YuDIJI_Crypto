@@ -107,8 +107,9 @@ export class EvidenceReadService {
     return {
       query: normalizedQuery,
       history,
-      activeObservations: resolved.activeObservations
-        .filter((record) => baseIdSet.has(record.evidenceId)),
+      activeObservations: history
+        .filter((record) => baseIdSet.has(record.evidenceId)
+          && resolved.activeObservations.some((active) => active.evidenceId === record.evidenceId)),
       resolutions: resolved.resolutions
         .filter((resolution) => baseIdSet.has(resolution.evidenceId)),
       diagnostics: resolved.diagnostics,

@@ -46,4 +46,5 @@ export type EvidenceLifecycleBatchResolution = {
   diagnostics: EvidenceLifecycleDiagnostic[];
 };
 
-export type EvidenceReadRecord = CreateEvidenceInput;
+export type EvidenceReadRecord = CreateEvidenceInput & Readonly<{ createdAt: Date }>;
+export type EvidenceLifecycleInputRecord = CreateEvidenceInput;

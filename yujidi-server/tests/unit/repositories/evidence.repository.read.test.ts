@@ -47,7 +47,7 @@ const harness = () => {
       return { exec: async () => 7 };
     },
   };
-  return { counts, finds, repository: new EvidenceRepository(model) };
+  return { counts, finds, records, repository: new EvidenceRepository(model) };
 };
 
 const baseParams = {
@@ -145,4 +145,16 @@ test("repository still exposes no mutation API", () => {
   ]) {
     assert.equal(repository[method], undefined);
   }
+});
+
+test("persisted createdAt is exposed through detached reads with cloned Dates", async () => {
+  const { records, repository } = harness();
+  const observedAt = new Date("2026-07-29T10:00:00.000Z");
+  const createdAt = new Date("2026-07-29T10:00:01.000Z");
+  records.push({ evidenceId: "A", recordType: "OBSERVATION", factorKey: "MARKET.PRICE", deduplicationKey: "d", subject: { type: "INSTRUMENT", key: "BTCUSDT" }, provenance: { sourceType: "MARKET_DATA", provider: "provider" }, value: { type: "NUMBER", numberValue: 1, unit: "USDT" }, observedAt, createdAt, schemaVersion: "1" });
+  const result = await repository.findHistory({ ...baseParams, limit: 1 });
+  assert.equal(result[0]?.createdAt.getTime(), createdAt.getTime());
+  assert.notEqual(result[0], records[0]);
+  assert.notEqual(result[0]?.createdAt, createdAt);
+  assert.notEqual(result[0]?.observedAt, observedAt);
 });

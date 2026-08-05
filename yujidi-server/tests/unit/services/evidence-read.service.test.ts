@@ -5,12 +5,12 @@ import type { EvidenceRepositoryContract } from "../../../src/repositories/evide
 import { EvidenceReadService } from "../../../src/services/evidence-read.service.js";
 import type { EvidenceLifecycleResolverService } from "../../../src/services/evidence-lifecycle-resolver.service.js";
 import type { EvidenceReadRecord } from "../../../src/types/evidence-lifecycle.types.js";
+import type { CreateEvidenceObservationInput } from "../../../src/types/evidence.types.js";
 import {
   EvidenceReadQueryError,
   MAX_EVIDENCE_RELATIONSHIP_LIMIT,
   type EvidenceHistoryQuery,
 } from "../../../src/types/evidence-read.types.js";
-import type { CreateEvidenceObservationInput } from "../../../src/types/evidence.types.js";
 
 const AS_OF = new Date("2026-07-29T12:00:00.000Z");
 const query = (overrides: Partial<EvidenceHistoryQuery> = {}): EvidenceHistoryQuery => ({
@@ -21,10 +21,11 @@ const query = (overrides: Partial<EvidenceHistoryQuery> = {}): EvidenceHistoryQu
   ...overrides,
 });
 
+type ObservationReadRecord = CreateEvidenceObservationInput & Readonly<{ createdAt: Date }>;
 const observation = (
   evidenceId: string,
-  overrides: Partial<CreateEvidenceObservationInput> = {},
-): CreateEvidenceObservationInput => ({
+  overrides: Partial<ObservationReadRecord> = {},
+): ObservationReadRecord => ({
   evidenceId,
   recordType: "OBSERVATION",
   factorKey: "GLOBAL.DXY",
@@ -33,6 +34,7 @@ const observation = (
   provenance: { sourceType: "MACRO_DATA", provider: "provider" },
   value: { type: "NUMBER", numberValue: 1 },
   observedAt: new Date("2026-07-29T10:00:00.000Z"),
+  createdAt: new Date("2026-07-29T10:00:01.000Z"),
   schemaVersion: "1.0",
   ...overrides,
 });
@@ -116,6 +118,7 @@ test("resolves base supersession and external revocation relationships", async (
   const A = observation("A");
   const B = observation("B", {
     observedAt: new Date("2026-07-29T11:00:00.000Z"),
+    createdAt: new Date("2026-07-29T11:00:01.000Z"),
     supersedesEvidenceId: "A",
   });
   const superseded = await harness({ base: [B, A] }).service.read(query());
@@ -135,6 +138,7 @@ test("resolves base supersession and external revocation relationships", async (
     revokesEvidenceId: "A",
     reasonCode: "CORRECTION",
     schemaVersion: "1.0",
+    createdAt: new Date("2026-07-29T11:00:01.000Z"),
   };
   const revoked = await harness({ base: [A], relationships: [R] }).service.read(query());
   assert.equal(revoked.resolutions[0]?.state, "REVOKED");

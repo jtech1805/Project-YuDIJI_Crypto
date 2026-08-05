@@ -1910,3 +1910,24 @@ Contracts:
 
 Runtime integration:
 No production runner registrations, provider retries, hidden fallbacks, A4 observation assembly, compiled execution, parity invocation, ScoreCheck integration, API, controller, route, feature-flag change, dependency, or application bootstrap wiring was added. Compiled execution remains default OFF and legacy scoring remains authoritative.
+
+### Phase A4 — Canonical Evidence to Compiled Shadow Observation Assembly
+
+Status:
+COMPLETE
+
+Next:
+Phase A5 — Standalone Compiled Shadow Orchestrator
+
+Contracts:
+- The persisted `EvidenceReadRecord` is distinct from caller creation input and exposes persistence-controlled `createdAt`; repository history reads detach records and clone Dates.
+- ADR-056 system-known replay requires source publication, Evidence ingestion, and attestation persistence timestamps at or before the explicit request `asOf`, with equality accepted and no timestamp substitution.
+- Historically unavailable observations, revocations, and superseding records are removed before the existing lifecycle resolver runs.
+- Every projected observation requires exactly one historical provider-resolution attestation with exact Evidence, provider-binding, resolution-policy, selected-provider, and explicit Evidence-provenance mapping validation.
+- Exact versioned factor, provider-binding, and resolution-policy authorities are used; compatibility and freshness reuse existing Evidence semantics and freshness remains based only on `asOf - observedAt`.
+- Detailed provider statuses project only as frozen by ADR-057 while degraded status, confidence adjustment, and ordered warnings remain in immutable traces.
+- Zero candidates produce typed omissions, multiple eligible candidates fail closed without recency selection, and output preserves compiled binding order.
+- The canonical MARKET.PRICE/BTCUSDT/Binance fixture produces one immutable provider-attested `CompiledShadowObservation` without network or persistence access.
+
+Runtime integration:
+None. No provider calls, legacy snapshot conversion, A5 orchestration, Phase 4G3 invocation, parity invocation, ScoreCheck integration, feature-flag change, controller, route, API, dependency, persistence write, or production registration was added. Compiled execution remains default OFF and legacy scoring remains authoritative.
