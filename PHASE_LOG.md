@@ -1890,3 +1890,23 @@ Contracts:
 
 Runtime integration:
 None. Phase 3E emission and provider namespace mapping are not implemented. No Evidence contract, provider-resolution logic, compiled observation, observation assembly, ScoreCheck path, feature flag, runtime registration, API, dependency, or production behavior was changed. Compiled execution remains default OFF and legacy scoring remains authoritative.
+
+### Phase A3.6-B — Phase 3E Attestation Emission and Provider Identity Mapping
+
+Status:
+COMPLETE
+
+Next:
+Phase A4 — Canonical Evidence to Compiled Shadow Observation Assembly
+
+Contracts:
+- Provider runner registration now maps exact provider key and runner/adapter identity to an explicit expected Evidence provenance provider; the namespaces remain separate and immutable.
+- Phase 3E requires the exact versioned provider-binding definition, validates its ordered provider lineage against the original Phase 3D result, and preserves exact resolution-policy identity/version.
+- Caller-supplied `resolvedAt` and an injected deterministic attestation-identity factory prevent hidden clock, random identity, latest-version, or default-version behavior.
+- Each CREATED or DUPLICATE persisted Evidence ID is loaded exactly, checked against the registered provenance provider, and receives an immutable attestation or reuses an exact existing attestation.
+- Detailed `RESOLVED`, `DEGRADED_PRIMARY_USED`, `FALLBACK_USED`, and `PROXY_USED` statuses, confidence adjustment, and ordered warnings are preserved without compiled projection.
+- Attestation conflict, missing Evidence, provenance mismatch, identity failure, and persistence failure produce typed PARTIAL diagnostics when usable Evidence exists.
+- Attestation attempts continue in candidate order for already persisted Evidence IDs; Evidence is never deleted or rolled back and provider execution is never retried.
+
+Runtime integration:
+No production runner registrations, provider retries, hidden fallbacks, A4 observation assembly, compiled execution, parity invocation, ScoreCheck integration, API, controller, route, feature-flag change, dependency, or application bootstrap wiring was added. Compiled execution remains default OFF and legacy scoring remains authoritative.

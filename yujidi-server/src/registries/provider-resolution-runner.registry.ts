@@ -13,7 +13,7 @@ export class ProviderResolutionRunnerRegistry implements ProviderResolutionRunne
       if (!valid(raw)) throw new ProviderResolutionRunnerRegistryError("INVALID_REGISTRATION");
       if (snapshots.has(raw.providerKey)) throw new ProviderResolutionRunnerRegistryError("DUPLICATE_PROVIDER_KEY");
       if (runnerIds.has(raw.runnerId)) throw new ProviderResolutionRunnerRegistryError("DUPLICATE_RUNNER_ID");
-      const snapshot = Object.freeze({ providerKey: raw.providerKey, runnerId: raw.runnerId, runner: raw.runner });
+      const snapshot = Object.freeze({ providerKey: raw.providerKey, runnerId: raw.runnerId, evidenceProvenanceProvider: raw.evidenceProvenanceProvider, runner: raw.runner });
       snapshots.set(snapshot.providerKey, snapshot); runnerIds.add(snapshot.runnerId);
     }
     this.registrations = snapshots;
@@ -26,6 +26,6 @@ export class ProviderResolutionRunnerRegistry implements ProviderResolutionRunne
 
 export const DEFAULT_PROVIDER_RESOLUTION_RUNNER_REGISTRATIONS = Object.freeze([] as const);
 export const createDefaultProviderResolutionRunnerRegistry = (): ProviderResolutionRunnerRegistry => new ProviderResolutionRunnerRegistry(DEFAULT_PROVIDER_RESOLUTION_RUNNER_REGISTRATIONS);
-const valid = (value: unknown): value is ProviderRunnerRegistration => record(value) && ID.test(value.providerKey) && ID.test(value.runnerId) && record(value.runner) && typeof value.runner.run === "function";
+const valid = (value: unknown): value is ProviderRunnerRegistration => record(value) && ID.test(value.providerKey) && ID.test(value.runnerId) && typeof value.evidenceProvenanceProvider === "string" && value.evidenceProvenanceProvider.length > 0 && value.evidenceProvenanceProvider.length <= 120 && value.evidenceProvenanceProvider.trim() === value.evidenceProvenanceProvider && record(value.runner) && typeof value.runner.run === "function";
 const dense = (values: readonly unknown[]) => { for (let index = 0; index < values.length; index += 1) if (!(index in values)) return false; return true; };
 const record = (value: unknown): value is Record<string, any> => typeof value === "object" && value !== null && !Array.isArray(value);
