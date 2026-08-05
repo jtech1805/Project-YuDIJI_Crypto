@@ -2203,3 +2203,35 @@ Verification:
 
 Runtime integration:
 No LLM client, generation port, prompt, model selection, operational trace integration, review presentation, candidate/template persistence, database model, repository, template lifecycle, ScoreCheck, compiler invocation, scoring execution, compiled execution, Evidence read, provider call, document, chunk, embedding, vector storage, retrieval, citation, RAG, controller, route, API, bootstrap, dependency, feature-default change, activation, deployment, or commit was added.
+
+### Track B1-EF — Structured Generation, Prompt Orchestration and Candidate Review Report
+
+Status:
+COMPLETE
+
+Next:
+Track B1-G — Template Lifecycle Correction and Safe USER/DRAFT Projection
+
+Contracts:
+- A dedicated provider-independent `TemplateDraftGenerationPort` accepts bounded provider-neutral prompt messages/context and returns typed structured output or provider failure without SDK coupling.
+- `TEMPLATE_DRAFT_REGISTRY_GROUNDED` v1 instructs the future model to use exact projected authorities, preserve every concept, ask for subject clarification, emit no accepted weights, and return no score, permission, decision, rulebook, or execution instruction.
+- The deterministic prompt context contains only the drafting request, requested concepts, compact B1-CD registry projection, schema identity, and disabled-weight/no-RAG constraints.
+- Strict Zod structured-output validation runs before B1-CD domain validation. Malformed JSON, invalid schema, provider failure, empty response, request mismatch, projection mismatch, hallucinated authority, unsupported relationship, omitted concept, and disabled weight remain typed and fail closed.
+- The B1-CD validator is composed exactly once and remains the authority for factor, version, relationship, subject, unit, provider, compilation mapping, weight, and concept-accounting decisions.
+- Fatal candidate-level invariants expose no supported bindings in the validated/review result.
+- The deterministic review projector preserves every requested concept, exact supported bindings, unresolved requirements, clarification questions, warnings, limitations, and complete prompt/projection/validation lineage without another model call.
+- Review limitations always disclose non-authoritative status, required user weights, no persistence, no RAG, and no runtime or compilation authority.
+- The ETF-flow fake-provider proof returns PARTIAL for exact `CRYPTO.ETF_NET_FLOW` v1, DIRECT, `ASSET/BTC`, exact provider/compilation summaries, and rejected model weight.
+- The Tata Steel fake-provider proof returns `UNSUPPORTED_REQUEST`, preserves long buildup, short buildup, quarterly results, and broker research, and accepts no invented factor, provider, subject, or `MARKET.PRICE` substitution.
+- One finalized metadata-only LLM trace is emitted per reached provider attempt with counts and lineage only; feature-disabled requests emit no provider trace, and trace failure cannot change generation output.
+- `RAG_TEMPLATE_DRAFTING_ENABLED` is the only existing declared drafting gate and remains default OFF. Its name conflates drafting generation with future RAG; no new flag was invented in this phase.
+
+Verification:
+- Focused B1-CD/B1-EF tests: 20 passed.
+- Existing AI, trace, feature, template, ScoreCheck, legacy scoring, compiled-shadow, and Track A regression selection: 180 passed.
+- Full backend: 987 passed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+
+Runtime integration:
+No production provider adapter, model selection, retry, fallback, tool calling, candidate/review/template persistence, database model, repository, USER/DRAFT creation, approval, template lifecycle, ScoreCheck, compiler, scoring, compiled execution, Evidence read, market-data provider, document, chunk, embedding, vector storage, retrieval, citation, RAG, controller, route, API, UI, bootstrap, dependency, feature-default change, activation, deployment, or commit was added.

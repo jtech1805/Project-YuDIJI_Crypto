@@ -2,6 +2,7 @@ export const LLM_TRACE_TASK_TYPES = [
   "ALERT_REPORT",
   "COPILOT_CHAT",
   "POST_TRADE_REVIEW",
+  "TEMPLATE_DRAFT_GENERATION",
 ] as const;
 
 export type LlmTraceTaskType = (typeof LLM_TRACE_TASK_TYPES)[number];

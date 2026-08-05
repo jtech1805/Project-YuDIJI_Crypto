@@ -130,12 +130,13 @@ export class TemplateDraftCandidateValidatorService {
         explanation: explanations.get(concept.conceptId) ?? null,
       }] : [];
     });
+    const finalSupported = fatal ? [] : supported;
     const validatedCandidate = {
       candidateId: validId(candidate.candidateId) ? candidate.candidateId : "INVALID_CANDIDATE",
       candidateSchemaVersion: positive(candidate.candidateSchemaVersion) ? candidate.candidateSchemaVersion : 1,
       requestId: request.requestId,
       interpretedRequest: candidate.interpretedRequest ?? {},
-      supportedBindings: supported,
+      supportedBindings: finalSupported,
       unresolvedConcepts: unresolved,
       clarificationQuestions: clarifications,
       warnings,
@@ -148,7 +149,7 @@ export class TemplateDraftCandidateValidatorService {
       },
     };
     const outcome = fatal ? "VALIDATION_FAILED" as const
-      : supported.length === 0 ? "UNSUPPORTED_REQUEST" as const
+      : finalSupported.length === 0 ? "UNSUPPORTED_REQUEST" as const
         : unresolved.length > 0 || clarifications.length > 0 ? "PARTIAL" as const : "COMPLETED" as const;
     return freeze({
       validatedCandidate,
@@ -157,7 +158,7 @@ export class TemplateDraftCandidateValidatorService {
         issues,
         counts: {
           requestedConcepts: request.requestedConcepts.length,
-          supportedBindings: supported.length,
+          supportedBindings: finalSupported.length,
           unresolvedConcepts: unresolved.length,
           clarificationQuestions: clarifications.length,
           warnings: warnings.length,
