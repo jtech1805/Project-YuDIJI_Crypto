@@ -1834,3 +1834,59 @@ Contracts:
 
 Runtime integration:
 None. No source, test, model, persistence, feature-flag, runtime registration, observation assembly, ScoreCheck integration, dependency, or production behavior was changed. Compiled execution remains default OFF and legacy scoring remains authoritative.
+
+### Phase A3.5 — Historical Provider-Resolution Attestation
+
+Status:
+ARCHITECTURE_ACCEPTED
+
+Next:
+Phase A3.6 — Immutable Provider-Resolution Attestation Authority and Phase 3E Emission
+
+Architecture decision:
+ADR-057 accepted.
+
+Track A:
+- A1 — Covered by ADR-055
+- A2 — COMPLETE
+- A3 — ARCHITECTURE_ACCEPTED
+- A3.5 — ARCHITECTURE_ACCEPTED
+- A4 — BLOCKED pending attestation implementation
+- A5 — PENDING
+- A6 — PENDING
+
+Contracts:
+- Phase A4's provider-provenance blocker is recorded: canonical Evidence does not prove historical provider binding, policy, or resolution status.
+- A separate immutable `EvidenceProviderResolutionAttestation` authority is selected rather than embedding resolution state into Evidence.
+- Phase 3E is the sole initial emission origin and must use the exact Phase 3D result that caused provider execution.
+- Every attestation correlates to exactly one persisted Evidence ID; zero is ineligible and duplicate/conflicting records fail closed.
+- Dedicated append-only persistence requires unique Evidence and attestation identities, exact reads, and no update, delete, upsert, latest, or most-recent behavior.
+- Exact versioned provider-binding lineage and explicit provider-key/runner/adapter/Evidence-provenance mapping must be validated during emission.
+- `DEGRADED_PRIMARY_USED` projects coarsely to compiled `RESOLVED` while detailed status, confidence adjustment, and warnings remain in attestation and assembly traces.
+- Unattested Evidence remains canonical and readable but is ineligible for compiled shadow execution.
+- Evidence persistence is not rolled back when attestation persistence fails; Phase 3E must expose partial or failed emission explicitly.
+- System-known replay additionally requires attestation `createdAt <= request.asOf`.
+
+Runtime integration:
+None. No runtime implementation, source, test, model, Evidence contract, provider-resolution service, compiled-observation contract, feature flag, runtime registration, API, dependency, or production behavior was changed. Phase A4 remains blocked until the Phase A3.6 authority and emission boundary are implemented. Compiled execution remains default OFF and legacy scoring remains authoritative.
+
+### Phase A3.6-A — Immutable Provider-Resolution Attestation Authority
+
+Status:
+COMPLETE
+
+Next:
+Phase A3.6-B — Phase 3E Attestation Emission and Provider Identity Mapping
+
+Contracts:
+- A dedicated append-only persisted `EvidenceProviderResolutionAttestation` authority records one exact historical provider-resolution decision for one exact Evidence ID.
+- Exact reads use Evidence ID only; unique Evidence-ID and attestation identity/version indexes enforce zero-or-one correlation and immutable identity.
+- The service validates exact Evidence existence before insertion without changing Evidence creation, ingestion, model, or read behavior.
+- Exact provider-binding and resolution-policy identity/version lineage is preserved alongside selected provider key/type.
+- Detailed `RESOLVED`, `DEGRADED_PRIMARY_USED`, `FALLBACK_USED`, and `PROXY_USED` statuses are preserved without compiled coarse projection.
+- Caller-supplied `resolvedAt`, finite non-positive confidence adjustment, and typed ordered warnings are preserved; Mongoose controls attestation `createdAt` and no `updatedAt` exists.
+- Exact duplicates are idempotent, material Evidence or attestation identity conflicts fail closed, and duplicate-key races are deterministically reclassified.
+- Returned records are detached and deeply frozen with cloned Dates and warning arrays.
+
+Runtime integration:
+None. Phase 3E emission and provider namespace mapping are not implemented. No Evidence contract, provider-resolution logic, compiled observation, observation assembly, ScoreCheck path, feature flag, runtime registration, API, dependency, or production behavior was changed. Compiled execution remains default OFF and legacy scoring remains authoritative.
