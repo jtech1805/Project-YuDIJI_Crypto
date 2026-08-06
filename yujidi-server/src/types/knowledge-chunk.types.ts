@@ -22,7 +22,6 @@ export type KnowledgeChunkCitationSource = Readonly<{
   chunk: Readonly<{ identity: KnowledgeChunkIdentity; sourceSpan: KnowledgeSourceSpan; contentDigest: string; strategy: Readonly<{ strategyId: string; strategyVersion: number }> }>;
 }>;
 export type KnowledgeChunkReadResult = Readonly<{ found: true; chunk: PersistedKnowledgeChunk }> | Readonly<{ found: false; code: "NOT_FOUND" | "PERSISTENCE_FAILED" | "INVARIANT_VIOLATION" }>;
-export type KnowledgeChunkSetReadResult = Readonly<{ found: true; chunks: readonly PersistedKnowledgeChunk[] }> | Readonly<{ found: false; code: "NOT_FOUND" | "PERSISTENCE_FAILED" | "INVARIANT_VIOLATION" }>;
+export type StoredKnowledgeChunkSetReadResult = Readonly<{ found: true; chunks: readonly PersistedKnowledgeChunk[] }> | Readonly<{ found: false; code: "NOT_FOUND" | "PERSISTENCE_FAILED" | "INVARIANT_VIOLATION" }>;
 export type KnowledgeChunkInsertResult = Readonly<{ inserted: true; chunks: readonly PersistedKnowledgeChunk[] }> | Readonly<{ inserted: false; code: "ALREADY_EXISTS" | "CONTENT_CONFLICT" | "PERSISTENCE_FAILED" | "INVARIANT_VIOLATION"; chunks?: readonly PersistedKnowledgeChunk[] }>;
 export type KnowledgeChunkingContext = Readonly<{ document: PersistedKnowledgeDocument; documentType: PlatformKnowledgeDocumentType }>;
-

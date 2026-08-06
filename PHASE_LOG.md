@@ -2360,3 +2360,103 @@ The repository performs complete-set validation and preflight before one ordered
 
 Runtime integration:
 No raw PDF/DOCX/HTML/URL/upload parser, OCR, file crawler, embedding, vector store, retrieval, reranking, RAG context, LLM call, market-research ingestion, private-document ingestion, API, controller, route, prompt, template, ScoreCheck, Factor Registry, evaluator, provider, Evidence, compiler, compiled runtime, feature, dependency, bootstrap registration, scheduled job, activation, deployment, or commit was added.
+
+### Track B2-BC1 — Immutable Chunk-Set Manifest and Atomic Completeness Authority
+
+Status:
+COMPLETE
+
+Next:
+Track B2-DE — Embedding, Vector Index, Bounded Retrieval and Citation Context
+
+Contracts:
+- The ordered `insertMany` partial-persistence blocker is confirmed: no established MongoDB transaction/session convention exists, and earlier chunk inserts may remain when a later insert fails.
+- An immutable chunk-set manifest authority now records exact caller-supplied manifest identity/version, document identity/version, strategy identity/version, expected count, canonically ordered chunk identities/versions/digests, publication-policy identity/version, canonical set digest, and database-controlled `createdAt`.
+- The manifest schema enforces unique exact manifest identity and one manifest for one exact document/version plus strategy/version publication identity. It has no status, `updatedAt`, latest, update, delete, replace, or upsert behavior.
+- Canonical SHA-256 set digests include the manifest schema/version, exact document and strategy lineage, expected count, ordered entries, and publication-policy lineage while excluding database timestamps and object insertion order.
+- The pure manifest builder validates bounded identities, nonempty bounded sets, unique chunk identities, unique dense ordinals, exact document/strategy lineage, and exact chunk digests without using time, randomness, or persistence.
+- The append-only manifest repository supports exact identity and exact document/strategy reads, distinguishes exact duplicates, content conflicts, set-publication conflicts, corrupted duplicates, duplicate-key races, and persistence failures, and never sorts to choose a winner.
+- Raw stored chunk-set reads are now explicitly named `findStoredSetForVerification`; the former manifest-free `findExactSet` authority no longer exists.
+- Authoritative reads require exactly one manifest and verify expected count, canonical manifest order, unique entries, missing chunks, unexpected chunks, exact identities/versions, ordinals, chunk digests, document/strategy lineage, and recalculated set digest.
+- Missing manifests return `MANIFEST_NOT_FOUND`; missing, unexpected, ordinal-mismatched, digest-mismatched, lineage-mismatched, and corrupted sets fail closed and never expose `verified: true`.
+- Publication validates the complete candidates, builds the manifest, writes chunks, rereads and verifies stored chunks, publishes the manifest last, and requires a final manifest-backed verified reread before returning success.
+- Without transactions, failed publication may leave orphan chunks. They remain unpublished, cannot pass the authoritative read, cannot produce citation sources through the verified-set boundary, and are not deleted automatically.
+- Citation-source projection now accepts only a manifest-verified set and an exact member identity; arbitrary persisted or orphan chunks are rejected.
+- This is a manifest-backed atomic publication boundary, not a claim of transactionally atomic insertion.
+
+Progress:
+```text
+Track A — COMPLETE
+Track B1 — COMPLETE
+
+Track B2:
+B2-A   — ARCHITECTURE_ACCEPTED
+B2-BC  — COMPLETE
+B2-BC1 — COMPLETE
+B2-DE  — NEXT
+B2-FG  — PENDING
+```
+
+Verification:
+- Focused B2-BC1 and B2-BC manifest, repository, verification, publication, strategy, and citation-readiness tests: 27 passed.
+- B2, canonicalization, B1, template, ScoreCheck, legacy, Track A, compiled-shadow, trace, and feature regression selection: 195 passed.
+- Full backend: 1,025 passed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- Dependency, feature, protected-file, prohibited-boundary, and git diff checks passed.
+
+Runtime integration:
+No Mongo transaction infrastructure, orphan cleanup, embedding, vector index, retrieval, citation handle, RAG context, LLM call, B1 integration, market/private corpus behavior, API, controller, route, prompt, template, ScoreCheck, scoring, Evidence, provider resolution, compiler, compiled runtime, feature, dependency, bootstrap registration, scheduled job, activation, deployment, or commit was added. B2-DE is unblocked but remains unimplemented.
+
+### Track B2-DE1 — Embedding Authority, Repository, and Versioned Vector Index Authority
+
+Status:
+COMPLETE
+
+Next:
+Track B2-DE2 — Bounded Retrieval, Hybrid Search, Reranking, Citation Validation and Context Assembly
+
+Contracts:
+- Embedding generation reruns the exact B2-BC1 manifest-backed verification boundary; arbitrary, orphaned, incomplete, unexpected, missing, stale-digest, or unmanifested chunks are not eligible.
+- An immutable exact-version embedding-schema registry defines provider/model, projector, normalization, vector dimension, metric, corpus, trust, and generation-eligibility lineage without latest-version selection.
+- A deterministic text projector produces bounded canonical model inputs and SHA-256 text digests from exact verified chunks and document semantics while excluding timestamps, source URIs, database fields, credentials, and unrelated content.
+- A provider-neutral embedding port is invoked once per reached batch. Provider/model identity, exact input correlation, vector count, dimensions, and finite numeric values are validated before persistence.
+- Canonical vector digests cover exact embedding, chunk-set, document, chunk, projector, provider/model, schema, normalization, dimension, and ordered vector lineage while excluding database timestamps and operational request identities.
+- The immutable embedding model and append-only repository provide exact identity and exact chunk/schema reads, database-controlled `createdAt`, no `updatedAt`, and deterministic duplicate, identity, lineage, content, invariant, race, and persistence outcomes.
+- Exact embedding and index-definition versions evolve independently. Existing embeddings are never overwritten or regenerated implicitly, and one exact embedding can be written to multiple exact index-definition versions.
+- An immutable exact-version vector-index definition registry validates schema, dimension, metric, namespace, corpus, and trust compatibility without selecting a latest definition.
+- The provider-neutral vector-index port is write-only. The indexing service revalidates vector digests and exact manifest/chunk/document lineage before producing bounded metadata and invoking the port once.
+- Deterministic test-owned embedding and in-memory vector-index write implementations provide fixed, configurable characterization behavior without network access or production registration.
+- The standalone infrastructure remains unregistered and caller-controlled. It does not check or change the default-OFF B1 drafting flag and introduces no new flag.
+- Operational results contain metadata-only summaries; raw embedding text, vectors, document content, and source URLs are not persisted as operational traces.
+
+Progress:
+```text
+Track A — COMPLETE
+Track B1 — COMPLETE
+
+Track B2:
+B2-A   — ARCHITECTURE_ACCEPTED
+B2-BC  — COMPLETE
+B2-BC1 — COMPLETE
+B2-DE1 — COMPLETE
+B2-DE2 — NEXT
+B2-FG  — PENDING
+```
+
+Verification:
+- Focused B2-DE1 schema, text projection, embedding repository/service, vector-index definition, write-port, and indexing tests: 17 passed.
+- Focused B2-BC1/B2-BC manifest, verification, admission, repository, strategy, validation, and chunking regression tests: 27 passed.
+- Full backend: 1,042 passed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- Dependency, feature, protected-file, prohibited-boundary, and git diff checks passed.
+
+Known limitations:
+- Embedding generation and vector-index writes have deterministic test-owned implementations only; no production provider, model, vector database, search, retrieval, lexical search, reranking, context assembly, citation validation, runtime registration, or B1 drafting integration exists.
+- Embedding batch persistence is append-only but not transactionally atomic; explicit per-item outcomes prevent partial completion from being represented as complete.
+- Durable vector-index publication state and embedding operational-trace persistence are deferred.
+- Unpublished/orphan chunk cleanup remains deferred from B2-BC1.
+
+Runtime integration:
+No retrieval, vector search, lexical search, reranking, query embedding, context assembly, citation handle, B1 prompt/generation integration, production provider/model, vector database, network call, dependency, API, controller, route, template, ScoreCheck, scoring, Evidence, compiler, compiled runtime, feature-default change, bootstrap registration, scheduled job, activation, deployment, or commit was added.
