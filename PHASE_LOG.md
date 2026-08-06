@@ -2657,3 +2657,55 @@ Known limitations:
 
 Next planning boundary:
 Controlled live structured-generation benchmark with explicit benchmark credentials, exact current stable models, cost/request/deadline guard, and privacy/account approvals. Track C-B1B remains blocked.
+
+### Track C-B1B — Gemini Free-Tier Structured-Generation Adapter and Guarded Validation
+
+Status:
+IMPLEMENTATION_COMPLETE / LIVE_VALIDATION_COMPLETE
+
+Result:
+```text
+LIVE_GEMINI_VALIDATION_COMPLETED
+```
+
+Contracts:
+- An unregistered `TemplateDraftGenerationPort` adapter uses official `@google/genai` 2.16.0, Gemini stable API `v1`, exact stable model `gemini-3.1-flash-lite`, and adapter version 1 without `latest`, preview, experimental, alternate-model, or Groq fallback.
+- The `TEMPLATE_DRAFT_CANDIDATE` v1 provider schema is derived from the existing strict Zod source and projected to Gemini's accepted structured-output subset. Unsupported string constraints and live-characterized repeated `maxItems` hints are omitted only from the provider request; the strict Zod contract remains authoritative after generation.
+- Configuration keeps the API key non-enumerable and environment-owned. The adapter is constructor-injected, initialized only when explicitly constructed, and is absent from bootstrap, factories, routes, controllers, and normal application traffic.
+- Requests preserve system/user separation, use `application/json`, low temperature, bounded output, no tools, no grounding, no search, no URL/file context, and no code/function execution.
+- Default request timeout is 30 seconds, total deadline 60 seconds, and maximum attempts 2. Only typed rate-limit, timeout, network, and unavailable failures retry against the same exact model.
+- Adapter-local failures cover authentication, permission, rate limit, timeout/caller abort, network/unavailable, rejection, empty/malformed/schema, input size, model lookup/deprecation, identity mismatch, and unknown failure. Frozen external results remain `PROVIDER_FAILED` or `EMPTY_RESPONSE` where required.
+- Provider/model/version, response ID, attempts, latency, usage, and bounded failures are available to a metadata-only diagnostic sink. Raw prompts, passages, candidates, responses, headers, and secrets are excluded; diagnostic failure is isolated.
+- A guarded command supports six synthetic cases, three repetitions, at most 18 calls, concurrency one, exact model enforcement, non-production environment, explicit confirmation/key, and the approved dataset only. It is not part of tests or CI.
+- Free-tier use is restricted to development, synthetic validation, and approved non-sensitive PLATFORM_KNOWLEDGE. Private/confidential/regulated, user-private, market-research, broker, position, account, personal, and production-database data is prohibited.
+- Guarded live validation completed against exact `gemini-3.1-flash-lite`: 18 of 18 synthetic requests completed and zero provider failures were recorded. No private data, prompt, response, header, or secret was logged.
+
+Progress:
+```text
+Track C:
+C-A   — ARCHITECTURE_ACCEPTED
+C-B1A — OFFLINE_COMPLETE
+C-B1B — IMPLEMENTATION_COMPLETE / LIVE_VALIDATION_COMPLETE
+C-B1C — READY_FOR_EVALUATION
+C-B2  — PENDING
+C-B3  — PENDING
+C-C   — PENDING
+C-D   — PENDING
+C-E   — PENDING
+C-F   — PENDING
+C-G   — PENDING
+```
+
+Known limitations:
+- Free-tier quota and data-use restrictions apply. The count-only benchmark does not yet prove post-generation Zod validity, deterministic semantic acceptance, latency percentiles, usage/cost thresholds, production privacy approval, load behavior, or continuous monitoring. There is no default runtime registration, provider fallback, or market/private-data authorization.
+
+Verification:
+- Focused Gemini configuration, translation, schema, response, identity, usage, failure, retry, timeout, diagnostics, and live-guard tests: 11 passed.
+- Guarded live Gemini transport/structured-request proof: 18 requests, 18 completed, 0 failed.
+- Focused Gemini plus B1/B2, C-B1A, trace, feature, template, and ScoreCheck regressions: 119 passed.
+- Full backend, including the new adapter suite: 1,099 passed.
+- Typecheck passed. Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles. `git diff --check` passed.
+- Production dependency audit reports 7 existing actionable packages (1 low, 2 moderate, 4 high); none is introduced through `@google/genai`. Dependency remediation remains separate because it affects existing Axios, Express/Mongoose/WebSocket dependency trees.
+
+Next planning boundary:
+Evaluate the sanitized live proof and extend C-B1C measurement to authoritative post-generation Zod/semantic acceptance plus latency and usage thresholds before any production activation decision.
