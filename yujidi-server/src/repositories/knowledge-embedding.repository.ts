@@ -119,6 +119,8 @@ const lineage = (value: KnowledgeEmbeddingCommand | PersistedKnowledgeEmbedding)
   chunkIdentity: value.chunkIdentity,
   embeddingSchema: value.embeddingSchema,
   embeddingTextProjector: value.embeddingTextProjector,
+  purpose: value.purpose,
+  normalizationStrategy: value.normalizationStrategy,
 });
 const lineageFilter = (chunk: KnowledgeChunkIdentity, schema: KnowledgeEmbeddingSchemaIdentity) => ({
   "chunkIdentity.chunkId": chunk.chunkId,
@@ -139,6 +141,7 @@ const toPersistence = (value: KnowledgeEmbeddingCommand) => ({
   model: value.model,
   embeddingSchema: value.embeddingSchema,
   normalizationStrategy: value.normalizationStrategy,
+  purpose: value.purpose,
   vectorDimension: value.vectorDimension,
   vector: [...value.vector],
   vectorDigest: value.vectorDigest,
@@ -159,6 +162,7 @@ const fromPersistence = (row: Record<string, any> | undefined): PersistedKnowled
         model: row.model,
         embeddingSchema: row.embeddingSchema,
         normalizationStrategy: row.normalizationStrategy,
+        purpose: row.purpose,
         vectorDimension: row.vectorDimension,
         vector: row.vector,
         vectorDigest: row.vectorDigest,

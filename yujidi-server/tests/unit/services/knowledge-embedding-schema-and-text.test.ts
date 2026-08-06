@@ -11,10 +11,16 @@ test("embedding schema registry provides immutable exact-only versioned lookup",
   assert.equal(registry.getExact(TEST_EMBEDDING_SCHEMA.embeddingSchemaId, 3), null);
   assert.deepEqual(registry.list().map((schema) => schema.embeddingSchemaVersion), [1, 2]);
   assert.ok(Object.isFrozen(registry.getExact(TEST_EMBEDDING_SCHEMA.embeddingSchemaId, 1)?.allowedTrustLevels));
+  assert.ok(Object.isFrozen(registry.getExact(TEST_EMBEDDING_SCHEMA.embeddingSchemaId, 1)?.allowedPurposes));
   assert.equal("getLatest" in registry, false);
   assert.throws(() => new KnowledgeEmbeddingSchemaRegistry([TEST_EMBEDDING_SCHEMA, TEST_EMBEDDING_SCHEMA]), /DUPLICATE/);
   assert.throws(() => new KnowledgeEmbeddingSchemaRegistry([{ ...TEST_EMBEDDING_SCHEMA, vectorDimension: 0 }]), /INVALID/);
   assert.throws(() => new KnowledgeEmbeddingSchemaRegistry([{ ...TEST_EMBEDDING_SCHEMA, allowedCorpora: ["MARKET_RESEARCH"] }]), /INVALID/);
+  assert.throws(() => new KnowledgeEmbeddingSchemaRegistry([{ ...TEST_EMBEDDING_SCHEMA, allowedPurposes: [] }]), /INVALID/);
+  assert.throws(() => new KnowledgeEmbeddingSchemaRegistry([{ ...TEST_EMBEDDING_SCHEMA, allowedPurposes: ["RETRIEVAL_QUERY", "RETRIEVAL_DOCUMENT"] }]), /INVALID/);
+  assert.throws(() => new KnowledgeEmbeddingSchemaRegistry([{ ...TEST_EMBEDDING_SCHEMA, allowedPurposes: ["RETRIEVAL_DOCUMENT", "RETRIEVAL_DOCUMENT"] }]), /INVALID/);
+  assert.throws(() => new KnowledgeEmbeddingSchemaRegistry([{ ...TEST_EMBEDDING_SCHEMA, normalizationStrategyId: "MISSING" }]), /INVALID/);
+  assert.throws(() => new KnowledgeEmbeddingSchemaRegistry([{ ...TEST_EMBEDDING_SCHEMA, vectorDimension: 5 }]), /INVALID/);
 });
 
 test("embedding text is deterministic, semantic, bounded, and excludes persistence metadata", () => {
@@ -42,4 +48,3 @@ test("projector version changes exact text digest lineage", () => {
   assert.notEqual(v1?.textDigest, v2?.textDigest);
   assert.equal(service.project(fixture.document, fixture.verifiedSet, { chunkId: "ORPHAN", chunkVersion: 1 }, TEST_EMBEDDING_SCHEMA), null);
 });
-

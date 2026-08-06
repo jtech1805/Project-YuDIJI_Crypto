@@ -2709,3 +2709,83 @@ Verification:
 
 Next planning boundary:
 Evaluate the sanitized live proof and extend C-B1C measurement to authoritative post-generation Zod/semantic acceptance plus latency and usage thresholds before any production activation decision.
+
+### Track C-B2A — Embedding Purpose and Normalization Architecture
+
+Status:
+ARCHITECTURE_ACCEPTED
+
+Context:
+- Track C-B2 correctly stopped before implementation because the provider-neutral request did not carry authoritative document/query purpose and embedding schemas named normalization lineage without defining an executable authority.
+- Existing `RETRIEVAL_QUERY` and `TRANSIENT_QUERY` identifiers remain correlation data and cannot be interpreted as purpose.
+- Test-owned `TEST_NO_NORMALIZATION` version 1 is not an approved production Gemini normalization policy.
+
+Decisions:
+- Every provider request carries one mandatory closed request-level purpose: `RETRIEVAL_DOCUMENT` or `RETRIEVAL_QUERY`. No default or inference is allowed.
+- `KnowledgeEmbeddingService` supplies `RETRIEVAL_DOCUMENT`; `KnowledgeRetrievalService` supplies `RETRIEVAL_QUERY`; adapters translate but never decide purpose.
+- Embedding schemas declare allowed purposes, and persisted embedding lineage records `RETRIEVAL_DOCUMENT`. Query vectors remain transient.
+- `L2_UNIT_VECTOR` version 1 is the approved initial provider-neutral strategy for `gemini-embedding-001`, dimension 768, cosine similarity, document embeddings, and query embeddings.
+- Exact L2 arithmetic, finite-value checks, unchanged dimension, zero/non-finite magnitude failure, no epsilon, no rounding, no clamping, and post-normalization unit-magnitude validation are frozen. C-B2B must characterize and freeze the bounded JavaScript tolerance before accepting the definition.
+- A versioned exact normalization registry and provider-neutral normalization service own canonicalization after provider validation and before persistence or vector search.
+- The normalized vector is the canonical persisted/search vector. Raw provider vectors are transient, discarded after normalization, and excluded from ordinary traces and persistence.
+- Purpose, normalization identity/version, canonical normalized vector, and existing lineage participate in `vectorDigest` material.
+- No Gemini embedding adapter, provider call, live validation, Atlas integration, feature change, production schema registration, or runtime activation was introduced.
+
+Progress:
+```text
+Track C:
+C-A   — ARCHITECTURE_ACCEPTED
+C-B1A — OFFLINE_COMPLETE
+C-B1B — DEVELOPMENT_ADAPTER_COMPLETE
+C-B2A — ARCHITECTURE_ACCEPTED
+C-B2B — NEXT
+C-B2C — PENDING
+C-B3  — BLOCKED pending C-B2C
+```
+
+Known limitations:
+- Normalization code and the exact characterized tolerance do not exist yet.
+- Purpose-bearing source contracts, callers, schemas, fixtures, and digests are not implemented yet.
+- The Gemini embedding adapter and live benchmark have not been implemented or run.
+- No production embedding schema, Atlas vector integration, provider registration, or production activation exists.
+
+Next planning boundary:
+Track C-B2B — Embedding Purpose and Normalization Foundation Implementation.
+
+### Track C-B2B — Embedding Purpose and Normalization Foundation Implementation
+
+Status:
+COMPLETE
+
+Contracts and implementation:
+- `KnowledgeEmbeddingPurpose` is a closed request-level `RETRIEVAL_DOCUMENT | RETRIEVAL_QUERY` contract. There is no default, mixed-purpose request, magic-ID inference, or provider-specific value.
+- Persisted chunk generation explicitly supplies `RETRIEVAL_DOCUMENT`; transient retrieval explicitly supplies `RETRIEVAL_QUERY`. Exact embedding schemas declare canonical ordered allowed purposes and reject incompatible purpose before a provider call.
+- Persisted knowledge embeddings preserve document purpose. Purpose and exact normalization identity/version participate in semantic lineage, repository conflicts, canonical persistence, and vector-digest material.
+- Immutable provider-neutral normalization definitions, exact registry, exact lookup, duplicate/conflict validation, deterministic listing, and detached outputs are implemented without latest-version selection.
+- Test-owned `TEST_NO_NORMALIZATION` version 1 remains explicit at dimension 4. Production-shaped `L2_UNIT_VECTOR` version 1 is available at dimension 768 without provider/runtime registration.
+- `L2_UNIT_VECTOR` uses exact `sqrt(sum(value * value))` and `value / magnitude` arithmetic with finite intermediate/output validation, unchanged dimensions, no epsilon, rounding, clamping, padding, truncation, or fallback. Zero and non-finite magnitude fail closed.
+- JavaScript-number characterization selected an explicit unit-magnitude validation tolerance of `1e-12`. It is stored in the strategy definition and is used only to validate normalized magnitude, never semantic similarity.
+- Provider vectors remain raw at the port. Both document and query orchestration validate then normalize through the exact provider-neutral strategy. Only canonical normalized vectors reach persistence, digest calculation, or vector search; raw vectors remain transient and are not retained.
+- Provider success followed by normalization failure remains stage-visible and cannot persist or search an unnormalized vector.
+- No Gemini embedding adapter, Gemini call, Atlas integration, dependency, feature change, route/API/controller, production schema activation, runtime registration, scoring change, or compilation change was introduced.
+
+Progress:
+```text
+Track C:
+C-A   — ARCHITECTURE_ACCEPTED
+C-B1A — OFFLINE_COMPLETE
+C-B1B — DEVELOPMENT_ADAPTER_COMPLETE
+C-B2A — ARCHITECTURE_ACCEPTED
+C-B2B — COMPLETE
+C-B2C — NEXT
+C-B3  — BLOCKED pending C-B2C
+```
+
+Known limitations:
+- The Gemini embedding adapter and guarded live validation do not exist yet.
+- `L2_UNIT_VECTOR` version 1 is initially fixed to dimension 768.
+- No production embedding schema is activated, no Atlas vector store is implemented, and no production provider is registered.
+- Raw provider vectors are intentionally not retained and continuous embedding-quality monitoring is deferred.
+
+Next planning boundary:
+Track C-B2C — Gemini Embedding Adapter and Guarded Live Validation.

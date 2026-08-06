@@ -1,5 +1,6 @@
 import { model, Schema, type HydratedDocument, type InferSchemaType } from "mongoose";
 import { KNOWLEDGE_CORPORA, KNOWLEDGE_TRUST_LEVELS } from "../types/knowledge-document.types.js";
+import { KNOWLEDGE_EMBEDDING_PURPOSES } from "../types/knowledge-embedding.types.js";
 
 const id = { type: String, required: true, trim: true, maxlength: 160 } as const;
 const version = { type: Number, required: true, min: 1 } as const;
@@ -26,6 +27,7 @@ export const knowledgeEmbeddingSchema = new Schema({
   model: { _id: false, modelId: id, modelVersion: { type: String, required: true, trim: true, maxlength: 120 } },
   embeddingSchema: { _id: false, embeddingSchemaId: id, embeddingSchemaVersion: version },
   normalizationStrategy: { _id: false, normalizationStrategyId: id, normalizationStrategyVersion: version },
+  purpose: { type: String, enum: KNOWLEDGE_EMBEDDING_PURPOSES, required: true },
   vectorDimension: { type: Number, required: true, min: 1, max: 4_096 },
   vector,
   vectorDigest: digest,
@@ -45,6 +47,9 @@ knowledgeEmbeddingSchema.index({
   "embeddingSchema.embeddingSchemaVersion": 1,
   "embeddingTextProjector.projectorId": 1,
   "embeddingTextProjector.projectorVersion": 1,
+  purpose: 1,
+  "normalizationStrategy.normalizationStrategyId": 1,
+  "normalizationStrategy.normalizationStrategyVersion": 1,
 }, { unique: true });
 
 knowledgeEmbeddingSchema.pre("validate", function () {
@@ -61,4 +66,3 @@ export const KnowledgeEmbeddingModel = model<KnowledgeEmbeddingPersistence>(
   "KnowledgeEmbedding",
   knowledgeEmbeddingSchema,
 );
-

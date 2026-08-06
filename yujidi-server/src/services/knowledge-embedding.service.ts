@@ -17,6 +17,7 @@ import { CanonicalCompilationInputService } from "./canonical-compilation-input.
 import { KnowledgeChunkSetVerificationService } from "./knowledge-chunk-set-verification.service.js";
 import { freezeClone } from "./knowledge-document-admission.service.js";
 import { KnowledgeEmbeddingTextService } from "./knowledge-embedding-text.service.js";
+import { KnowledgeEmbeddingNormalizationService } from "./knowledge-embedding-normalization.service.js";
 
 export class KnowledgeEmbeddingService {
   public constructor(
@@ -28,6 +29,7 @@ export class KnowledgeEmbeddingService {
     private readonly textProjector = new KnowledgeEmbeddingTextService(),
     private readonly policy: KnowledgeEmbeddingGenerationPolicy = KNOWLEDGE_EMBEDDING_GENERATION_POLICY,
     private readonly canonical = new CanonicalCompilationInputService(),
+    private readonly normalization = new KnowledgeEmbeddingNormalizationService(),
   ) {}
 
   public async generate(request: KnowledgeEmbeddingGenerationRequest): Promise<KnowledgeEmbeddingGenerationResult> {
@@ -38,6 +40,7 @@ export class KnowledgeEmbeddingService {
     );
     if (!schema) return result("SCHEMA_NOT_FOUND", [], 0, null);
     if (!schema.activeForGeneration) return result("SCHEMA_INACTIVE", [], 0, schema.vectorDimension);
+    if (!schema.allowedPurposes.includes("RETRIEVAL_DOCUMENT")) return result("PURPOSE_NOT_ALLOWED", [], 0, schema.vectorDimension, "PURPOSE_NOT_ALLOWED");
 
     const verified = await this.verifier.readExactCompleteSet(request.documentIdentity, request.strategy);
     if (!verified.verified) {
@@ -87,6 +90,7 @@ export class KnowledgeEmbeddingService {
     }
 
     const providerRequest = freezeClone({
+      purpose: "RETRIEVAL_DOCUMENT" as const,
       requestId: request.requestId,
       requestVersion: request.requestVersion,
       schemaIdentity: request.schemaIdentity,
@@ -111,7 +115,10 @@ export class KnowledgeEmbeddingService {
 
     const outcomes: Array<{ identity: typeof request.embeddings[number]["embeddingIdentity"]; chunkIdentity: typeof request.embeddings[number]["chunkIdentity"]; outcome: "CREATED" | "ALREADY_EXISTS" | "FAILED"; code?: string }> = [];
     for (const item of projections) {
-      const vector = vectors.values.get(embeddingKey(item.embedding.embeddingIdentity))!;
+      const rawVector = vectors.values.get(embeddingKey(item.embedding.embeddingIdentity))!;
+      const normalized = this.normalization.normalize({ normalizationStrategyId: schema.normalizationStrategyId, normalizationStrategyVersion: schema.normalizationStrategyVersion }, rawVector);
+      if (normalized.status === "FAILED") { outcomes.push({ identity: item.embedding.embeddingIdentity, chunkIdentity: item.chunk.identity, outcome: "FAILED", code: normalized.failureCode }); continue; }
+      const vector = normalized.vector;
       const command = createCommand(request, schema, document.corpus, document.trustLevel, item, vector, this.canonical);
       if (!command) {
         outcomes.push({ identity: item.embedding.embeddingIdentity, chunkIdentity: item.chunk.identity, outcome: "FAILED", code: "VECTOR_DIGEST_FAILED" });
@@ -125,7 +132,8 @@ export class KnowledgeEmbeddingService {
           : { identity: item.embedding.embeddingIdentity, chunkIdentity: item.chunk.identity, outcome: "FAILED", code: inserted.code });
     }
     const failed = outcomes.filter((outcome) => outcome.outcome === "FAILED").length;
-    const status = failed === 0 ? "COMPLETED" : failed === outcomes.length ? "PERSISTENCE_FAILED" : "PARTIAL";
+    const normalizationFailures = outcomes.filter((outcome) => outcome.outcome === "FAILED" && (outcome.code?.startsWith("VECTOR_") || outcome.code?.startsWith("NORMALIZ"))).length;
+    const status = failed === 0 ? "COMPLETED" : failed === outcomes.length && normalizationFailures === failed ? "NORMALIZATION_FAILED" : failed === outcomes.length ? "PERSISTENCE_FAILED" : "PARTIAL";
     return result(status, outcomes, totalCharacters, schema.vectorDimension);
   }
 }
@@ -151,6 +159,7 @@ const createCommand = (
     model: { modelId: schema.modelId, modelVersion: schema.modelVersion },
     embeddingSchema: { embeddingSchemaId: schema.embeddingSchemaId, embeddingSchemaVersion: schema.embeddingSchemaVersion },
     normalizationStrategy: { normalizationStrategyId: schema.normalizationStrategyId, normalizationStrategyVersion: schema.normalizationStrategyVersion },
+    purpose: "RETRIEVAL_DOCUMENT" as const,
     vectorDimension: schema.vectorDimension,
     vector: [...vector],
     corpus,

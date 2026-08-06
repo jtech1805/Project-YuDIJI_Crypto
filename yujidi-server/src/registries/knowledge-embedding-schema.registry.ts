@@ -2,14 +2,16 @@ import { isDeepStrictEqual } from "node:util";
 import { freezeClone } from "../services/knowledge-document-admission.service.js";
 import { KNOWLEDGE_CORPORA, KNOWLEDGE_TRUST_LEVELS } from "../types/knowledge-document.types.js";
 import { KNOWLEDGE_SIMILARITY_METRICS, type KnowledgeEmbeddingSchemaDefinition } from "../types/knowledge-embedding.types.js";
+import { KNOWLEDGE_EMBEDDING_PURPOSES } from "../types/knowledge-embedding.types.js";
+import { KNOWLEDGE_EMBEDDING_NORMALIZATION_AUTHORITY, type KnowledgeEmbeddingNormalizationRegistry } from "./knowledge-embedding-normalization.registry.js";
 
 export class KnowledgeEmbeddingSchemaRegistry {
   private readonly definitions: ReadonlyMap<string, KnowledgeEmbeddingSchemaDefinition>;
 
-  public constructor(definitions: readonly KnowledgeEmbeddingSchemaDefinition[]) {
+  public constructor(definitions: readonly KnowledgeEmbeddingSchemaDefinition[], normalization: Pick<KnowledgeEmbeddingNormalizationRegistry, "getExact"> = KNOWLEDGE_EMBEDDING_NORMALIZATION_AUTHORITY) {
     const entries = new Map<string, KnowledgeEmbeddingSchemaDefinition>();
     for (const definition of definitions) {
-      validate(definition);
+      validate(definition, normalization);
       const key = identityKey(definition.embeddingSchemaId, definition.embeddingSchemaVersion);
       const existing = entries.get(key);
       if (existing) {
@@ -34,7 +36,8 @@ export class KnowledgeEmbeddingSchemaRegistry {
   }
 }
 
-const validate = (definition: KnowledgeEmbeddingSchemaDefinition): void => {
+const validate = (definition: KnowledgeEmbeddingSchemaDefinition, normalization: Pick<KnowledgeEmbeddingNormalizationRegistry, "getExact">): void => {
+  const strategy = normalization.getExact(definition.normalizationStrategyId, definition.normalizationStrategyVersion);
   if (!identifier(definition.embeddingSchemaId)
     || !positive(definition.embeddingSchemaVersion)
     || !identifier(definition.providerId)
@@ -50,6 +53,10 @@ const validate = (definition: KnowledgeEmbeddingSchemaDefinition): void => {
     || !positive(definition.embeddingTextProjectorVersion)
     || !uniqueAllowed(definition.allowedCorpora, KNOWLEDGE_CORPORA)
     || !uniqueAllowed(definition.allowedTrustLevels, KNOWLEDGE_TRUST_LEVELS)
+    || !uniqueAllowed(definition.allowedPurposes, KNOWLEDGE_EMBEDDING_PURPOSES)
+    || definition.allowedPurposes.some((purpose, index) => purpose !== KNOWLEDGE_EMBEDDING_PURPOSES.filter((item) => definition.allowedPurposes.includes(item))[index])
+    || !strategy || strategy.inputDimension !== definition.vectorDimension
+    || (definition.similarityMetric === "COSINE" && strategy.algorithm === "NONE" && !definition.normalizationStrategyId.startsWith("TEST_"))
     || !definition.allowedCorpora.includes("PLATFORM_KNOWLEDGE")) {
     throw new Error("INVALID_KNOWLEDGE_EMBEDDING_SCHEMA");
   }
@@ -63,4 +70,3 @@ const identifier = (value: unknown): value is string =>
 const bounded = (value: unknown, max: number): value is string =>
   typeof value === "string" && value.trim() === value && value.length > 0 && value.length <= max;
 const positive = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) > 0;
-

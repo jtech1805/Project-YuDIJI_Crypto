@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { KnowledgeEmbeddingRepository, type KnowledgeEmbeddingModelPort } from "../../../src/repositories/knowledge-embedding.repository.js";
 import { embeddingCommand } from "../../fixtures/knowledge-embedding.fixture.js";
+import { calculateKnowledgeEmbeddingVectorDigest } from "../../../src/services/knowledge-embedding.service.js";
 
 const query = <T>(value: T) => ({ lean: () => ({ exec: async () => structuredClone(value) }) });
 
@@ -44,8 +45,20 @@ test("embedding repository distinguishes identity, lineage, and content conflict
   assert.equal(identity.inserted ? null : identity.code, "IDENTITY_CONFLICT");
   const lineage = await repository.insert({ ...candidate, identity: { embeddingId: "OTHER_EMBEDDING", embeddingVersion: 1 } });
   assert.equal(lineage.inserted ? null : lineage.code, "LINEAGE_CONFLICT");
+  const purpose = await repository.insert({ ...candidate, purpose: "RETRIEVAL_QUERY" });
+  assert.equal(purpose.inserted ? null : purpose.code, "IDENTITY_CONFLICT");
+  const normalization = await repository.insert({ ...candidate, normalizationStrategy: { normalizationStrategyId: "TEST_OTHER_NORMALIZATION", normalizationStrategyVersion: 1 } });
+  assert.equal(normalization.inserted ? null : normalization.code, "IDENTITY_CONFLICT");
   rows = [toRow(candidate), toRow(candidate)];
   assert.deepEqual(await repository.findExact(candidate.identity), { found: false, code: "INVARIANT_VIOLATION" });
+});
+
+test("canonical vector digest includes purpose and normalization lineage but excludes createdAt", () => {
+  const candidate = embeddingCommand(); const { vectorDigest: _, ...material } = candidate;
+  const base = calculateKnowledgeEmbeddingVectorDigest(material); assert.equal(base, candidate.vectorDigest);
+  assert.notEqual(calculateKnowledgeEmbeddingVectorDigest({ ...material, purpose: "RETRIEVAL_QUERY" }), base);
+  assert.notEqual(calculateKnowledgeEmbeddingVectorDigest({ ...material, normalizationStrategy: { ...material.normalizationStrategy, normalizationStrategyVersion: 2 } }), base);
+  assert.notEqual(calculateKnowledgeEmbeddingVectorDigest({ ...material, vector: [0.2, ...material.vector.slice(1)] }), base);
 });
 
 test("embedding repository recovers duplicate-key race through exact reread", async () => {
@@ -73,6 +86,7 @@ const toRow = (value: ReturnType<typeof embeddingCommand>) => ({
   model: value.model,
   embeddingSchema: value.embeddingSchema,
   normalizationStrategy: value.normalizationStrategy,
+  purpose: value.purpose,
   vectorDimension: value.vectorDimension,
   vector: value.vector,
   vectorDigest: value.vectorDigest,

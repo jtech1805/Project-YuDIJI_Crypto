@@ -2,6 +2,9 @@ import type { KnowledgeChunkIdentity } from "./knowledge-chunk.types.js";
 import type { KnowledgeChunkSetManifestIdentity, KnowledgeChunkSetStrategyIdentity } from "./knowledge-chunk-set-manifest.types.js";
 import type { KnowledgeCorpus, KnowledgeDocumentIdentity, KnowledgeTrustLevel } from "./knowledge-document.types.js";
 
+export const KNOWLEDGE_EMBEDDING_PURPOSES = ["RETRIEVAL_DOCUMENT", "RETRIEVAL_QUERY"] as const;
+export type KnowledgeEmbeddingPurpose = typeof KNOWLEDGE_EMBEDDING_PURPOSES[number];
+
 export const KNOWLEDGE_SIMILARITY_METRICS = ["COSINE", "DOT_PRODUCT", "EUCLIDEAN"] as const;
 export type KnowledgeSimilarityMetric = typeof KNOWLEDGE_SIMILARITY_METRICS[number];
 
@@ -28,6 +31,7 @@ export type KnowledgeEmbeddingSchemaDefinition = KnowledgeEmbeddingSchemaIdentit
   embeddingTextProjectorVersion: number;
   allowedCorpora: readonly KnowledgeCorpus[];
   allowedTrustLevels: readonly KnowledgeTrustLevel[];
+  allowedPurposes: readonly KnowledgeEmbeddingPurpose[];
   activeForGeneration: boolean;
 }>;
 
@@ -65,6 +69,7 @@ export type KnowledgeEmbeddingTextProjection = Readonly<{
 }>;
 
 export type KnowledgeEmbeddingProviderRequest = Readonly<{
+  purpose: KnowledgeEmbeddingPurpose;
   requestId: string;
   requestVersion: number;
   schemaIdentity: KnowledgeEmbeddingSchemaIdentity;
@@ -103,6 +108,7 @@ export type KnowledgeEmbeddingCommand = Readonly<{
   model: Readonly<{ modelId: string; modelVersion: string }>;
   embeddingSchema: KnowledgeEmbeddingSchemaIdentity;
   normalizationStrategy: Readonly<{ normalizationStrategyId: string; normalizationStrategyVersion: number }>;
+  purpose: KnowledgeEmbeddingPurpose;
   vectorDimension: number;
   vector: readonly number[];
   vectorDigest: string;
@@ -139,9 +145,8 @@ export type KnowledgeEmbeddingGenerationRequest = Readonly<{
 }>;
 
 export type KnowledgeEmbeddingGenerationResult = Readonly<{
-  status: "COMPLETED" | "PARTIAL" | "VALIDATION_FAILED" | "SCHEMA_NOT_FOUND" | "SCHEMA_INACTIVE" | "CHUNK_SET_NOT_FOUND" | "CHUNK_SET_NOT_COMPLETE" | "CHUNK_LINEAGE_MISMATCH" | "CHUNK_DIGEST_MISMATCH" | "CORPUS_NOT_ALLOWED" | "TRUST_NOT_ALLOWED" | "BATCH_LIMIT_EXCEEDED" | "PROVIDER_FAILED" | "PROVIDER_OUTPUT_INVALID" | "PERSISTENCE_FAILED" | "INVARIANT_VIOLATION";
+  status: "COMPLETED" | "PARTIAL" | "VALIDATION_FAILED" | "SCHEMA_NOT_FOUND" | "SCHEMA_INACTIVE" | "CHUNK_SET_NOT_FOUND" | "CHUNK_SET_NOT_COMPLETE" | "CHUNK_LINEAGE_MISMATCH" | "CHUNK_DIGEST_MISMATCH" | "CORPUS_NOT_ALLOWED" | "TRUST_NOT_ALLOWED" | "PURPOSE_NOT_ALLOWED" | "BATCH_LIMIT_EXCEEDED" | "PROVIDER_FAILED" | "PROVIDER_OUTPUT_INVALID" | "NORMALIZATION_FAILED" | "PERSISTENCE_FAILED" | "INVARIANT_VIOLATION";
   embeddings: readonly Readonly<{ identity: KnowledgeEmbeddingIdentity; chunkIdentity: KnowledgeChunkIdentity; outcome: "CREATED" | "ALREADY_EXISTS" | "FAILED"; code?: string }>[];
   summary: Readonly<{ requested: number; created: number; existing: number; failed: number; totalCharacters: number; vectorDimension: number | null }>;
   failureCode?: string;
 }>;
-

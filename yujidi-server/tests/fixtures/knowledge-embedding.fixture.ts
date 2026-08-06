@@ -20,6 +20,7 @@ export const TEST_EMBEDDING_SCHEMA: KnowledgeEmbeddingSchemaDefinition = Object.
   embeddingTextProjectorVersion: 1,
   allowedCorpora: Object.freeze(["PLATFORM_KNOWLEDGE"] as const),
   allowedTrustLevels: Object.freeze(["AUTHORITATIVE", "APPROVED_GUIDANCE", "EXPLANATORY"] as const),
+  allowedPurposes: Object.freeze(["RETRIEVAL_DOCUMENT", "RETRIEVAL_QUERY"] as const),
   activeForGeneration: true,
 });
 
@@ -83,6 +84,7 @@ export const embeddingCommand = (index = 0): KnowledgeEmbeddingCommand => {
     model: { modelId: TEST_EMBEDDING_SCHEMA.modelId, modelVersion: TEST_EMBEDDING_SCHEMA.modelVersion },
     embeddingSchema: { embeddingSchemaId: TEST_EMBEDDING_SCHEMA.embeddingSchemaId, embeddingSchemaVersion: 1 },
     normalizationStrategy: { normalizationStrategyId: TEST_EMBEDDING_SCHEMA.normalizationStrategyId, normalizationStrategyVersion: 1 },
+    purpose: "RETRIEVAL_DOCUMENT",
     vectorDimension: 4,
     vector: Object.freeze([0.1, 0.2, 0.3, 0.4]),
     corpus: "PLATFORM_KNOWLEDGE",
