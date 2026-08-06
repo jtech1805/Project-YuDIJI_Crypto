@@ -2460,3 +2460,58 @@ Known limitations:
 
 Runtime integration:
 No retrieval, vector search, lexical search, reranking, query embedding, context assembly, citation handle, B1 prompt/generation integration, production provider/model, vector database, network call, dependency, API, controller, route, template, ScoreCheck, scoring, Evidence, compiler, compiled runtime, feature-default change, bootstrap registration, scheduled job, activation, deployment, or commit was added.
+
+### Track B2-DE2 — Bounded Retrieval, Hybrid Search, Reranking, Citation Validation and Context Assembly
+
+Status:
+COMPLETE
+
+Next:
+Track B2-FG — RAG Drafting Integration, Security and Retrieval Evaluation Proof
+
+Contracts:
+- Bounded retrieval requests require exact policy, embedding-schema, vector-index, caller-supplied eligible-document identities, and explicit `asOf`; no current document or latest version is inferred.
+- Exact eligible documents are reread before provider execution and checked for platform corpus, requested trust, document type, half-open effective time, and malformed supersession lineage.
+- An immutable exact-version retrieval-policy registry freezes candidate, ranking, expansion, fallback, document, passage, and character-budget limits without mutable activation or latest lookup.
+- Deterministic query projection preserves exact projector lineage and a canonical digest while excluding time, document content, vectors, user identity, and unrelated drafting data.
+- Query embeddings reuse the DE1 provider-neutral port, remain transient, use the exact selected schema/provider/model/dimension, and are never persisted.
+- Vector search and lexical search use separate provider-neutral ports. Deterministic test implementations provide exact namespace/index filtering, cosine characterization, Unicode-normalized lexical overlap, bounded results, and canonical tie-breaking without external services.
+- Vector and lexical results remain untrusted candidates. Exact document, chunk, manifest-set, embedding, digest, corpus, trust, type, effective-time, source-span, and metadata rereads fail closed before selection.
+- Exact document/chunk candidate identities are deduplicated while preserving both source diagnostics. Source-specific score ranges are normalized before deterministic weighted reranking.
+- Final top-K, per-document limits, complete-passage character budgets, and bounded non-recursive parent/sibling expansion are enforced with explicit exclusion diagnostics.
+- Citation handles canonically bind the exact request, policy, document, manifest, chunk, source span, corpus, and trust lineage. Only selected verified passages receive handles, and returned handles validate only against their exact immutable context.
+- Every passage is marked `UNTRUSTED_RETRIEVED_CONTENT` with a stable quoted-source-only notice. Raw vectors, embedding text, credentials, source URLs, and full documents never enter context or metadata summaries.
+- Standalone retrieval receives an explicit caller-supplied enablement decision, remains unregistered, and performs no provider or search calls when disabled. The default-OFF B1 drafting flag remains unchanged.
+- The ETF-flow, forbidden long-buildup substitution, factor-not-registered, and DIRECT-versus-INVERSE characterization queries exercise deterministic vector/lexical foundations without production semantic-quality claims.
+
+Progress:
+```text
+Track A — COMPLETE
+Track B1 — COMPLETE
+
+Track B2:
+B2-A   — ARCHITECTURE_ACCEPTED
+B2-BC  — COMPLETE
+B2-BC1 — COMPLETE
+B2-DE1 — COMPLETE
+B2-DE2 — COMPLETE
+B2-FG  — NEXT
+```
+
+Verification:
+- Focused B2-DE2 policy, projection, search-port, candidate-validation, reranking, expansion, budgeting, citation, context, orchestration, fallback, security, and characterization tests: 22 passed.
+- Focused B2-DE1/B2-BC1/B2-BC regression selection: 44 passed.
+- Full backend: 1,064 passed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- Dependency, feature, protected-file, prohibited-boundary, and git diff checks passed.
+
+Known limitations:
+- Query embeddings are deterministic test vectors; vector search is in-memory/test-only; lexical search is basic deterministic token overlap; and reranking is rule-based.
+- Context uses character budgets rather than model-specific tokenization.
+- Only PLATFORM_KNOWLEDGE is supported. Market research and private documents remain unavailable.
+- No B1 integration, production provider/model, vector database, API, runtime registration, or durable retrieval-trace persistence exists.
+- Unpublished/orphan chunk cleanup remains deferred from B2-BC1.
+
+Runtime integration:
+No B1 prompt or generation integration, LLM call, production embedding provider/model, vector vendor, network call, market/private retrieval, dependency, API, controller, route, template, ScoreCheck, scoring, Evidence, compiler, compiled runtime, feature-default change, bootstrap registration, scheduled job, activation, deployment, or commit was added.
