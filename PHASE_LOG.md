@@ -2572,3 +2572,88 @@ Known limitations:
 
 Runtime integration:
 No live LLM or embedding call, production vector vendor, market/private retrieval, dependency, API, controller, route, template persistence during generation, ACTIVE template creation, ScoreCheck, scoring, compiler invocation, compiled execution, feature-default change, bootstrap registration, scheduled job, activation, deployment, or commit was added.
+
+### Track C-A — Production AI/RAG Provider Integration and Rollout Architecture
+
+Status:
+ARCHITECTURE_ACCEPTED
+
+Contracts:
+- Generation, embedding, and vector-index providers are separate independently versioned, configured, observed, rolled-out, and rolled-back classes behind the existing provider-neutral ports.
+- Initial production providers remain benchmark-gated: OpenAI leads generation and embedding contract testing, and MongoDB Atlas Vector Search leads operational-compatibility testing, without approval as permanent dependencies.
+- Exact provider, adapter, model, schema, prompt, index, namespace, corpus-publication, and index-publication identity is required. `latest`, inferred versions, and automatic cross-provider fallback are prohibited.
+- Retry ownership, explicit timeouts/deadlines, closed provider errors, bounded rate limits, queues/concurrency, circuit breaking, and request/user/global cost controls are frozen.
+- Credentials remain class-separated, least-privilege secrets. Provider retention, training, regional processing, encryption, data classification, and incident-response acceptance are activation gates.
+- Append-only corpus-publication and index-publication manifests are required; model/index migration creates new immutable artifacts and evaluation subjects rather than overwriting existing versions.
+- Independent future default-OFF generation, ingestion, embedding, indexing, retrieval, and RAG controls are approved conceptually, with explicit dependency and no-call disabled behavior.
+- Metadata-only production observability and immutable exact-combination evaluation gates are required before the staged shadow, internal, limited, or general rollout can advance.
+- Initial scope is PLATFORM_KNOWLEDGE and internal/allowlisted USER/DRAFT template drafting only. No provider implementation or production activation was added.
+
+Progress:
+```text
+Track A — COMPLETE
+Track B1 — COMPLETE
+Track B2 — COMPLETE
+
+Track C:
+C-A  — ARCHITECTURE_ACCEPTED
+C-B1 — NEXT
+C-B2 — PENDING
+C-B3 — PENDING
+C-C  — PENDING
+C-D  — PENDING
+C-E  — PENDING
+C-F  — PENDING
+C-G  — PENDING
+```
+
+Known limitations:
+- No production adapters, provider credentials/configuration, provider SDKs, production tokenizer, durable publication manifests, runtime feature flags, staging benchmarks, production quality thresholds, market/private RAG, or continuous monitoring exists yet.
+
+Runtime integration:
+No source, test, dependency, lockfile, environment, configuration, feature-flag, provider SDK, runtime registration, model/vendor activation, traffic, persistence, API, controller, route, scoring, compiled runtime, deployment, or commit was added.
+
+### Track C-B1A — Structured-Generation Provider Benchmark, Security Review and Initial Provider Selection
+
+Status:
+INCONCLUSIVE
+
+Contracts:
+- OpenAI, Anthropic, and Google Gemini were compared using official documentation; all account-specific model access, quotas, retention settings, regions, and commercial terms remain explicitly unverified.
+- Exact immutable benchmark subjects, bounded policy, 10-case synthetic dataset, versioned pricing method, hard selection gates, weighted criteria, deterministic metrics, and canonical no-winner behavior are implemented.
+- Thirty sanitized offline provider-response classifications cover valid structured output, rejection, empty/malformed/schema-invalid output, rate limiting, timeout, authentication, model lookup/deprecation, usage, and identity across the three candidates.
+- Safety measurement distinguishes model proposals from final deterministic acceptance and includes invented factors/relationships, silent substitution, weights, registry overrule, citations, and prompt-injection behavior.
+- The current provider-neutral result cannot distinctly represent refusal, timeout/cancellation, rate-limit metadata, provider response ID, cached/reasoning usage, or the complete ADR-061 error vocabulary; frozen application contracts were not modified.
+- The controlled live run was not executed because benchmark credentials, paid-account capability evidence, and explicit live authorization were unavailable. No provider/model was selected and no live result was fabricated.
+- Privacy approval is limited to a future synthetic benchmark. PLATFORM_KNOWLEDGE staging requires provider/product-specific retention, region, account, security, privacy, and legal approval.
+- No production adapter, dependency, credential, feature flag, bootstrap registration, provider traffic, API, persistence, compilation, scoring, or activation was introduced.
+
+Progress:
+```text
+Track A — COMPLETE
+Track B1 — COMPLETE
+Track B2 — COMPLETE
+
+Track C:
+C-A   — ARCHITECTURE_ACCEPTED
+C-B1A — INCONCLUSIVE
+C-B1B — BLOCKED
+C-B2  — PENDING
+C-B3  — PENDING
+C-C   — PENDING
+C-D   — PENDING
+C-E   — PENDING
+C-F   — PENDING
+C-G   — PENDING
+```
+
+Verification:
+- Focused C-B1A benchmark policy, subject, dataset, provider-fixture, metric, cost, hard-gate, verdict, and deterministic-selection tests passed.
+- Live benchmark: not run.
+
+Known limitations:
+- Results use synthetic data and sanitized response classifications. No account quota, provider nondeterminism, live schema reliability, latency, usage, cost, or rate-limit recovery was measured.
+- There is no production adapter, fallback, traffic, continuous monitoring, or resolved provider-specific privacy/legal approval.
+
+Next planning boundary:
+Controlled live structured-generation benchmark with explicit benchmark credentials, exact current stable models, cost/request/deadline guard, and privacy/account approvals. Track C-B1B remains blocked.
