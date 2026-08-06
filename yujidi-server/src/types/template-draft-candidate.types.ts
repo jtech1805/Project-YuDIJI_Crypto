@@ -90,6 +90,7 @@ export type TemplateDraftCandidate = Readonly<{
   proposedUnresolvedConcepts: readonly ModelProposedUnresolvedConcept[];
   proposedClarificationQuestions: readonly DraftClarificationQuestion[];
   generationWarnings: readonly DraftGenerationWarning[];
+  citationReferences?: readonly import("./template-draft-citation.types.js").DraftCitationReference[];
   generationLineage: Readonly<{
     generationAttemptId: string;
     modelProvider: string;

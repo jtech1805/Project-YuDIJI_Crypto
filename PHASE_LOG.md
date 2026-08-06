@@ -2515,3 +2515,60 @@ Known limitations:
 
 Runtime integration:
 No B1 prompt or generation integration, LLM call, production embedding provider/model, vector vendor, network call, market/private retrieval, dependency, API, controller, route, template, ScoreCheck, scoring, Evidence, compiler, compiled runtime, feature-default change, bootstrap registration, scheduled job, activation, deployment, or commit was added.
+
+### Track B2-FG — RAG Drafting Integration, Security and Retrieval Evaluation Proof
+
+Status:
+COMPLETE
+
+Next planning boundary:
+Production AI/RAG Provider Integration and Rollout Architecture
+
+Contracts:
+- Explicit `REGISTRY_ONLY` and `REGISTRY_PLUS_PLATFORM_KNOWLEDGE` modes are implemented. Registry-only mode delegates unchanged to the existing B1 generation boundary, and RAG mode requires complete exact retrieval lineage and explicit fallback behavior.
+- Drafting requests project deterministically into exact bounded B2 retrieval requests while preserving every requested concept. Generic guidance concepts may be added, but unsupported concepts are never substituted with registered factors.
+- RAG mode invokes B2 retrieval exactly once and never retries another model, index, corpus, trust scope, or document version. Security and invariant failures fail closed; only explicitly eligible ordinary failures can use registry-only fallback.
+- Prompt context keeps `AUTHORITATIVE_REGISTRY_CONTEXT`, `UNTRUSTED_RETRIEVED_CONTEXT`, and `OUTPUT_SCHEMA_AND_CITATION_RULES` separate. Retrieved instructions remain quoted, exactly cited, and machine-labelled as untrusted.
+- The B1 candidate schema now accepts an optional bounded closed-vocabulary citation collection. Registry-only candidates remain backward compatible and do not require citations.
+- RAG generation reuses the existing provider-neutral structured-generation port and exact B1 candidate parser. The unchanged deterministic B1 authority validator runs exactly once and never reads retrieval content.
+- Citation validation composes the exact B2 context-bound validator after schema and authority validation. Valid, forged, duplicate, absent-context, and cross-context references remain explicit and are never silently repaired.
+- Deterministic structural contradiction analysis reports registry conflicts for factor identity/version, relationship execution, subject compatibility, provider capability, compilation support, model-overrule claims, and citation-purpose mismatches. Registries always win.
+- Unsupported long-buildup and unavailable research concepts remain unresolved. Retrieved explanations may support their review, but cannot produce `MARKET.PRICE`, a new provider, an executable VETO, or another fabricated authority.
+- Model and document weights remain rejected by the unchanged B1 validator; every supported binding still reports `REQUIRES_USER_INPUT`.
+- The deterministic RAG review report includes B1 review semantics, retrieval/fallback status, safe citation display, valid and invalid citations, contradictions, selected-passage counts, complete limitations, and exact context/policy lineage without a second model call.
+- A fixture-based evaluation harness mechanically derives retrieval, document/chunk hit, duplication, citation, concept-accounting, invented-reference, unresolved-retention, registry-conflict, budget, and security metrics. It makes no production-quality claim.
+- Golden and adversarial tests cover ETF flow, unsupported long buildup, forged/cross-context citations, stale or invented authority, prompt-injection commands, AI weights, activation attempts, retrieval fallback, and feature-disabled behavior.
+- RAG results expose metadata-only summaries. Raw prompts, retrieved bodies, model candidate bodies, vectors, embeddings, URLs, and private metadata are not persisted as traces.
+
+Progress:
+```text
+Track A — COMPLETE
+Track B1 — COMPLETE
+
+Track B2:
+B2-A   — ARCHITECTURE_ACCEPTED
+B2-BC  — COMPLETE
+B2-BC1 — COMPLETE
+B2-DE1 — COMPLETE
+B2-DE2 — COMPLETE
+B2-FG  — COMPLETE
+
+Track B2 milestone — COMPLETE
+```
+
+Verification:
+- Focused B2-FG query, prompt separation, citation schema/validation, contradiction, orchestration, fallback, unsupported-concept, prompt-injection, review, and evaluation tests: 17 passed.
+- Focused B1 registry-only drafting and acceptance regressions: 29 passed.
+- Focused B2-DE2/B2-DE1/B2-BC1/B2-BC regressions: 66 passed.
+- Full backend: 1,081 passed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- Dependency, feature, protected-file, prohibited-boundary, registration, and git diff checks passed.
+
+Known limitations:
+- Generation, embeddings, and vector search remain deterministic test implementations. Lexical retrieval and reranking remain deterministic rule-based characterization logic.
+- Only PLATFORM_KNOWLEDGE is supported; no market-research extraction or private-document RAG exists.
+- No production embedding model, vector database, exact production tokenizer, public API/UI, runtime registration, continuous evaluation monitoring, or durable retrieval-trace persistence exists.
+
+Runtime integration:
+No live LLM or embedding call, production vector vendor, market/private retrieval, dependency, API, controller, route, template persistence during generation, ACTIVE template creation, ScoreCheck, scoring, compiler invocation, compiled execution, feature-default change, bootstrap registration, scheduled job, activation, deployment, or commit was added.
