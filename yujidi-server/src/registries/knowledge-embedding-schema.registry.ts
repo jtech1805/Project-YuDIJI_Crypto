@@ -42,7 +42,7 @@ const validate = (definition: KnowledgeEmbeddingSchemaDefinition, normalization:
     || !positive(definition.embeddingSchemaVersion)
     || !identifier(definition.providerId)
     || !positive(definition.providerVersion)
-    || !identifier(definition.modelId)
+    || !bounded(definition.modelId, 120)
     || !bounded(definition.modelVersion, 120)
     || !positive(definition.vectorDimension)
     || definition.vectorDimension > 4_096

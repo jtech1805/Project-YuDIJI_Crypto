@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit",
     "arch:circular": "node scripts/check-circular-dependencies.mjs",
     "arch:graph": "npx --no-install depcruise --include-only '^src' --output-type dot src",
-    "benchmark:gemini-generation": "tsx scripts/benchmarks/run-gemini-structured-generation-benchmark.ts"
+    "benchmark:gemini-generation": "tsx scripts/benchmarks/run-gemini-structured-generation-benchmark.ts",
+    "benchmark:gemini-embedding": "tsx scripts/benchmarks/run-gemini-embedding-benchmark.ts"
   },
   "keywords": [],
   "author": "",

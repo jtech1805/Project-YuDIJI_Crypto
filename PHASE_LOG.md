@@ -2789,3 +2789,52 @@ Known limitations:
 
 Next planning boundary:
 Track C-B2C — Gemini Embedding Adapter and Guarded Live Validation.
+
+### Track C-B2C — Gemini Embedding Adapter and Guarded Live Validation
+
+Status:
+IMPLEMENTATION_COMPLETE / LIVE_VALIDATION_PENDING
+
+Result:
+```text
+LIVE_GEMINI_EMBEDDING_VALIDATION_NOT_RUN
+```
+
+Implementation:
+- An unregistered `KnowledgeEmbeddingPort` adapter uses official `@google/genai` 2.16.0, stable API `v1`, exact `gemini-embedding-001`, adapter version 1, and explicit output dimension 768 without latest, preview, alternate model/provider, deterministic fake, OpenAI, or Groq fallback.
+- Exact request-level `RETRIEVAL_DOCUMENT` and `RETRIEVAL_QUERY` map directly to Gemini task types. Purpose is never inferred from IDs, text, schema names, or callers.
+- One ordered multi-content Gemini call is issued per reached attempt. Only bounded exact text is sent; internal chunk/document/index/citation/ownership/database lineage remains local. Provider outputs correlate positionally under the SDK's documented ordered response contract.
+- The adapter validates configuration, exact request lineage, bounds, unique input IDs, output presence/count, and structurally numeric nonempty vectors. It returns detached immutable raw vectors without normalization, magnitude calculation, rounding, clamping, padding, truncation, digesting, persistence, or search.
+- C-B2B remains authoritative for exact 768/finite validation, `L2_UNIT_VECTOR` version 1, canonical vector digests, immutable document embedding persistence, and transient normalized query vectors.
+- A production-shaped exact schema authority exists for `YUDIJI_GEMINI_PLATFORM_KNOWLEDGE_EMBEDDING` version 1, both purposes, cosine similarity, and `L2_UNIT_VECTOR` version 1. It is not registered in application bootstrap.
+- Adapter-owned provider transport retries are bounded to two attempts for rate limit, request timeout, network failure, and provider unavailability only, under per-attempt timeout and total deadline. There is no caller retry or fallback.
+- Metadata-only diagnostics include request/schema/provider/model/adapter/SDK/API/purpose/count/dimension/attempts/latency/status/failure and available usage only. Text, vectors, digests, secrets, provider bodies, documents, and URLs are excluded; diagnostic failure is isolated.
+- The guarded benchmark contains six synthetic document inputs and four synthetic query inputs, concurrency one, maximum 20 inputs, exact model/dimension/dataset/deadline guards, downstream L2 validation, and four cosine smoke checks. It is absent from tests, CI, bootstrap, and normal startup.
+- Live validation was not run because `YUDIJI_GEMINI_EMBEDDING_LIVE_VALIDATION_CONFIRMED=true` was unavailable. The existing API key alone did not authorize embedding calls.
+- Free-tier use is development-only and limited to synthetic or approved non-sensitive PLATFORM_KNOWLEDGE. Private/user/market/broker/financial/position/account/personal/confidential/production content is prohibited.
+
+Progress:
+```text
+Track C:
+C-A   — ARCHITECTURE_ACCEPTED
+C-B1A — OFFLINE_COMPLETE
+C-B1B — DEVELOPMENT_ADAPTER_COMPLETE
+C-B2A — ARCHITECTURE_ACCEPTED
+C-B2B — COMPLETE
+C-B2C — IMPLEMENTATION_COMPLETE / LIVE_VALIDATION_PENDING
+C-B3  — BLOCKED pending guarded C-B2C live validation
+```
+
+Known limitations:
+- Live exact-model access, dimensions, finite values, normalization, similarity behavior, latency, quota/rate limits, and usage metadata remain unmeasured.
+- The adapter is text-only and fixed to the initial 768-dimensional schema. There is no production vector database, runtime registration, private/market-content permission, or continuous embedding monitoring.
+
+Verification:
+- Focused C-B2C adapter/configuration/schema/purpose/translation/raw-vector/response/failure/retry/timeout/diagnostic/guard tests: 12 passed.
+- Combined C-B2C, C-B2B, B2/RAG and Gemini-generation regressions: 119 passed.
+- Full backend: 1,123 passed, 0 failed.
+- Typecheck passed. Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles. `git diff --check` passed.
+- Package lock and dependency set are unchanged; only the guarded benchmark script was added to `package.json`.
+
+Next planning boundary:
+Run the guarded synthetic benchmark only after separate embedding confirmation. C-B3 remains blocked until live validation passes.

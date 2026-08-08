@@ -217,20 +217,6 @@ export class AnalyzerEngine {
         instrumentToken: tick.instrumentToken,
       });
 
-    logger.info(
-      {
-        event: "ANALYZER_NORMALIZED_TICK_RECEIVED",
-        subscriptionKey,
-        provider: tick.provider,
-        marketType: tick.marketType,
-        exchange: tick.exchange,
-        symbol: tick.symbol,
-        instrumentToken: tick.instrumentToken,
-        price: tick.price,
-      },
-      "Analyzer received normalized market tick",
-    );
-
     await this.processTick(
       tick.symbol,
       tick.price,
@@ -869,17 +855,6 @@ export class AnalyzerEngine {
       const cooldownRemainingMs = COOLDOWN_MS - (currentTimestamp - lastTriggeredAt);
       const isInCooldown = cooldownRemainingMs > 0;
       if (isInCooldown) {
-        logger.info(
-          {
-            event: "ANALYZER_MONITOR_COOLDOWN",
-            symbol: normalizedSymbol,
-            monitorId,
-            userId: monitor.user.toString(),
-            lastTriggeredAt,
-            cooldownRemainingMs,
-          },
-          "Skipped monitor due to cooldown window",
-        );
         continue;
       }
 
