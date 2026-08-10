@@ -2932,3 +2932,51 @@ Known limitations:
 
 Next planning boundary:
 Track C-B3C — MongoDB Atlas Write/Search Adapters and Guarded Development Validation.
+
+### Track C-B3C0 — Atlas Search Request, Candidate Lineage and Projection-Reread Contract Amendment
+
+Status:
+COMPLETE
+
+Implementation:
+- Added the retrieval request's exact `asOf` timestamp to the provider-neutral vector-search request as a detached date clone. The in-memory search fake rejects missing or invalid timestamps and never derives wall-clock time.
+- Replaced untrusted vector candidates' duplicated full chunk metadata with exact immutable publication lineage: index entry, index definition/version, namespace, embedding, document, chunk set, chunk, chunk digest, vector digest, raw provider score, and dense provider ordinal. Searchable metadata is optional and bounded.
+- Enriched vector candidate-source traces with the exact publication target and provider ordinal while preserving the existing retrieval ranking and citation contracts.
+- Required exact projection reread and correlation before accepting vector-candidate embedding, document, manifest, or chunk authority. Projection absence or any index, namespace, embedding, document, chunk-set, chunk, digest, or searchable-metadata mismatch is excluded deterministically.
+- Preserved exact embedding, document, complete-manifest, chunk, effective-time, trust, corpus, source-span, digest, and supersession validation after projection correlation.
+- Added deterministic validation for dense, unique provider ordinals. No first/last/latest/insertion-order fallback exists.
+- Updated the in-memory vector-search fake and retrieval tests to exercise the corrected provider-neutral boundary.
+- No Atlas adapter, Atlas query, Atlas index, dependency, persistence mutation, API, scoring, compiler, template, feature flag, runtime registration, or production activation was introduced.
+
+Verification:
+- Focused retrieval, vector projection, candidate validation, search-port, citation, and RAG tests: 50 passed.
+- Combined embedding, generation, projection, normalization, manifest, retrieval, RAG, ScoreCheck, and compiled-shadow regressions: 186 passed.
+- Full backend: 1,129 passed, 0 failed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- `git diff --check` passed.
+
+Progress:
+```text
+Track C:
+C-A    — ARCHITECTURE_ACCEPTED
+C-B1A  — OFFLINE_COMPLETE
+C-B1B  — DEVELOPMENT_ADAPTER_COMPLETE
+C-B2A  — ARCHITECTURE_ACCEPTED
+C-B2B  — COMPLETE
+C-B2C  — IMPLEMENTATION_COMPLETE / LIVE_VALIDATION_PENDING
+C-B3A  — ARCHITECTURE_ACCEPTED
+C-B3B  — COMPLETE
+C-B3C0 — COMPLETE
+C-B3C  — NEXT
+C-C    — BLOCKED
+```
+
+Known limitations:
+- MongoDB Atlas write/search adapters and Atlas index administration remain unimplemented.
+- Guarded Gemini embedding live validation remains pending, and the Atlas environment remains unverified.
+- The retrieval request does not select an Atlas namespace directly; exact namespace authority remains the immutable projection and exact index target selected by the configured vector-search port.
+- No immutable production index-publication manifest, cleanup/reconciliation workflow, or production provider registration exists.
+
+Next planning boundary:
+Track C-B3C — MongoDB Atlas Write/Search Adapters and Guarded Development Validation.
