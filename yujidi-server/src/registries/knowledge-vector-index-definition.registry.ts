@@ -2,6 +2,8 @@ import { isDeepStrictEqual } from "node:util";
 import { freezeClone } from "../services/knowledge-document-admission.service.js";
 import type { KnowledgeVectorIndexDefinition } from "../types/knowledge-vector-index-definition.types.js";
 import { KnowledgeEmbeddingSchemaRegistry } from "./knowledge-embedding-schema.registry.js";
+import { GEMINI_PLATFORM_KNOWLEDGE_EMBEDDING_SCHEMA } from "../types/gemini-embedding-adapter.types.js";
+
 
 export class KnowledgeVectorIndexDefinitionRegistry {
   private readonly definitions: ReadonlyMap<string, KnowledgeVectorIndexDefinition>;
@@ -68,3 +70,13 @@ const identifier = (value: unknown): value is string =>
 const namespace = (value: unknown): value is string =>
   typeof value === "string" && /^[A-Z0-9_.:-]{1,200}$/.test(value);
 const positive = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) > 0;
+
+export const MONGO_ATLAS_PLATFORM_KNOWLEDGE_VECTOR_INDEX_DEFINITION: KnowledgeVectorIndexDefinition = Object.freeze({
+  indexId:"YUDIJI_ATLAS_PLATFORM_KNOWLEDGE_GEMINI_768",indexVersion:1,indexSchemaId:"YUDIJI_ATLAS_VECTOR_INDEX_SCHEMA",indexSchemaVersion:1,
+  namespace:"YUDIJI:PLATFORM_KNOWLEDGE:ATLAS:GEMINI_768:V1",corpus:"PLATFORM_KNOWLEDGE",allowedTrustLevels:Object.freeze(["AUTHORITATIVE","APPROVED_GUIDANCE","EXPLANATORY"] as const),
+  embeddingSchema:{embeddingSchemaId:"YUDIJI_GEMINI_PLATFORM_KNOWLEDGE_EMBEDDING",embeddingSchemaVersion:1},vectorDimension:768,similarityMetric:"COSINE",
+  metadataSchemaId:"PLATFORM_KNOWLEDGE_INDEX_METADATA",metadataSchemaVersion:1,writePolicyId:"PLATFORM_KNOWLEDGE_INDEX_WRITE",writePolicyVersion:1,retrievalEligible:false,
+});
+export const MONGO_ATLAS_KNOWLEDGE_VECTOR_INDEX_AUTHORITY = new KnowledgeVectorIndexDefinitionRegistry(
+  [MONGO_ATLAS_PLATFORM_KNOWLEDGE_VECTOR_INDEX_DEFINITION], new KnowledgeEmbeddingSchemaRegistry([GEMINI_PLATFORM_KNOWLEDGE_EMBEDDING_SCHEMA]),
+);

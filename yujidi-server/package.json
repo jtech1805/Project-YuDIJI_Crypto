@@ -11,13 +11,15 @@
     "sync:symbols:angel:nfo": "tsx src/scripts/sync-angel-symbols.ts --exchanges=NFO --market-types=FNO --names=*",
     "sync:symbols:angel:all": "tsx src/scripts/sync-angel-symbols.ts --exchanges=MCX,NSE,NFO --market-types=COMMODITY,EQUITY,FNO --names=*",
     "symbols:backfill-search": "tsx src/scripts/backfill-symbol-search-fields.ts",
-    "test": "node --import tsx --test tests/unit/adapters/ai/*.test.ts tests/unit/services/*.test.ts tests/unit/services/security/*.test.ts tests/unit/integrations/market-data/angel/*.test.ts tests/unit/utils/*.test.ts",
+    "test": "node --import tsx --test tests/unit/adapters/ai/*.test.ts tests/unit/adapters/vector/*.test.ts tests/unit/services/*.test.ts tests/unit/services/security/*.test.ts tests/unit/integrations/market-data/angel/*.test.ts tests/unit/utils/*.test.ts",
     "test:analyzer": "node --import tsx --test tests/unit/services/analyzer.*.test.ts",
     "typecheck": "tsc --noEmit",
     "arch:circular": "node scripts/check-circular-dependencies.mjs",
     "arch:graph": "npx --no-install depcruise --include-only '^src' --output-type dot src",
     "benchmark:gemini-generation": "tsx scripts/benchmarks/run-gemini-structured-generation-benchmark.ts",
-    "benchmark:gemini-embedding": "tsx scripts/benchmarks/run-gemini-embedding-benchmark.ts"
+    "benchmark:gemini-embedding": "tsx scripts/benchmarks/run-gemini-embedding-benchmark.ts",
+    "atlas:create-vector-index": "tsx scripts/atlas/create-platform-knowledge-vector-index.ts",
+    "benchmark:atlas-vector-search": "tsx scripts/benchmarks/run-atlas-vector-search-benchmark.ts"
   },
   "keywords": [],
   "author": "",

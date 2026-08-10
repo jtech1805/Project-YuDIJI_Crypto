@@ -2933,6 +2933,67 @@ Known limitations:
 Next planning boundary:
 Track C-B3C — MongoDB Atlas Write/Search Adapters and Guarded Development Validation.
 
+### Track C-B3C — MongoDB Atlas Write/Search Adapters and Guarded Development Validation
+
+Status:
+IMPLEMENTATION_COMPLETE / LIVE_VALIDATION_PENDING
+
+Verdict:
+INCONCLUSIVE
+
+Implementation:
+- Added immutable MongoDB Atlas adapter configuration for the explicit development database, the existing `knowledgevectorindexprojections` collection, Atlas index `yudiji_atlas_platform_knowledge_gemini_768_v1`, vector path `vector`, 768 dimensions, cosine similarity, and bounded write/search/time limits. Mongo credentials and URI are never serialized.
+- Registered the exact inactive logical index authority `YUDIJI_ATLAS_PLATFORM_KNOWLEDGE_GEMINI_768` v1 for Gemini platform-knowledge embeddings. It is not current, default, retrieval-eligible, or runtime-registered.
+- Added a deterministic Atlas Vector Search specification with SHA-256 digest `c22cdcaa18faa4fea51ba28b7164df17e67624a14efce617cbc8d6a978f0bac0`.
+- Exact filter paths cover logical index identity/version, namespace, embedding schema identity/version, corpus, trust, document identity/version, document/chunk types, factors, relationships, subjects, topics, validation codes, example classification, ADR number, and half-open effective-time fields.
+- Added exact named-index inspection and explicitly authorized one-time creation. Exact existing definitions are classified as already present; conflicting definitions are rejected. No update, replacement, deletion, startup creation, write-time creation, or search-time creation exists.
+- Added an Atlas-bound write adapter that validates exact provider/index configuration and delegates exactly once to the existing immutable projection authority. It creates no provider collection and no third vector copy.
+- Added a native-collection Atlas search adapter using bounded `$vectorSearch`. ANN uses explicit `limit` and `numCandidates`; ENN is explicit validation-only `exact: true` and omits ANN-only fields.
+- Search prefilters exact index/version, namespace, embedding schema, platform-knowledge corpus, allowed trust, explicit eligible document/version pairs, structured closed metadata, and the request's exact cloned `asOf` with half-open effective-time semantics.
+- Returned candidates contain only exact projection/index/namespace/embedding/document/chunk-set/chunk/digest lineage, bounded untrusted searchable metadata, raw Atlas score, and dense provider ordinal. Vectors, raw Mongo documents, text, URIs, and `_id` are excluded.
+- Projection-first application validation, downstream embedding/document/manifest/chunk rereads, lexical merging, deterministic normalization/reranking, and citation construction remain unchanged.
+- Added guarded index and benchmark commands. Both require explicit development targets and live confirmations, reject production-looking databases and wrong collection/index targets, and are not invoked by tests or application startup.
+- No Atlas automated embedding, native hybrid fusion, provider fallback, API, scoring, compiler, template, feature flag, bootstrap registration, production activation, private corpus, or market corpus was introduced.
+
+Live validation:
+- `LIVE_ATLAS_VECTOR_VALIDATION_NOT_RUN`.
+- Atlas credentials, deployment, tier, server version, exact index status, live writes, duplicate/conflict behavior, ANN queries, ENN capability, filter exclusions, latency, and live projection-first composition were not measured.
+- Deterministic adapter tests use synthetic normalized vectors only. Gemini-to-Atlas mode remains guarded behind separate Gemini embedding live proof.
+
+Verification:
+- Focused C-B3C configuration, specification, administration, write, search, ANN/ENN, candidate, and command-guard tests: 11 passed.
+- Combined Atlas, C-B3C0, C-B3B, C-B2, retrieval, RAG, projection, manifest, embedding, Gemini, ScoreCheck, and compiled-shadow regressions: 189 passed.
+- Full backend: 1,142 passed, 0 failed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- `git diff --check` passed.
+
+Progress:
+```text
+Track C:
+C-A    — ARCHITECTURE_ACCEPTED
+C-B1A  — OFFLINE_COMPLETE
+C-B1B  — DEVELOPMENT_ADAPTER_COMPLETE
+C-B2A  — ARCHITECTURE_ACCEPTED
+C-B2B  — COMPLETE
+C-B2C  — IMPLEMENTATION_COMPLETE / LIVE_VALIDATION_PENDING
+C-B3A  — ARCHITECTURE_ACCEPTED
+C-B3B  — COMPLETE
+C-B3C0 — COMPLETE
+C-B3C  — IMPLEMENTATION_COMPLETE / LIVE_VALIDATION_PENDING
+C-C    — BLOCKED
+```
+
+Known limitations:
+- Development approval cannot be granted until guarded Atlas validation is explicitly run against an isolated development deployment.
+- Gemini embedding live proof remains pending.
+- No durable index-publication manifest, production load test, monitoring, automatic failover, cleanup, or reconciliation exists.
+- ANN quality is unmeasured; ENN availability depends on the connected Atlas deployment/version.
+- Scope remains synthetic/platform knowledge only. Private and market corpora remain prohibited.
+
+Next planning boundary:
+Run guarded Atlas development validation. Track C-C remains blocked until the result supports development approval or conditional approval.
+
 ### Track C-B3C0 — Atlas Search Request, Candidate Lineage and Projection-Reread Contract Amendment
 
 Status:
