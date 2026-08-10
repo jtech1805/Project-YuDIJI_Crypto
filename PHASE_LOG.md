@@ -2838,3 +2838,97 @@ Verification:
 
 Next planning boundary:
 Run the guarded synthetic benchmark only after separate embedding confirmation. C-B3 remains blocked until live validation passes.
+
+### Track C-B3A — Immutable Atlas Vector Projection Architecture
+
+Status:
+ARCHITECTURE_ACCEPTED
+
+Mandatory stop and decision:
+- The Track C-B3 mandatory audit correctly stopped implementation because the canonical `KnowledgeEmbedding` collection cannot represent exact vector-index entry identity, index definition/version, namespace, metadata schema, or bounded searchable publication metadata without combining embedding and index-publication authorities.
+- ADR-063 separates canonical embedding persistence from an immutable provider-neutral vector-index projection authority. `KnowledgeEmbedding` remains the canonical vector authority.
+- One embedding may be published into multiple exact providers, index definitions, versions, namespaces, metadata-schema versions, and development or production targets using distinct exact index-entry identities/versions.
+- The projection deliberately duplicates the canonical normalized vector only for provider indexing and preserves the exact vector digest, schema, purpose, normalization, document, chunk-set, chunk, corpus, and trust lineage.
+- A provider-neutral projection collection that Atlas can index directly is preferred, avoiding a third vector copy while keeping Atlas-specific query/index behavior outside domain contracts.
+- `KnowledgeVectorIndexingService`, through `KnowledgeVectorIndexWritePort`, is the sole initial synchronization owner. Embedding/model hooks, application bootstrap, Atlas triggers, controller writes, search writes, and unapproved background polling are prohibited.
+- Projection persistence is append-only with exact `CREATED`, `ALREADY_EXISTS`, `CONFLICT`, `INVARIANT_VIOLATION`, and `PERSISTENCE_FAILED` outcomes. Updates, replacements, upserts, deletes, latest selection, and automatic supersession are prohibited.
+- A canonical projection digest covers exact semantic publication material independently of the canonical vector digest.
+- Initial searchable metadata is bounded to existing platform-knowledge identity, type, corpus, trust, schema/index, factor, relationship, subject, topic, and effective-time contracts. Raw text, source URIs, credentials, private/tenant data, and market content are excluded.
+- Persisting projections does not prove that an Atlas index is built, queryable, complete, or approved. A durable index-publication manifest remains deferred to C-C.
+- No projection model/repository, Atlas adapter, Atlas index, Atlas call, dependency, runtime registration, or production retrieval activation was introduced.
+
+Progress:
+```text
+Track C:
+C-A   — ARCHITECTURE_ACCEPTED
+C-B1A — OFFLINE_COMPLETE
+C-B1B — DEVELOPMENT_ADAPTER_COMPLETE
+C-B2A — ARCHITECTURE_ACCEPTED
+C-B2B — COMPLETE
+C-B2C — IMPLEMENTATION_COMPLETE / LIVE_VALIDATION_PENDING
+C-B3A — ARCHITECTURE_ACCEPTED
+C-B3B — NEXT
+C-B3C — PENDING
+C-C   — BLOCKED
+```
+
+Known limitations:
+- The immutable projection authority is not implemented.
+- MongoDB Atlas write/search adapters and index administration are not implemented.
+- Guarded Gemini embedding live validation remains pending.
+- The Atlas environment, tier, version, permissions, and queryability remain unverified.
+- No immutable production index-publication manifest, cleanup/reconciliation workflow, or production registration exists.
+- The approved projection scope is limited to `PLATFORM_KNOWLEDGE`; private and market corpora remain prohibited.
+
+Next planning boundary:
+Track C-B3B — Immutable Vector Projection Authority Implementation.
+
+### Track C-B3B — Immutable Vector Projection Authority Implementation
+
+Status:
+COMPLETE
+
+Implementation:
+- Added provider-neutral immutable vector-index projection contracts with exact caller-supplied entry identity/version, exact index target, embedding/schema/purpose/normalization lineage, canonical vector copy and digest, source lineage, bounded searchable metadata, canonical projection digest, and database-owned creation time.
+- `KnowledgeEmbedding` remains the canonical vector authority. Its model and persistence semantics were not modified; projection vectors are detached copies used only for explicit index publication.
+- Added deterministic searchable-metadata projection from exact document and chunk authorities. Output is canonically ordered, deeply frozen, date-cloned, and excludes raw text, source URIs, credentials, private/tenant data, and market content.
+- Added canonical SHA-256 projection digesting over semantic publication material. The vector itself and `createdAt` are excluded; the exact canonical `vectorDigest` remains included and authoritative.
+- Added a strict provider-neutral Mongoose projection model with no mutable status or `updatedAt`, exact identity uniqueness, exact publication-target uniqueness, bounded vector/metadata validation, and no Atlas-specific types or indexes.
+- Added an append-only repository with exact entry and publication-target reads, exact duplicate classification, material conflict classification, sanitized persistence failures, and deterministic duplicate-key race rereads. No latest, update, replace, upsert, delete, or supersession operations exist.
+- Added a projection validation/persistence service and a provider-neutral `KnowledgeVectorIndexWritePort` adapter. Query-purpose vectors, unsupported corpora/trust, wrong dimensions/metrics, non-finite vectors, invalid metadata, and caller-controlled persistence fields fail before insertion.
+- Narrowly enriched the existing vector write entry with purpose, normalization, metadata-schema, similarity, and bounded searchable-metadata lineage. `KnowledgeVectorIndexingService` remains the sole initial creator and retains exact embedding, schema, document, manifest, chunk, digest, corpus, and trust rereads before one explicit write-port call.
+- Proved the same embedding can publish into different indexes and index versions, while a second entry identity for the same exact target conflicts. Projection failure does not mutate or regenerate canonical sources.
+- No Atlas adapter, Atlas call, Atlas Vector Search index, provider call, runtime registration, bootstrap write, model hook, background job, API, scoring, compiler, template, feature-flag, dependency, or canonical embedding schema change was introduced.
+
+Verification:
+- Focused C-B3B projection, model, repository, digest, metadata, adapter, write-port, and indexing tests: 16 passed.
+- Combined B2/C-B2, Gemini, retrieval, citation, Track A shadow, template, and ScoreCheck regressions: 183 passed.
+- Full backend: 1,127 passed, 0 failed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- `git diff --check` passed.
+
+Progress:
+```text
+Track C:
+C-A   — ARCHITECTURE_ACCEPTED
+C-B1A — OFFLINE_COMPLETE
+C-B1B — DEVELOPMENT_ADAPTER_COMPLETE
+C-B2A — ARCHITECTURE_ACCEPTED
+C-B2B — COMPLETE
+C-B2C — IMPLEMENTATION_COMPLETE / LIVE_VALIDATION_PENDING
+C-B3A — ARCHITECTURE_ACCEPTED
+C-B3B — COMPLETE
+C-B3C — NEXT
+C-C   — BLOCKED
+```
+
+Known limitations:
+- MongoDB Atlas write/search adapters and Atlas index administration are not implemented.
+- Guarded Gemini embedding live validation remains pending, and the Atlas environment remains unverified.
+- No immutable production index-publication manifest or cleanup/reconciliation workflow exists.
+- No production provider registration exists; scope remains `PLATFORM_KNOWLEDGE` only.
+- Deliberate projection vector duplication increases storage in exchange for independent publication lineage.
+
+Next planning boundary:
+Track C-B3C — MongoDB Atlas Write/Search Adapters and Guarded Development Validation.

@@ -8,6 +8,7 @@ import type { KnowledgeVectorIndexEntry, KnowledgeVectorIndexingRequest, Knowled
 import { KnowledgeChunkSetVerificationService } from "./knowledge-chunk-set-verification.service.js";
 import { freezeClone } from "./knowledge-document-admission.service.js";
 import { calculateKnowledgeEmbeddingVectorDigest } from "./knowledge-embedding.service.js";
+import { KnowledgeVectorSearchableMetadataProjectionService } from "./knowledge-vector-searchable-metadata-projection.service.js";
 
 export class KnowledgeVectorIndexingService {
   public constructor(
@@ -18,6 +19,7 @@ export class KnowledgeVectorIndexingService {
     private readonly manifests = new KnowledgeChunkSetManifestRepository(),
     private readonly verifier = new KnowledgeChunkSetVerificationService(),
     private readonly documents = new KnowledgeDocumentRepository(),
+    private readonly metadataProjection = new KnowledgeVectorSearchableMetadataProjectionService(),
   ) {}
 
   public async index(request: KnowledgeVectorIndexingRequest): Promise<KnowledgeVectorIndexingResult> {
@@ -94,6 +96,13 @@ export class KnowledgeVectorIndexingService {
         namespace: definition.namespace,
         embeddingIdentity: embedding.identity,
         embeddingSchema: embedding.embeddingSchema,
+        purpose: embedding.purpose,
+        normalizationStrategy: embedding.normalizationStrategy,
+        metadataSchema: {
+          metadataSchemaId: definition.metadataSchemaId,
+          metadataSchemaVersion: definition.metadataSchemaVersion,
+        },
+        similarityMetric: definition.similarityMetric,
         vectorDigest: embedding.vectorDigest,
         vector: embedding.vector,
         documentIdentity: embedding.documentIdentity,
@@ -105,6 +114,7 @@ export class KnowledgeVectorIndexingService {
         documentType: documentRead.document.documentType,
         chunkType: chunk.chunkType,
         metadata: chunk.metadata,
+        searchableMetadata: this.metadataProjection.project(documentRead.document, chunk),
         sourceSpan: chunk.sourceSpan,
       }));
     }

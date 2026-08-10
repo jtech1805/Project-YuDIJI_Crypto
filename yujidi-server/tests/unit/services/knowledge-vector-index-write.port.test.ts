@@ -14,6 +14,10 @@ const entry = (): KnowledgeVectorIndexEntry => {
     namespace: TEST_INDEX_DEFINITION.namespace,
     embeddingIdentity: embedding.identity,
     embeddingSchema: embedding.embeddingSchema,
+    purpose: embedding.purpose,
+    normalizationStrategy: embedding.normalizationStrategy,
+    metadataSchema: { metadataSchemaId: TEST_INDEX_DEFINITION.metadataSchemaId, metadataSchemaVersion: 1 },
+    similarityMetric: TEST_INDEX_DEFINITION.similarityMetric,
     vectorDigest: embedding.vectorDigest,
     vector: embedding.vector,
     documentIdentity: embedding.documentIdentity,
@@ -25,6 +29,15 @@ const entry = (): KnowledgeVectorIndexEntry => {
     documentType: fixture.document.documentType,
     chunkType: chunk.chunkType,
     metadata: chunk.metadata,
+    searchableMetadata: {
+      documentType: fixture.document.documentType,
+      chunkType: chunk.chunkType,
+      factors: chunk.metadata.factors,
+      relationshipTypes: chunk.metadata.relationshipTypes,
+      subjectTypes: chunk.metadata.subjectTypes,
+      topics: chunk.metadata.topics,
+      validationCodes: chunk.metadata.validationCodes,
+    },
     sourceSpan: chunk.sourceSpan,
   };
 };
@@ -58,4 +71,3 @@ test("test vector write port rejects changed duplicates, namespaces, dimensions,
   assert.equal((await new InMemoryKnowledgeVectorIndexWritePort(TEST_INDEX_DEFINITION.namespace, 8).write(request())).status, "FAILED");
   assert.equal((await new InMemoryKnowledgeVectorIndexWritePort(TEST_INDEX_DEFINITION.namespace, 4).write(request({ ...entry(), vector: [Number.NaN, 0, 0, 0] }))).status, "FAILED");
 });
-

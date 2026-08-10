@@ -3,6 +3,8 @@ import type { KnowledgeVectorIndexDefinitionIdentity } from "./knowledge-vector-
 import type { KnowledgeChunkIdentity, KnowledgeChunkMetadata, KnowledgeChunkType } from "./knowledge-chunk.types.js";
 import type { KnowledgeChunkSetManifestIdentity } from "./knowledge-chunk-set-manifest.types.js";
 import type { KnowledgeCorpus, KnowledgeDocumentIdentity, KnowledgeSourceSpan, KnowledgeTrustLevel, PlatformKnowledgeDocumentType } from "./knowledge-document.types.js";
+import type { KnowledgeEmbeddingPurpose, KnowledgeSimilarityMetric } from "./knowledge-embedding.types.js";
+import type { KnowledgeVectorSearchableMetadata } from "./knowledge-vector-index-projection.types.js";
 
 export type KnowledgeVectorIndexEntryIdentity = Readonly<{ indexEntryId: string; indexEntryVersion: number }>;
 export type KnowledgeVectorIndexEntry = Readonly<{
@@ -11,6 +13,10 @@ export type KnowledgeVectorIndexEntry = Readonly<{
   namespace: string;
   embeddingIdentity: KnowledgeEmbeddingIdentity;
   embeddingSchema: KnowledgeEmbeddingSchemaIdentity;
+  purpose: KnowledgeEmbeddingPurpose;
+  normalizationStrategy: Readonly<{ normalizationStrategyId: string; normalizationStrategyVersion: number }>;
+  metadataSchema: Readonly<{ metadataSchemaId: string; metadataSchemaVersion: number }>;
+  similarityMetric: KnowledgeSimilarityMetric;
   vectorDigest: string;
   vector: readonly number[];
   documentIdentity: KnowledgeDocumentIdentity;
@@ -22,6 +28,7 @@ export type KnowledgeVectorIndexEntry = Readonly<{
   documentType: PlatformKnowledgeDocumentType;
   chunkType: KnowledgeChunkType;
   metadata: KnowledgeChunkMetadata;
+  searchableMetadata: KnowledgeVectorSearchableMetadata;
   sourceSpan: KnowledgeSourceSpan;
 }>;
 
