@@ -2,6 +2,8 @@ import type { KnowledgeChunkIdentity, KnowledgeChunkMetadata } from "./knowledge
 import type { KnowledgeEmbeddingIdentity, KnowledgeEmbeddingSchemaIdentity, KnowledgeSimilarityMetric } from "./knowledge-embedding.types.js";
 import type { KnowledgeCorpus, KnowledgeDocumentIdentity, KnowledgeTrustLevel, PlatformKnowledgeDocumentType } from "./knowledge-document.types.js";
 import type { KnowledgeVectorIndexDefinitionIdentity } from "./knowledge-vector-index-definition.types.js";
+import type { KnowledgeChunkSetManifestIdentity } from "./knowledge-chunk-set-manifest.types.js";
+import type { KnowledgeVectorSearchableMetadata } from "./knowledge-vector-index-projection.types.js";
 
 export type KnowledgeRetrievalPolicyIdentity = Readonly<{ policyId: string; policyVersion: number }>;
 export type KnowledgeScoreRange = Readonly<{ minimum: number; maximum: number; clamp: boolean }>;
@@ -39,14 +41,17 @@ export type KnowledgeQueryTextProjection = Readonly<{ projectorId: string; proje
 export type KnowledgeVectorSearchRequest = Readonly<{
   index: KnowledgeVectorIndexDefinitionIdentity; namespace: string;
   indexSchema: Readonly<{ indexSchemaId: string; indexSchemaVersion: number }>;
+  asOf: Date;
   queryVector: readonly number[]; vectorDimension: number; metric: KnowledgeSimilarityMetric; candidateLimit: number;
   corpus: "PLATFORM_KNOWLEDGE"; trustLevels: readonly KnowledgeTrustLevel[]; documentTypes?: readonly PlatformKnowledgeDocumentType[];
   filters?: KnowledgeRetrievalFilters; eligibleDocuments: readonly KnowledgeDocumentIdentity[];
 }>;
 export type KnowledgeUntrustedVectorCandidate = Readonly<{
-  indexEntryId: string; indexEntryVersion: number; namespace: string; embeddingIdentity: KnowledgeEmbeddingIdentity;
-  documentIdentity: KnowledgeDocumentIdentity; chunkIdentity: KnowledgeChunkIdentity; score: number;
-  documentDigest?: string; chunkDigest: string; vectorDigest: string; metadata: KnowledgeChunkMetadata;
+  indexEntryId: string; indexEntryVersion: number; index: KnowledgeVectorIndexDefinitionIdentity; namespace: string;
+  embeddingIdentity: KnowledgeEmbeddingIdentity; documentIdentity: KnowledgeDocumentIdentity;
+  chunkSetIdentity: KnowledgeChunkSetManifestIdentity; chunkIdentity: KnowledgeChunkIdentity;
+  chunkDigest: string; vectorDigest: string; providerScore: number; providerOrdinal: number;
+  searchableMetadata?: KnowledgeVectorSearchableMetadata;
 }>;
 export type KnowledgeVectorSearchResult = Readonly<{
   status: "COMPLETED" | "NO_CANDIDATES" | "VALIDATION_FAILED" | "INDEX_NOT_FOUND" | "INDEX_INELIGIBLE" | "NAMESPACE_MISMATCH" | "DIMENSION_MISMATCH" | "METRIC_NOT_SUPPORTED" | "SEARCH_FAILED";
@@ -62,9 +67,9 @@ export type KnowledgeLexicalSearchRequest = Readonly<{
 export type KnowledgeUntrustedLexicalCandidate = Readonly<{ documentIdentity: KnowledgeDocumentIdentity; chunkIdentity: KnowledgeChunkIdentity; score: number; matchedFilters: readonly string[] }>;
 export type KnowledgeLexicalSearchResult = Readonly<{ status: "COMPLETED" | "NO_CANDIDATES" | "VALIDATION_FAILED" | "SEARCH_FAILED"; candidates: readonly KnowledgeUntrustedLexicalCandidate[]; failureCode?: string }>;
 
-export type KnowledgeCandidateSource = Readonly<{ type: "VECTOR"; rawScore: number; indexEntryId: string; indexEntryVersion: number; embeddingIdentity: KnowledgeEmbeddingIdentity; indexedChunkDigest: string; indexedVectorDigest: string; indexedDocumentDigest?: string }> | Readonly<{ type: "LEXICAL"; rawScore: number }>;
+export type KnowledgeCandidateSource = Readonly<{ type: "VECTOR"; rawScore: number; providerOrdinal: number; indexEntryId: string; indexEntryVersion: number; index: KnowledgeVectorIndexDefinitionIdentity; namespace: string; embeddingIdentity: KnowledgeEmbeddingIdentity; chunkSetIdentity: KnowledgeChunkSetManifestIdentity; indexedChunkDigest: string; indexedVectorDigest: string; searchableMetadata?: KnowledgeVectorSearchableMetadata }> | Readonly<{ type: "LEXICAL"; rawScore: number }>;
 export type KnowledgeRetrievalCandidate = Readonly<{ documentIdentity: KnowledgeDocumentIdentity; chunkIdentity: KnowledgeChunkIdentity; sources: readonly KnowledgeCandidateSource[]; matchedFilters: readonly string[] }>;
-export const KNOWLEDGE_RETRIEVAL_EXCLUSION_CODES = ["DOCUMENT_NOT_ELIGIBLE","DOCUMENT_NOT_FOUND","DOCUMENT_OUTSIDE_EFFECTIVE_TIME","DOCUMENT_SUPERSEDED","MANIFEST_NOT_FOUND","CHUNK_SET_INCOMPLETE","CHUNK_NOT_FOUND","UNEXPECTED_CHUNK","DOCUMENT_DIGEST_MISMATCH","CHUNK_DIGEST_MISMATCH","EMBEDDING_NOT_FOUND","EMBEDDING_LINEAGE_MISMATCH","VECTOR_DIGEST_MISMATCH","INDEX_LINEAGE_MISMATCH","CORPUS_MISMATCH","TRUST_MISMATCH","DOCUMENT_TYPE_MISMATCH","METADATA_FILTER_MISMATCH","SOURCE_SPAN_INVALID","DUPLICATE_CANDIDATE","PER_DOCUMENT_LIMIT","CONTEXT_BUDGET_EXCLUDED"] as const;
+export const KNOWLEDGE_RETRIEVAL_EXCLUSION_CODES = ["PROVIDER_ORDINAL_INVALID","PROJECTION_NOT_FOUND","PROJECTION_IDENTITY_MISMATCH","INDEX_IDENTITY_MISMATCH","NAMESPACE_MISMATCH","DOCUMENT_LINEAGE_MISMATCH","CHUNK_SET_LINEAGE_MISMATCH","CHUNK_LINEAGE_MISMATCH","SEARCHABLE_METADATA_MISMATCH","DOCUMENT_NOT_ELIGIBLE","DOCUMENT_NOT_FOUND","DOCUMENT_OUTSIDE_EFFECTIVE_TIME","DOCUMENT_SUPERSEDED","MANIFEST_NOT_FOUND","CHUNK_SET_INCOMPLETE","CHUNK_NOT_FOUND","UNEXPECTED_CHUNK","DOCUMENT_DIGEST_MISMATCH","CHUNK_DIGEST_MISMATCH","EMBEDDING_NOT_FOUND","EMBEDDING_LINEAGE_MISMATCH","VECTOR_DIGEST_MISMATCH","INDEX_LINEAGE_MISMATCH","CORPUS_MISMATCH","TRUST_MISMATCH","DOCUMENT_TYPE_MISMATCH","METADATA_FILTER_MISMATCH","SOURCE_SPAN_INVALID","DUPLICATE_CANDIDATE","PER_DOCUMENT_LIMIT","CONTEXT_BUDGET_EXCLUDED"] as const;
 export type KnowledgeRetrievalExclusionCode = typeof KNOWLEDGE_RETRIEVAL_EXCLUSION_CODES[number];
 export type KnowledgeRetrievalExclusion = Readonly<{ code: KnowledgeRetrievalExclusionCode; documentIdentity: KnowledgeDocumentIdentity; chunkIdentity?: KnowledgeChunkIdentity; sourceTypes: readonly ("VECTOR" | "LEXICAL")[] }>;
 export type ValidatedKnowledgeRetrievalCandidate = Readonly<{ candidate: KnowledgeRetrievalCandidate; document: import("./knowledge-document.types.js").PersistedKnowledgeDocument; chunk: import("./knowledge-chunk.types.js").PersistedKnowledgeChunk; verifiedChunks: readonly import("./knowledge-chunk.types.js").PersistedKnowledgeChunk[]; chunkSetIdentity: import("./knowledge-chunk-set-manifest.types.js").KnowledgeChunkSetManifestIdentity }>;
