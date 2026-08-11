@@ -14,6 +14,8 @@ import {
   AiRuntimeCallerCancelledError,
   AiRuntimeDeadlineExceededError,
 } from "../types/ai-runtime-deadline.types.js";
+import { AiProviderCircuitAttributionService } from "./ai-provider-circuit-attribution.service.js";
+import { AI_PROVIDER_CIRCUIT_POLICY } from "../registries/ai-runtime-execution-policy.registry.js";
 export class TemplateDraftRagRuntimeService {
   public constructor(
     private readonly bindingService: TemplateDraftRagRuntimeBindingService,
@@ -176,6 +178,11 @@ export class TemplateDraftRagRuntimeService {
         input.request,
         undefined,
         deadline,
+        new AiProviderCircuitAttributionService(
+          this.circuits,
+          AI_PROVIDER_CIRCUIT_POLICY,
+          this.now,
+        ),
       );
       const comparison = this.comparisonService.compare(
         input.authoritativeResult,

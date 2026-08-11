@@ -23,6 +23,7 @@ Feature-flag state:
 Feature-flag scaffolding exists in Phase 0D. All approved flags default OFF and no flag is connected to scoring, LLM tracing, provider, API, WebSocket, trade, or frontend behavior yet.
 
 Known constraints:
+
 - Legacy scoring remains authoritative during the migration.
 - New architecture must sit beside legacy scoring until a future ADR changes authority.
 - Existing public scoring output fields remain backward compatible.
@@ -96,11 +97,13 @@ Production code changed:
 No
 
 Active LLM workflows:
+
 - Analyzer alert report.
 - Copilot chat.
 - Post-trade review.
 
 Artifacts:
+
 - `docs/ai/LLM_CALL_INVENTORY.md`
 - `docs/design/LLM_TRACE_DESIGN.md`
 - `docs/adr/ADR-006-shared-provider-independent-llm-trace-contract.md`
@@ -126,14 +129,17 @@ Production code changed:
 Startup validation only. No product behavior is connected to a flag.
 
 Files added:
+
 - `yujidi-server/src/config/feature-flags.ts`
 - `yujidi-server/tests/unit/config/feature-flags.test.ts`
 
 Files modified:
+
 - `yujidi-server/src/server.ts`
 - `PHASE_LOG.md`
 
 Approved flags:
+
 - `EVIDENCE_PIPELINE_ENABLED` default OFF
 - `GENERIC_EVALUATOR_ENABLED` default OFF
 - `SOURCE_RESOLVER_FALLBACK_ENABLED` default OFF
@@ -161,6 +167,7 @@ Objective:
 Implement the approved provider-independent LLM trace contract, append-oriented model, and best-effort persistence service.
 
 Files added:
+
 - `yujidi-server/src/types/llm-trace.types.ts`
 - `yujidi-server/src/models/llm-trace.model.ts`
 - `yujidi-server/src/services/llm-trace.service.ts`
@@ -182,6 +189,7 @@ Scope:
 Post-trade review only.
 
 Files modified:
+
 - `yujidi-server/src/services/ai-trade-review.service.ts`
 - `yujidi-server/tests/unit/services/ai-trade-review.service.test.ts`
 - `PHASE_LOG.md`
@@ -244,6 +252,7 @@ Objective:
 Add the provider-independent Evidence persistence foundation beside legacy scoring without making it authoritative.
 
 Artifacts:
+
 - `docs/adr/ADR-007-append-only-evidence-foundation.md`
 - `yujidi-server/src/types/evidence.types.ts`
 - `yujidi-server/src/models/evidence.model.ts`
@@ -278,6 +287,7 @@ Objective:
 Add a provider-independent candidate, normalization, canonical deduplication, and ingestion boundary while preserving append-only Evidence.
 
 Artifacts:
+
 - `docs/adr/ADR-008-provider-independent-evidence-ingestion.md`
 - `yujidi-server/src/types/evidence-ingestion.types.ts`
 - `yujidi-server/src/ports/evidence-provider-adapter.port.ts`
@@ -316,6 +326,7 @@ Objective:
 Interpret supplied append-only Evidence history at a caller-provided evaluation time without persisting derived lifecycle state.
 
 Artifacts:
+
 - `docs/adr/ADR-009-evidence-lifecycle-resolution.md`
 - `yujidi-server/src/types/evidence-lifecycle.types.ts`
 - `yujidi-server/src/services/evidence-lifecycle-resolver.service.ts`
@@ -351,6 +362,7 @@ Objective:
 Load bounded relevant Evidence history and apply the Phase 1C lifecycle resolver through an internal read-only application boundary.
 
 Artifacts:
+
 - `docs/adr/ADR-010-evidence-read-query-boundary.md`
 - `yujidi-server/src/types/evidence-read.types.ts`
 - `yujidi-server/src/services/evidence-read.service.ts`
@@ -390,6 +402,7 @@ Objective:
 Execute the frozen Phase 1B adapter contract through a bounded, deterministic, sequential ingestion harness without adding a concrete provider.
 
 Artifacts:
+
 - `docs/adr/ADR-011-generic-evidence-provider-runner.md`
 - `yujidi-server/src/types/evidence-provider-run.types.ts`
 - `yujidi-server/src/services/evidence-provider-runner.service.ts`
@@ -431,6 +444,7 @@ Objective:
 Translate bounded Binance public spot-price responses into normalized Evidence candidates through the frozen pull-adapter contract.
 
 Artifacts:
+
 - `docs/adr/ADR-012-binance-public-price-evidence-adapter.md`
 - injected Binance public-market client port and Axios implementation
 - injected clock port
@@ -490,6 +504,7 @@ Objective:
 Record privacy-safe operational summaries for explicitly executed Evidence provider runs and derive deterministic per-adapter health.
 
 Artifacts:
+
 - `docs/adr/ADR-013-evidence-shadow-observability.md`
 - `yujidi-server/src/types/evidence-observability.types.ts`
 - `yujidi-server/src/services/evidence-observability.service.ts`
@@ -525,6 +540,7 @@ Objective:
 Coordinate explicitly supplied adapters through the generic runner and operational observability without creating an automatic runtime path.
 
 Artifacts:
+
 - `docs/adr/ADR-014-explicit-evidence-shadow-execution.md`
 - `yujidi-server/src/types/evidence-shadow-execution.types.ts`
 - `yujidi-server/src/services/evidence-shadow-execution.service.ts`
@@ -563,6 +579,7 @@ Baseline and enforcement:
 Six verified legacy cycles are recorded in `docs/architecture/known-circular-dependencies.json`. Cycle paths are normalized across separators, rotation, and reverse orientation. Malformed or duplicate baseline entries fail. New or changed cycles fail. Resolved baseline entries are reported as removable debt. No production directory is broadly excluded.
 
 Legacy remediation:
+
 - `LEGACY-CYCLE-001`: extract live-tick and cached-trade projection contracts into a neutral type module.
 - `LEGACY-CYCLE-002`: relocate the trade-event record contract and inject a delivery port.
 - `LEGACY-CYCLE-003`: inject narrow delivery and live-monitoring ports at composition.
@@ -585,6 +602,7 @@ Objective:
 Define authoritative, deterministic, immutable factor metadata without connecting it to Evidence reads, source resolution, evaluators, or scoring.
 
 Artifacts:
+
 - `docs/adr/ADR-015-factor-registry-foundation.md`
 - `yujidi-server/src/types/factor-registry.types.ts`
 - `yujidi-server/src/registries/default-factor-definitions.ts`
@@ -618,6 +636,7 @@ Objective:
 Validate one caller-supplied Evidence observation against immutable factor metadata, its inclusive validity interval, and freshness at an explicit evaluation time.
 
 Artifacts:
+
 - `docs/adr/ADR-016-evidence-factor-compatibility-freshness.md`
 - `yujidi-server/src/types/evidence-factor-compatibility.types.ts`
 - `yujidi-server/src/services/evidence-factor-compatibility.service.ts`
@@ -650,6 +669,7 @@ Objective:
 Select one authoritative observation deterministically from a caller-supplied, bounded, lifecycle-active set without repository reads, lifecycle resolution, evaluator execution, or scoring.
 
 Artifacts:
+
 - `docs/adr/ADR-017-deterministic-evidence-source-resolution.md`
 - `yujidi-server/src/types/evidence-source-resolution.types.ts`
 - `yujidi-server/src/registries/default-evidence-source-authority.ts`
@@ -684,6 +704,7 @@ Objective:
 Assemble one evaluator-ready factor input by orchestrating bounded lifecycle-aware Evidence reads and Phase 2C source selection without independently selecting Evidence, executing an evaluator, or calculating a score.
 
 Artifacts:
+
 - `docs/adr/ADR-018-deterministic-factor-input-assembly.md`
 - `yujidi-server/src/types/factor-input-assembly.types.ts`
 - `yujidi-server/src/services/factor-input-assembly.service.ts`
@@ -719,6 +740,7 @@ Objective:
 Define the stable synchronous contract, result taxonomy, and validation boundary that future deterministic factor evaluators must follow without implementing production factor logic or score aggregation.
 
 Artifacts:
+
 - `docs/adr/ADR-019-deterministic-factor-evaluator-contract.md`
 - `yujidi-server/src/types/factor-evaluator.types.ts`
 - `yujidi-server/src/ports/deterministic-factor-evaluator.port.ts`
@@ -755,6 +777,7 @@ Objective:
 Register and resolve Phase 2E-valid deterministic evaluator implementations through immutable code-defined exact lookup without executing evaluators or selecting one automatically.
 
 Artifacts:
+
 - `docs/adr/ADR-020-deterministic-factor-evaluator-registry.md`
 - `yujidi-server/src/types/factor-evaluator-registry.types.ts`
 - `yujidi-server/src/registries/deterministic-factor-evaluator.registry.ts`
@@ -791,6 +814,7 @@ Objective:
 Execute exactly one caller-selected Phase 2E evaluator against one caller-supplied assembled factor input through a deterministic, sanitized, fail-closed boundary.
 
 Artifacts:
+
 - `docs/adr/ADR-021-explicit-deterministic-evaluator-execution-boundary.md`
 - `yujidi-server/src/types/factor-evaluator-execution.types.ts`
 - `yujidi-server/src/services/explicit-factor-evaluator-execution.service.ts`
@@ -826,6 +850,7 @@ Objective:
 Validate one caller-supplied, single-factor multi-evaluator plan as a bounded, deterministic, immutable contract without executing evaluators or introducing aggregation.
 
 Artifacts:
+
 - `docs/adr/ADR-022-explicit-multi-evaluator-execution-plan-contract.md`
 - `yujidi-server/src/types/factor-evaluator-execution-plan.types.ts`
 - `yujidi-server/src/services/factor-evaluator-execution-plan.service.ts`
@@ -864,6 +889,7 @@ Objective:
 Run one already validated Phase 2H plan against one already assembled Phase 2D input through ordered Phase 2G delegation and return a safe categorical execution report without aggregating contributions.
 
 Artifacts:
+
 - `docs/adr/ADR-023-bounded-multi-evaluator-execution-runner.md`
 - `yujidi-server/src/types/factor-evaluator-plan-runner.types.ts`
 - `yujidi-server/src/services/factor-evaluator-plan-runner.service.ts`
@@ -902,6 +928,7 @@ Objective:
 Validate an immutable, versioned contribution-aggregation policy for one factor and one exact validated execution plan without reading a report or performing aggregation.
 
 Artifacts:
+
 - `docs/adr/ADR-024-deterministic-contribution-aggregation-contract.md`
 - `yujidi-server/src/types/factor-contribution-aggregation.types.ts`
 - `yujidi-server/src/services/factor-contribution-aggregation-policy.service.ts`
@@ -940,6 +967,7 @@ Objective:
 Aggregate eligible contributions from one successful Phase 2I report under one exact validated Phase 2J policy into a finite, bounded raw weighted contribution without normalization or decisions.
 
 Artifacts:
+
 - `docs/adr/ADR-025-deterministic-contribution-aggregation-execution.md`
 - `yujidi-server/src/types/factor-contribution-aggregation-execution.types.ts`
 - `yujidi-server/src/services/factor-contribution-aggregation-execution.service.ts`
@@ -978,6 +1006,7 @@ Objective:
 Define an immutable normalization-policy contract for a future deterministic mapping of one bounded raw aggregate into an explicit normalized numeric range without executing normalization or producing decisions.
 
 Artifacts:
+
 - `docs/adr/ADR-026-deterministic-raw-aggregate-normalization-contract.md`
 - `yujidi-server/src/types/factor-aggregate-normalization.types.ts`
 - `yujidi-server/src/services/factor-aggregate-normalization-policy.service.ts`
@@ -1099,6 +1128,7 @@ Architecture decision:
 ADR-031 accepted.
 
 Contracts:
+
 - Provider definition and stable provider identity are frozen.
 - Provider type, descriptive authority metadata, and descriptive cost metadata are frozen.
 - Licensing, production-use suitability, proxy approval, cost, and other commercial decisions remain human-owned.
@@ -1131,6 +1161,7 @@ Architecture decision:
 ADR-032 accepted.
 
 Contracts:
+
 - Frozen `HEALTHY`, `DEGRADED`, `UNAVAILABLE`, and `UNKNOWN` provider-health states were added.
 - One bounded caller-supplied aggregate telemetry contract records explicit window dates, attempt counts, consecutive failures, average/maximum latency, latest success/failure, and runtime operator disablement.
 - One explicit caller-supplied threshold policy controls telemetry freshness, error rate, consecutive failures, average latency, and required recent success.
@@ -1163,6 +1194,7 @@ Architecture decision:
 ADR-033 accepted.
 
 Contracts:
+
 - The provider-resolution policy contract and frozen typed resolution statuses were added.
 - Frozen warning codes define future Phase 3D output requirements without generating runtime warnings.
 - Each policy has an explicit uppercase identity, positive version, and one canonical factor.
@@ -1196,6 +1228,7 @@ Architecture decision:
 ADR-034 accepted.
 
 Contracts and execution:
+
 - One synchronous deterministic provider-resolution executor was added.
 - Catalog, exact binding, policy factor, bound-provider, and health-assessment lineage are defensively validated without calling earlier validation services.
 - Exactly one health assessment is required per bound provider; duplicate, missing, and unexpected assessments fail closed.
@@ -1228,6 +1261,7 @@ Architecture decision:
 ADR-035 accepted.
 
 Composition and proof:
+
 - Explicit immutable provider-runner registration and exact provider-key lookup were added with an empty default production registry.
 - Provider key, runner identity, adapter identity, and Evidence provenance remain separate explicit namespaces; no identity is inferred.
 - Only the already-selected Phase 3D provider can execute, exactly once.
@@ -1272,6 +1306,7 @@ Architecture decision:
 ADR-036 accepted.
 
 Reconciliation:
+
 - The original foundation roadmap was reconciled with the actual Phase 1–3 implementation and explicit remaining backlog.
 - The existing template-driven ScoreCheck flow, template model, versioning, resource snapshots, evaluator dispatch, persistence, and APIs were documented from repository evidence.
 - Templates remain the user-facing starting point and declare what must be monitored.
@@ -1308,6 +1343,7 @@ Architecture decision:
 ADR-037 accepted.
 
 Contracts:
+
 - The current production ScoreCheck controller, request, template/Symbol/geometry validation, context, legacy scoring, persistence, audit, snapshot, update/delete, and trade-setup conversion paths were inspected.
 - `LEGACY`, `SHADOW`, and `COMPILED` execution modes were frozen without implementation or silent mode fallback.
 - One explicit fixed `asOf`, immutable template/rulebook/instrument/trade lineage, and user-scoped idempotency direction were frozen.
@@ -1342,6 +1378,7 @@ Architecture decision:
 ADR-038 accepted.
 
 Contracts and proof:
+
 - Canonical `ASSET` subject identity was added without changing existing subject meanings.
 - `ASSET/BTC` denotes the underlying Bitcoin asset; `INSTRUMENT/BTCUSDT` remains a tradable instrument.
 - Roadmap label `BTC_ETF_NET_FLOW` was reconciled to canonical factor `CRYPTO.ETF_NET_FLOW` plus subject `ASSET/BTC`.
@@ -1370,6 +1407,7 @@ Architecture decision:
 ADR-039 accepted.
 
 Contracts:
+
 - Six exact immutable relationship types and deterministic support classifications are frozen.
 - DIRECT and INVERSE are executable single-factor directional arithmetic.
 - CONDITIONAL requires a caller-supplied compiled condition binding and remains validation-only.
@@ -1393,6 +1431,7 @@ Architecture decision:
 ADR-040 accepted.
 
 Implementation:
+
 - `GENERIC_RELATIONSHIP_FACTOR_EVALUATOR` v1/configuration v1 reuses the Phase 2 evaluator contract.
 - DIRECT and INVERSE execute five deterministic ETF-flow bands with bounded contributions.
 - CONDITIONAL remains binding-required; confirmation, risk, and veto remain explicitly deferred without directional points.
@@ -1413,6 +1452,7 @@ Architecture decision:
 ADR-041 accepted.
 
 Implementation:
+
 - Exact `GENERIC_FACTOR:<factor-key>` parsing and closed-registry eligibility checks are frozen.
 - A separate adapter deterministically projects bounded DIRECT/INVERSE contributions to legacy 0–100 results.
 - Missing Evidence and conditional/confirmation/risk/veto semantics fail typed and are never flattened to score zero.
@@ -1434,6 +1474,7 @@ Architecture decision:
 ADR-042 accepted; Outcome B formal deferral.
 
 Decision:
+
 - No MCP or dedicated evaluation-harness infrastructure currently exists.
 - Read-only contracts are frozen for factor definition, templates, ScoreChecks, and trade journals, with factor definition as the minimum first tool.
 - Authentication, authorization, redaction, bounding, audit, transport, and production-exposure prerequisites are explicit.
@@ -1449,6 +1490,7 @@ Next:
 Phase 4 — Compiled Rulebooks
 
 Summary:
+
 - `CRYPTO.ETF_NET_FLOW` plus `ASSET/BTC` is registered and proven with mocked canonical Evidence.
 - Relationship semantics are frozen; DIRECT/INVERSE evaluation and all-six-semantic golden proofs exist.
 - Isolated legacy generic-factor compatibility and a private DRAFT template reference are proven.
@@ -1467,6 +1509,7 @@ Architecture decision:
 ADR-043 accepted.
 
 Contracts:
+
 - The immutable compiled-rulebook purpose, identity, version, and exact source-template lineage are frozen.
 - Caller-supplied compiler identity/version, timestamp, and lowercase SHA-256 compilation-input hash shape are frozen.
 - Stable binding IDs, contiguous zero-based order, closed factor keys with real factor-definition versions, and the FIXED/TRADED_INSTRUMENT/UNDERLYING_ASSET subject vocabulary are frozen.
@@ -1490,6 +1533,7 @@ Architecture decision:
 ADR-044 accepted.
 
 Contracts:
+
 - Evaluator-configuration and provider-binding identity/version are frozen as immutable historical lineage.
 - Closed constructor-built authorities provide exact lookup, greatest-version convenience lookup, and deterministic ascending version listing.
 - Exact lookup is authoritative; latest lookup never substitutes for a compiled historical reference.
@@ -1515,6 +1559,7 @@ Architecture decision:
 ADR-045 accepted. Remaining planned Phase 4 ADRs advance to ADR-046 through ADR-050.
 
 Contracts:
+
 - Exact historical authorities now exist for factor definitions, evaluator declarations, provider-resolution policies, aggregation policies, normalization policies, and decision-band policies.
 - All authorities provide authoritative exact lookup, latest-version convenience only, and deterministic ascending historical version lists.
 - Historical versions and immutable compile eligibility are retained; duplicate identity/version registration fails even for deep-equal content.
@@ -1537,6 +1582,7 @@ Architecture decision:
 ADR-046 accepted.
 
 Contracts:
+
 - Mapping identity/version and authoritative exact historical lookup are frozen; latest remains convenience only.
 - Reusable mappings select candidates by normalized evaluator key, while exact template occurrences use a later snapshot-bound section/evaluator coordinate.
 - Duplicate source occurrences are independent; materially different eligible mapping definitions produce explicit AMBIGUOUS lookup rather than first-match selection.
@@ -1562,6 +1608,7 @@ Architecture decision:
 ADR-047 accepted.
 
 Contracts:
+
 - An exact caller-supplied detached template snapshot and material canonical projection are frozen.
 - Stable canonical serialization and SHA-256 snapshot hashing identify in-place draft authoring state.
 - Enabled sections/evaluators traverse deterministically into exact Phase 4C source-rule coordinates; disabled entries remain hash material only.
@@ -1589,6 +1636,7 @@ Architecture decision:
 ADR-043 additive Phase 4D1 amendment accepted.
 
 Contracts:
+
 - The compiled optional-behavior gap is closed with the canonical PARTIAL/OMIT vocabulary.
 - Every compiled binding contains optionalBehavior explicitly.
 - MANDATORY requires null; OPTIONAL requires PARTIAL or OMIT.
@@ -1612,11 +1660,12 @@ Architecture decision:
 ADR-049 accepted.
 
 Contracts:
+
 - The compiler request explicitly carries caller-owned rulebook identity/version, compiler identity/version, compiledAt, and a Phase 4D specification.
 - Canonical logical compilation projection and lowercase SHA-256 hashing are frozen.
 - Compiler identity/version, template provenance, mapping/coordinate provenance, all compiled semantics, optional behavior, effective weight, and binding order affect the hash.
 - compiledAt and rulebook identity/version do not affect the logical hash.
-- Binding IDs use BINDING_ plus the full uppercase SHA-256 of exact snapshot/coordinate/mapping lineage; collisions fail.
+- Binding IDs use BINDING\_ plus the full uppercase SHA-256 of exact snapshot/coordinate/mapping lineage; collisions fail.
 - Phase 4D source traversal order becomes contiguous compiled order without sorting.
 - MANDATORY/null, OPTIONAL/PARTIAL, and OPTIONAL/OMIT are preserved exactly.
 - Effective weight and every exact provider/policy lineage field are copied without inference.
@@ -1638,6 +1687,7 @@ Architecture decision:
 ADR-050 accepted.
 
 Contracts:
+
 - A strict compiled-rulebook persistence schema and append-only repository are added.
 - rulebookId + rulebookVersion is authoritative and uniquely indexed; template identity/version remains non-unique.
 - Defensive Phase 4A/4D1 validation protects inserts and immutable domain projection protects reads.
@@ -1664,6 +1714,7 @@ Architecture decision:
 ADR-051 accepted. Phase 4G was blocked by its runtime semantic audit.
 
 Contracts:
+
 - The compiled binding input-state and disposition vocabularies are frozen.
 - MANDATORY missing/invalid blocks; OPTIONAL/PARTIAL retains denominator weight; OPTIONAL/OMIT removes denominator weight.
 - No missing binding receives a synthetic evaluator score.
@@ -1688,6 +1739,7 @@ Architecture decision:
 ADR-052 accepted.
 
 Contracts:
+
 - One explicit execution request carries exact rulebook identity, caller-controlled `asOf`, nullable dynamic-subject context, and a bounded dense observation collection.
 - FIXED, TRADED_INSTRUMENT, and UNDERLYING_ASSET resolve without inference; irrelevant subject context is ignored.
 - Observation matching uses exact factor, subject, provider-binding, and resolution-policy lineage and rejects missing, duplicate, or ambiguous matches without ordering selection.
@@ -1710,6 +1762,7 @@ Architecture decision:
 ADR-053 accepted.
 
 Contracts:
+
 - A parallel Evidence-independent compiled evaluator port consumes `CompiledFactorInput`; it never manufactures `AssembledFactorInput` or Evidence provenance.
 - Legacy and compiled generic evaluators must share one pure DIRECT/INVERSE calculation core so threshold, contribution, outcome, reason, and diagnostic behavior cannot fork.
 - Evaluator declaration, immutable configuration, and executable implementation resolve through exact identity/version lookups only.
@@ -1736,6 +1789,7 @@ Architecture decision:
 ADR-054 accepted.
 
 Contracts:
+
 - Execution accepts an already loaded validated rulebook; exact repository loading, when needed, is caller-owned and occurs before the pure executor.
 - Request and rulebook identities must match exactly, and bindings traverse once in stored compiled order without sorting or parallelism.
 - Domain binding outcomes always continue for complete traces; only an unrepresentable preparation/execution invariant failure stops traversal.
@@ -1760,6 +1814,7 @@ Architecture decision:
 ADR-055 accepted. Phase 4G4-A repository audit complete.
 
 Contracts:
+
 - Legacy scoring remains authoritative; compiled execution is a read-only shadow and cannot alter score, permission, status, confidence, diagnostics, persistence, errors, or public responses.
 - An explicit immutable authority must map one exact source-template identity to one exact compiled-rulebook identity; latest, most-recent, highest-version, and timestamp inference are forbidden.
 - Initial eligibility is restricted to explicitly bound system-template versions; user-template rollout requires a later approval.
@@ -1781,6 +1836,7 @@ Next:
 Phase 4G4 — Exact source-template-to-compiled-rulebook execution-binding authority
 
 Contracts:
+
 - One explicit immutable policy ID/version governs every comparison; no discovery, environment selection, latest lookup, or timestamp selection exists.
 - Numeric parity compares the legacy score and compiled normalized score only when enabled and explicitly eligible, after one configured canonical decimal projection and exact equality.
 - Original and canonical numeric values are preserved; no epsilon, tolerance, fuzzy equality, scale inference, or forced-value inference is permitted.
@@ -1801,6 +1857,7 @@ Next:
 Publication-time eligibility architecture checkpoint
 
 Contracts:
+
 - A dedicated persisted append-only authority maps one exact system-template identity to one exact compiled-rulebook identity.
 - Exact template identity uses `templateId`, `templateVersion`, and the existing `SYSTEM` scope; user-template eligibility is not implemented.
 - Candidate insertion loads only the exact rulebook ID/version and validates its exact source-template lineage before persistence.
@@ -1823,6 +1880,7 @@ Architecture decision:
 ADR-056 accepted.
 
 Contracts:
+
 - Publication eligibility is evaluated in canonical Evidence assembly before lifecycle resolution, provider lineage validation, freshness, and observation projection.
 - Initial historical execution uses system-known replay: both `provenance.sourcePublishedAt` and persisted Evidence `createdAt` must be at or before request `asOf`.
 - Missing or invalid publication time fails closed; no exact provider timestamp policy currently authorizes `observedAt` substitution.
@@ -1847,6 +1905,7 @@ Architecture decision:
 ADR-057 accepted.
 
 Track A:
+
 - A1 — Covered by ADR-055
 - A2 — COMPLETE
 - A3 — ARCHITECTURE_ACCEPTED
@@ -1856,6 +1915,7 @@ Track A:
 - A6 — PENDING
 
 Contracts:
+
 - Phase A4's provider-provenance blocker is recorded: canonical Evidence does not prove historical provider binding, policy, or resolution status.
 - A separate immutable `EvidenceProviderResolutionAttestation` authority is selected rather than embedding resolution state into Evidence.
 - Phase 3E is the sole initial emission origin and must use the exact Phase 3D result that caused provider execution.
@@ -1879,6 +1939,7 @@ Next:
 Phase A3.6-B — Phase 3E Attestation Emission and Provider Identity Mapping
 
 Contracts:
+
 - A dedicated append-only persisted `EvidenceProviderResolutionAttestation` authority records one exact historical provider-resolution decision for one exact Evidence ID.
 - Exact reads use Evidence ID only; unique Evidence-ID and attestation identity/version indexes enforce zero-or-one correlation and immutable identity.
 - The service validates exact Evidence existence before insertion without changing Evidence creation, ingestion, model, or read behavior.
@@ -1900,6 +1961,7 @@ Next:
 Phase A4 — Canonical Evidence to Compiled Shadow Observation Assembly
 
 Contracts:
+
 - Provider runner registration now maps exact provider key and runner/adapter identity to an explicit expected Evidence provenance provider; the namespaces remain separate and immutable.
 - Phase 3E requires the exact versioned provider-binding definition, validates its ordered provider lineage against the original Phase 3D result, and preserves exact resolution-policy identity/version.
 - Caller-supplied `resolvedAt` and an injected deterministic attestation-identity factory prevent hidden clock, random identity, latest-version, or default-version behavior.
@@ -1920,6 +1982,7 @@ Next:
 Phase A5 — Standalone Compiled Shadow Orchestrator
 
 Contracts:
+
 - The persisted `EvidenceReadRecord` is distinct from caller creation input and exposes persistence-controlled `createdAt`; repository history reads detach records and clone Dates.
 - ADR-056 system-known replay requires source publication, Evidence ingestion, and attestation persistence timestamps at or before the explicit request `asOf`, with equality accepted and no timestamp substitution.
 - Historically unavailable observations, revocations, and superseding records are removed before the existing lifecycle resolver runs.
@@ -1941,6 +2004,7 @@ Next:
 Phase A6 — System-Template Replay and Legacy/Compiled Parity Proof
 
 Contracts:
+
 - One caller-supplied immutable request carries exact system-template identity, explicit `asOf`, canonical subject context, deterministic shadow identity, and optional all-or-none legacy parity inputs.
 - Exact execution-binding and exact compiled-rulebook reads occur once and validate the complete request/binding/rulebook/compiler lineage chain without latest, most-recent, version inference, or compilation.
 - Canonical Evidence histories are read for each distinct compiled factor/subject tuple, incomplete histories fail closed, and exact attestations are read once for every reached Evidence ID without provider execution or fallback.
@@ -1950,6 +2014,7 @@ Contracts:
 - Completed, skipped, and failed outcomes preserve all reached immutable diagnostics and lineage, clone Dates, expose no raw exceptions, and perform no writes or production side effects.
 
 Verification:
+
 - Focused A5 tests: 15 passed.
 - Protected A2/A4/Phase 4, Evidence/attestation/provider-resolution, ScoreCheck, and legacy scoring regressions: 355 passed.
 - Full backend: 931 passed.
@@ -1967,6 +2032,7 @@ Next:
 Phase A5.5-B2 — BTC ETF-Flow System Template and Immutable Compilation Authorities
 
 Contracts:
+
 - `ScoringEngineService` recognizes only the exact existing `GENERIC_FACTOR:<registered-factor-key>` syntax and preserves the existing evaluator registry path for every non-generic or malformed key.
 - `GENERIC_EVALUATOR_ENABLED` remains default OFF; while disabled, generic keys preserve the prior unknown-evaluator result and neither generic execution nor compatibility dispatch runs.
 - Enabled generic evaluation consumes only an explicitly supplied caller-resolved `AssembledFactorInput` and relationship type through an injected deterministic executor; it performs no Evidence, provider, persistence, compiled-runtime, or snapshot read.
@@ -1975,6 +2041,7 @@ Contracts:
 - Existing global reward-risk forced rejection remains after evaluator dispatch and all seven existing system-template results remain unchanged.
 
 Verification:
+
 - Focused generic/scoring characterization: 46 passed.
 - Protected scoring, ScoreCheck, Evidence/provider-resolution, and compiled-runtime regression selection: 370 passed.
 - Full backend: 941 passed.
@@ -1995,6 +2062,7 @@ Architecture decision:
 ADR-058 accepted.
 
 Track A:
+
 - A1–A5 — COMPLETE
 - A5.5-B1 — COMPLETE
 - A5.5-B1.5 — ARCHITECTURE_ACCEPTED
@@ -2003,6 +2071,7 @@ Track A:
 - A6 — BLOCKED
 
 Contracts:
+
 - The B2 blockers are confirmed: current system registration grants public listing, ScoreCheck selection, and duplication, while compiled mappings require exact provider binding and resolution-policy lineage.
 - One system-template identity registry gains independent immutable `listable`, `scoreCheckSelectable`, `duplicable`, and `compileEligible` capabilities; existing templates preserve their current public behavior.
 - The future ETF template may be a real SYSTEM identity while remaining non-listable, non-selectable, non-duplicable, and compile eligible.
@@ -2025,6 +2094,7 @@ Next:
 Phase A5.5-B3 — Test-Owned ETF Evidence, Exact Execution Binding, and Compiled Runtime Proof
 
 Contracts:
+
 - System-template registrations now carry independent immutable listing, ScoreCheck-selection, duplication, and compilation capabilities.
 - All seven existing public system templates retain listing, ScoreCheck-selection, and duplication behavior.
 - `CRYPTO_BTC_ETF_FLOW_DAILY_V1` is an internal SYSTEM v1 template that is hidden, ScoreCheck-ineligible, non-duplicable, and compile eligible.
@@ -2040,6 +2110,7 @@ Contracts:
 - `GENERIC_EVALUATOR_ENABLED` and `COMPILED_RULEBOOK_EXECUTION` remain default OFF. Legacy scoring remains authoritative.
 
 Verification:
+
 - Focused B2 capability and compilation proof: 5 passed.
 - Focused template/provider/generic regression selection: 53 passed.
 - Registry regressions: 93 passed.
@@ -2058,6 +2129,7 @@ Next:
 Phase A5.5-B3 — Test-Owned ETF Evidence, Exact Execution Binding, and Compiled Runtime Proof
 
 Contracts:
+
 - Canonical `evidenceProvenanceProvider` now belongs to the immutable provider-authority registration alongside provider identity and independent compile/live/replay capabilities.
 - `YUDIJI_CHARACTERIZATION_BTC_ETF_FLOW` maps exactly to `yudiji-internal-btc-etf-flow-characterization` without acquiring a runner or live-execution eligibility.
 - A4 observation assembly resolves exact provider authority directly and requires `replayFixtureEligible === true` before accepting replay Evidence.
@@ -2068,6 +2140,7 @@ Contracts:
 - No B3 Evidence, attestation, execution-binding, or runtime fixture was created in this phase.
 
 Verification:
+
 - Focused provider-authority, B2, A4, Phase 3, runner, and compiler regressions: 71 passed.
 - Typecheck passed before full regression execution.
 - Full backend, circular-dependency, and final diff audits recorded at phase handoff.
@@ -2084,6 +2157,7 @@ Next:
 Phase A6 — System-Template Legacy/Compiled Replay and Parity Proof
 
 Contracts:
+
 - The real internal `CRYPTO_BTC_ETF_FLOW_DAILY_V1` SYSTEM template and complete B2 factor, evaluator, provider, subject, and policy authority chain are used unchanged.
 - The deterministic compiler produces the exact `CRYPTO_BTC_ETF_FLOW_DAILY_RULEBOOK` v1 projection with stable compiler lineage, canonical hash, and repeatable deep equality.
 - One immutable test-owned `BTC_ETF_FLOW_TEST_EXECUTION_BINDING` v1 binds the exact source template identity to the exact compiled rulebook identity through read-only exact readers.
@@ -2095,6 +2169,7 @@ Contracts:
 - Repeated compilation, assembly, compiled execution, and A5 outcomes are deeply equal, detached, immutable, and leave test-owned inputs unchanged.
 
 Verification:
+
 - Focused B3 proof: 9 passed.
 - B2/B2.5, A2, A4, A5, and Phase 4 focused boundary selection: 63 passed.
 - Evidence, attestation, Phase 3 provider, system-template, legacy scoring, and ScoreCheck regression selection: 332 passed.
@@ -2116,6 +2191,7 @@ Track A milestone:
 COMPLETE
 
 Contracts:
+
 - The real internal `CRYPTO_BTC_ETF_FLOW_DAILY_V1` SYSTEM template executes through the authoritative `ScoringEngineService` using its exact hidden registration and a deterministic test-injected generic evaluator flag.
 - Explicit `AssembledFactorInput` values use `CRYPTO.ETF_NET_FLOW` v1, `ASSET/BTC`, DIRECT relationship, numeric USD, and fixed deterministic lineage; the legacy scorer executes the evaluator rather than receiving a compiled contribution.
 - The exact B3 compiled rulebook, execution binding, canonical Evidence, historical attestation, A4 assembler, A5 orchestrator, and Phase 4G3 executor are reused without alternate authority identities.
@@ -2129,6 +2205,7 @@ Contracts:
 - Thresholds and values remain characterization-only literal USD units and are not production calibrated.
 
 Verification:
+
 - Focused A6 replay proof: 10 passed.
 - Track A, Phase 3/4, Evidence/provider, legacy, and ScoreCheck regression selection: 328 passed.
 - Full backend clean rerun: 967 passed.
@@ -2146,6 +2223,7 @@ Next:
 Track B1-CD — Candidate Contracts, Deterministic Validator and Compact Registry Knowledge Projection
 
 Contracts:
+
 - ADR-059 freezes a dedicated versioned `TemplateDraftCandidate` as a transient, non-authoritative proposal rather than a template, compiled artifact, or executable input.
 - The first MVP persists no candidate, prompt body, model response, validation report, review report, or template. Existing metadata-only LLM tracing remains the only permitted operational record.
 - A compact immutable versioned registry projection supplies a closed vocabulary; exact runtime authorities are re-resolved by deterministic validation and remain authoritative.
@@ -2160,6 +2238,7 @@ Contracts:
 - All future drafting integration remains default OFF. Existing template, ScoreCheck, compiler, persistence, legacy scoring, and compiled runtime behavior remains unchanged.
 
 Optimized Track B plan:
+
 ```text
 B1-B  — COMPLETE after this phase
 B1-CD — Candidate contracts, validator and registry projection
@@ -2181,6 +2260,7 @@ Next:
 Track B1-EF — Structured Generation, Prompt Orchestration and Candidate Review Report
 
 Contracts:
+
 - Transient drafting-request, untrusted model-candidate, validated-candidate, validation-report, issue, requirement, policy, and registry-projection contracts are implemented without persistence models.
 - The original model proposal and detached validated result remain separate immutable values.
 - The compact registry projection contains exact versioned factors, relationship classifications, subject/value/unit constraints, bounded provider capability summaries, compilation-mapping summaries, missing-data policies, validation constraints, and sorted exact-member lineage.
@@ -2195,6 +2275,7 @@ Contracts:
 - Outputs are deterministically ordered, detached, deeply frozen, repeatable, and use no system clock or random identity.
 
 Verification:
+
 - Focused B1-CD projection and validator tests: 12 passed.
 - Factor, relationship/evaluator, provider, template, compilation, compiled-shadow, and Track A regression selection: 123 passed.
 - Full backend: 979 passed.
@@ -2213,6 +2294,7 @@ Next:
 Track B1-G — Template Lifecycle Correction and Safe USER/DRAFT Projection
 
 Contracts:
+
 - A dedicated provider-independent `TemplateDraftGenerationPort` accepts bounded provider-neutral prompt messages/context and returns typed structured output or provider failure without SDK coupling.
 - `TEMPLATE_DRAFT_REGISTRY_GROUNDED` v1 instructs the future model to use exact projected authorities, preserve every concept, ask for subject clarification, emit no accepted weights, and return no score, permission, decision, rulebook, or execution instruction.
 - The deterministic prompt context contains only the drafting request, requested concepts, compact B1-CD registry projection, schema identity, and disabled-weight/no-RAG constraints.
@@ -2227,6 +2309,7 @@ Contracts:
 - `RAG_TEMPLATE_DRAFTING_ENABLED` is the only existing declared drafting gate and remains default OFF. Its name conflates drafting generation with future RAG; no new flag was invented in this phase.
 
 Verification:
+
 - Focused B1-CD/B1-EF tests: 20 passed.
 - Existing AI, trace, feature, template, ScoreCheck, legacy scoring, compiled-shadow, and Track A regression selection: 180 passed.
 - Full backend: 987 passed.
@@ -2245,6 +2328,7 @@ Next:
 Track B2-A — Document Corpus, Chunk Authority and RAG Architecture
 
 Contracts:
+
 - USER template duplication now creates an owner-scoped, PRIVATE, editable DRAFT; the source SYSTEM template remains unchanged.
 - ScoreCheck exact resolution now accepts only ACTIVE templates. USER/DRAFT remains persistable, owner-visible, owner-editable, and non-executable.
 - Explicit acceptance is bound to the authenticated owner and exact generation request, candidate, schema, registry projection, and validation lineage.
@@ -2260,6 +2344,7 @@ Contracts:
 - Outputs are detached and deeply frozen, and Dates are cloned.
 
 Verification:
+
 - Focused B1-GH and lifecycle tests: 14 passed.
 - B1, template, ScoreCheck, legacy scoring, Phase 4, shadow, trace, and feature regression selection: 165 passed.
 - Full backend: 998 passed.
@@ -2279,6 +2364,7 @@ Next:
 Track B2-B — Immutable Document and Chunk Authority
 
 Contracts:
+
 - ADR-060 approves distinct `PLATFORM_KNOWLEDGE`, `MARKET_RESEARCH`, and `USER_PRIVATE_DOCUMENTS` corpora with no implicit cross-corpus, trust, ownership, or tenant search.
 - Platform knowledge explains product and template semantics; market research contains attributed claims. Neither can assume the other's authority, and exact registries and Evidence remain authoritative.
 - Documents are immutable append-only versions with exact digest, source, ownership, trust, effective-time, parser, and supersession lineage.
@@ -2294,6 +2380,7 @@ Contracts:
 - `RAG_TEMPLATE_DRAFTING_ENABLED` remains default OFF and unchanged. Registry-only B1 drafting must survive retrieval rollback.
 
 Progress:
+
 ```text
 Track A — COMPLETE
 Track B1 — COMPLETE
@@ -2320,6 +2407,7 @@ Next:
 Track B2-DE — Embedding, Vector Index, Bounded Retrieval and Citation Context
 
 Contracts:
+
 - Exact corpus, platform-document-type, trust, ownership, normalized-block, source-span, document, chunk, admission, and chunking contracts are implemented.
 - Initial admission accepts only `PLATFORM_KNOWLEDGE` owned by `SYSTEM` with `AUTHORITATIVE`, `APPROVED_GUIDANCE`, or `EXPLANATORY` trust. Market research, private documents, USER/ORGANIZATION ownership, and unverified trust fail closed.
 - The pure admission service validates bounded identity, source, parser and policy lineage, half-open effective time (`effectiveFrom < effectiveUntil`), direct supersession, dense normalized blocks, exact spans, tables, labels, references, and repository safety bounds without using system time.
@@ -2336,6 +2424,7 @@ Contracts:
 - Initial fixtures characterize `CRYPTO.ETF_NET_FLOW`, DIRECT/INVERSE guidance, ADR-060, approved and negative example semantics, and `FACTOR_NOT_REGISTERED` correction guidance without ingesting files.
 
 Progress:
+
 ```text
 Track A — COMPLETE
 Track B1 — COMPLETE
@@ -2348,6 +2437,7 @@ B2-FG — PENDING
 ```
 
 Verification:
+
 - Focused B2-BC admission, repository, registry, strategy, validation, orchestration, and citation-readiness tests: 17 passed.
 - B2-BC, canonicalization, B1, template, ScoreCheck, legacy, Track A, compiled-shadow, trace, and feature regression selection: 185 passed.
 - Full backend: 1,015 passed.
@@ -2370,6 +2460,7 @@ Next:
 Track B2-DE — Embedding, Vector Index, Bounded Retrieval and Citation Context
 
 Contracts:
+
 - The ordered `insertMany` partial-persistence blocker is confirmed: no established MongoDB transaction/session convention exists, and earlier chunk inserts may remain when a later insert fails.
 - An immutable chunk-set manifest authority now records exact caller-supplied manifest identity/version, document identity/version, strategy identity/version, expected count, canonically ordered chunk identities/versions/digests, publication-policy identity/version, canonical set digest, and database-controlled `createdAt`.
 - The manifest schema enforces unique exact manifest identity and one manifest for one exact document/version plus strategy/version publication identity. It has no status, `updatedAt`, latest, update, delete, replace, or upsert behavior.
@@ -2385,6 +2476,7 @@ Contracts:
 - This is a manifest-backed atomic publication boundary, not a claim of transactionally atomic insertion.
 
 Progress:
+
 ```text
 Track A — COMPLETE
 Track B1 — COMPLETE
@@ -2398,6 +2490,7 @@ B2-FG  — PENDING
 ```
 
 Verification:
+
 - Focused B2-BC1 and B2-BC manifest, repository, verification, publication, strategy, and citation-readiness tests: 27 passed.
 - B2, canonicalization, B1, template, ScoreCheck, legacy, Track A, compiled-shadow, trace, and feature regression selection: 195 passed.
 - Full backend: 1,025 passed.
@@ -2417,6 +2510,7 @@ Next:
 Track B2-DE2 — Bounded Retrieval, Hybrid Search, Reranking, Citation Validation and Context Assembly
 
 Contracts:
+
 - Embedding generation reruns the exact B2-BC1 manifest-backed verification boundary; arbitrary, orphaned, incomplete, unexpected, missing, stale-digest, or unmanifested chunks are not eligible.
 - An immutable exact-version embedding-schema registry defines provider/model, projector, normalization, vector dimension, metric, corpus, trust, and generation-eligibility lineage without latest-version selection.
 - A deterministic text projector produces bounded canonical model inputs and SHA-256 text digests from exact verified chunks and document semantics while excluding timestamps, source URIs, database fields, credentials, and unrelated content.
@@ -2431,6 +2525,7 @@ Contracts:
 - Operational results contain metadata-only summaries; raw embedding text, vectors, document content, and source URLs are not persisted as operational traces.
 
 Progress:
+
 ```text
 Track A — COMPLETE
 Track B1 — COMPLETE
@@ -2445,6 +2540,7 @@ B2-FG  — PENDING
 ```
 
 Verification:
+
 - Focused B2-DE1 schema, text projection, embedding repository/service, vector-index definition, write-port, and indexing tests: 17 passed.
 - Focused B2-BC1/B2-BC manifest, verification, admission, repository, strategy, validation, and chunking regression tests: 27 passed.
 - Full backend: 1,042 passed.
@@ -2453,6 +2549,7 @@ Verification:
 - Dependency, feature, protected-file, prohibited-boundary, and git diff checks passed.
 
 Known limitations:
+
 - Embedding generation and vector-index writes have deterministic test-owned implementations only; no production provider, model, vector database, search, retrieval, lexical search, reranking, context assembly, citation validation, runtime registration, or B1 drafting integration exists.
 - Embedding batch persistence is append-only but not transactionally atomic; explicit per-item outcomes prevent partial completion from being represented as complete.
 - Durable vector-index publication state and embedding operational-trace persistence are deferred.
@@ -2470,6 +2567,7 @@ Next:
 Track B2-FG — RAG Drafting Integration, Security and Retrieval Evaluation Proof
 
 Contracts:
+
 - Bounded retrieval requests require exact policy, embedding-schema, vector-index, caller-supplied eligible-document identities, and explicit `asOf`; no current document or latest version is inferred.
 - Exact eligible documents are reread before provider execution and checked for platform corpus, requested trust, document type, half-open effective time, and malformed supersession lineage.
 - An immutable exact-version retrieval-policy registry freezes candidate, ranking, expansion, fallback, document, passage, and character-budget limits without mutable activation or latest lookup.
@@ -2485,6 +2583,7 @@ Contracts:
 - The ETF-flow, forbidden long-buildup substitution, factor-not-registered, and DIRECT-versus-INVERSE characterization queries exercise deterministic vector/lexical foundations without production semantic-quality claims.
 
 Progress:
+
 ```text
 Track A — COMPLETE
 Track B1 — COMPLETE
@@ -2499,6 +2598,7 @@ B2-FG  — NEXT
 ```
 
 Verification:
+
 - Focused B2-DE2 policy, projection, search-port, candidate-validation, reranking, expansion, budgeting, citation, context, orchestration, fallback, security, and characterization tests: 22 passed.
 - Focused B2-DE1/B2-BC1/B2-BC regression selection: 44 passed.
 - Full backend: 1,064 passed.
@@ -2507,6 +2607,7 @@ Verification:
 - Dependency, feature, protected-file, prohibited-boundary, and git diff checks passed.
 
 Known limitations:
+
 - Query embeddings are deterministic test vectors; vector search is in-memory/test-only; lexical search is basic deterministic token overlap; and reranking is rule-based.
 - Context uses character budgets rather than model-specific tokenization.
 - Only PLATFORM_KNOWLEDGE is supported. Market research and private documents remain unavailable.
@@ -2525,6 +2626,7 @@ Next planning boundary:
 Production AI/RAG Provider Integration and Rollout Architecture
 
 Contracts:
+
 - Explicit `REGISTRY_ONLY` and `REGISTRY_PLUS_PLATFORM_KNOWLEDGE` modes are implemented. Registry-only mode delegates unchanged to the existing B1 generation boundary, and RAG mode requires complete exact retrieval lineage and explicit fallback behavior.
 - Drafting requests project deterministically into exact bounded B2 retrieval requests while preserving every requested concept. Generic guidance concepts may be added, but unsupported concepts are never substituted with registered factors.
 - RAG mode invokes B2 retrieval exactly once and never retries another model, index, corpus, trust scope, or document version. Security and invariant failures fail closed; only explicitly eligible ordinary failures can use registry-only fallback.
@@ -2541,6 +2643,7 @@ Contracts:
 - RAG results expose metadata-only summaries. Raw prompts, retrieved bodies, model candidate bodies, vectors, embeddings, URLs, and private metadata are not persisted as traces.
 
 Progress:
+
 ```text
 Track A — COMPLETE
 Track B1 — COMPLETE
@@ -2557,6 +2660,7 @@ Track B2 milestone — COMPLETE
 ```
 
 Verification:
+
 - Focused B2-FG query, prompt separation, citation schema/validation, contradiction, orchestration, fallback, unsupported-concept, prompt-injection, review, and evaluation tests: 17 passed.
 - Focused B1 registry-only drafting and acceptance regressions: 29 passed.
 - Focused B2-DE2/B2-DE1/B2-BC1/B2-BC regressions: 66 passed.
@@ -2566,6 +2670,7 @@ Verification:
 - Dependency, feature, protected-file, prohibited-boundary, registration, and git diff checks passed.
 
 Known limitations:
+
 - Generation, embeddings, and vector search remain deterministic test implementations. Lexical retrieval and reranking remain deterministic rule-based characterization logic.
 - Only PLATFORM_KNOWLEDGE is supported; no market-research extraction or private-document RAG exists.
 - No production embedding model, vector database, exact production tokenizer, public API/UI, runtime registration, continuous evaluation monitoring, or durable retrieval-trace persistence exists.
@@ -2579,6 +2684,7 @@ Status:
 ARCHITECTURE_ACCEPTED
 
 Contracts:
+
 - Generation, embedding, and vector-index providers are separate independently versioned, configured, observed, rolled-out, and rolled-back classes behind the existing provider-neutral ports.
 - Initial production providers remain benchmark-gated: OpenAI leads generation and embedding contract testing, and MongoDB Atlas Vector Search leads operational-compatibility testing, without approval as permanent dependencies.
 - Exact provider, adapter, model, schema, prompt, index, namespace, corpus-publication, and index-publication identity is required. `latest`, inferred versions, and automatic cross-provider fallback are prohibited.
@@ -2590,6 +2696,7 @@ Contracts:
 - Initial scope is PLATFORM_KNOWLEDGE and internal/allowlisted USER/DRAFT template drafting only. No provider implementation or production activation was added.
 
 Progress:
+
 ```text
 Track A — COMPLETE
 Track B1 — COMPLETE
@@ -2608,6 +2715,7 @@ C-G  — PENDING
 ```
 
 Known limitations:
+
 - No production adapters, provider credentials/configuration, provider SDKs, production tokenizer, durable publication manifests, runtime feature flags, staging benchmarks, production quality thresholds, market/private RAG, or continuous monitoring exists yet.
 
 Runtime integration:
@@ -2619,6 +2727,7 @@ Status:
 INCONCLUSIVE
 
 Contracts:
+
 - OpenAI, Anthropic, and Google Gemini were compared using official documentation; all account-specific model access, quotas, retention settings, regions, and commercial terms remain explicitly unverified.
 - Exact immutable benchmark subjects, bounded policy, 10-case synthetic dataset, versioned pricing method, hard selection gates, weighted criteria, deterministic metrics, and canonical no-winner behavior are implemented.
 - Thirty sanitized offline provider-response classifications cover valid structured output, rejection, empty/malformed/schema-invalid output, rate limiting, timeout, authentication, model lookup/deprecation, usage, and identity across the three candidates.
@@ -2629,6 +2738,7 @@ Contracts:
 - No production adapter, dependency, credential, feature flag, bootstrap registration, provider traffic, API, persistence, compilation, scoring, or activation was introduced.
 
 Progress:
+
 ```text
 Track A — COMPLETE
 Track B1 — COMPLETE
@@ -2648,10 +2758,12 @@ C-G   — PENDING
 ```
 
 Verification:
+
 - Focused C-B1A benchmark policy, subject, dataset, provider-fixture, metric, cost, hard-gate, verdict, and deterministic-selection tests passed.
 - Live benchmark: not run.
 
 Known limitations:
+
 - Results use synthetic data and sanitized response classifications. No account quota, provider nondeterminism, live schema reliability, latency, usage, cost, or rate-limit recovery was measured.
 - There is no production adapter, fallback, traffic, continuous monitoring, or resolved provider-specific privacy/legal approval.
 
@@ -2664,11 +2776,13 @@ Status:
 IMPLEMENTATION_COMPLETE / LIVE_VALIDATION_COMPLETE
 
 Result:
+
 ```text
 LIVE_GEMINI_VALIDATION_COMPLETED
 ```
 
 Contracts:
+
 - An unregistered `TemplateDraftGenerationPort` adapter uses official `@google/genai` 2.16.0, Gemini stable API `v1`, exact stable model `gemini-3.1-flash-lite`, and adapter version 1 without `latest`, preview, experimental, alternate-model, or Groq fallback.
 - The `TEMPLATE_DRAFT_CANDIDATE` v1 provider schema is derived from the existing strict Zod source and projected to Gemini's accepted structured-output subset. Unsupported string constraints and live-characterized repeated `maxItems` hints are omitted only from the provider request; the strict Zod contract remains authoritative after generation.
 - Configuration keeps the API key non-enumerable and environment-owned. The adapter is constructor-injected, initialized only when explicitly constructed, and is absent from bootstrap, factories, routes, controllers, and normal application traffic.
@@ -2681,6 +2795,7 @@ Contracts:
 - Guarded live validation completed against exact `gemini-3.1-flash-lite`: 18 of 18 synthetic requests completed and zero provider failures were recorded. No private data, prompt, response, header, or secret was logged.
 
 Progress:
+
 ```text
 Track C:
 C-A   — ARCHITECTURE_ACCEPTED
@@ -2697,9 +2812,11 @@ C-G   — PENDING
 ```
 
 Known limitations:
+
 - Free-tier quota and data-use restrictions apply. The count-only benchmark does not yet prove post-generation Zod validity, deterministic semantic acceptance, latency percentiles, usage/cost thresholds, production privacy approval, load behavior, or continuous monitoring. There is no default runtime registration, provider fallback, or market/private-data authorization.
 
 Verification:
+
 - Focused Gemini configuration, translation, schema, response, identity, usage, failure, retry, timeout, diagnostics, and live-guard tests: 11 passed.
 - Guarded live Gemini transport/structured-request proof: 18 requests, 18 completed, 0 failed.
 - Focused Gemini plus B1/B2, C-B1A, trace, feature, template, and ScoreCheck regressions: 119 passed.
@@ -2716,11 +2833,13 @@ Status:
 ARCHITECTURE_ACCEPTED
 
 Context:
+
 - Track C-B2 correctly stopped before implementation because the provider-neutral request did not carry authoritative document/query purpose and embedding schemas named normalization lineage without defining an executable authority.
 - Existing `RETRIEVAL_QUERY` and `TRANSIENT_QUERY` identifiers remain correlation data and cannot be interpreted as purpose.
 - Test-owned `TEST_NO_NORMALIZATION` version 1 is not an approved production Gemini normalization policy.
 
 Decisions:
+
 - Every provider request carries one mandatory closed request-level purpose: `RETRIEVAL_DOCUMENT` or `RETRIEVAL_QUERY`. No default or inference is allowed.
 - `KnowledgeEmbeddingService` supplies `RETRIEVAL_DOCUMENT`; `KnowledgeRetrievalService` supplies `RETRIEVAL_QUERY`; adapters translate but never decide purpose.
 - Embedding schemas declare allowed purposes, and persisted embedding lineage records `RETRIEVAL_DOCUMENT`. Query vectors remain transient.
@@ -2732,6 +2851,7 @@ Decisions:
 - No Gemini embedding adapter, provider call, live validation, Atlas integration, feature change, production schema registration, or runtime activation was introduced.
 
 Progress:
+
 ```text
 Track C:
 C-A   — ARCHITECTURE_ACCEPTED
@@ -2744,6 +2864,7 @@ C-B3  — BLOCKED pending C-B2C
 ```
 
 Known limitations:
+
 - Normalization code and the exact characterized tolerance do not exist yet.
 - Purpose-bearing source contracts, callers, schemas, fixtures, and digests are not implemented yet.
 - The Gemini embedding adapter and live benchmark have not been implemented or run.
@@ -2758,6 +2879,7 @@ Status:
 COMPLETE
 
 Contracts and implementation:
+
 - `KnowledgeEmbeddingPurpose` is a closed request-level `RETRIEVAL_DOCUMENT | RETRIEVAL_QUERY` contract. There is no default, mixed-purpose request, magic-ID inference, or provider-specific value.
 - Persisted chunk generation explicitly supplies `RETRIEVAL_DOCUMENT`; transient retrieval explicitly supplies `RETRIEVAL_QUERY`. Exact embedding schemas declare canonical ordered allowed purposes and reject incompatible purpose before a provider call.
 - Persisted knowledge embeddings preserve document purpose. Purpose and exact normalization identity/version participate in semantic lineage, repository conflicts, canonical persistence, and vector-digest material.
@@ -2770,6 +2892,7 @@ Contracts and implementation:
 - No Gemini embedding adapter, Gemini call, Atlas integration, dependency, feature change, route/API/controller, production schema activation, runtime registration, scoring change, or compilation change was introduced.
 
 Progress:
+
 ```text
 Track C:
 C-A   — ARCHITECTURE_ACCEPTED
@@ -2782,6 +2905,7 @@ C-B3  — BLOCKED pending C-B2C
 ```
 
 Known limitations:
+
 - The Gemini embedding adapter and guarded live validation do not exist yet.
 - `L2_UNIT_VECTOR` version 1 is initially fixed to dimension 768.
 - No production embedding schema is activated, no Atlas vector store is implemented, and no production provider is registered.
@@ -2796,11 +2920,13 @@ Status:
 IMPLEMENTATION_COMPLETE / LIVE_VALIDATION_PENDING
 
 Result:
+
 ```text
 LIVE_GEMINI_EMBEDDING_VALIDATION_NOT_RUN
 ```
 
 Implementation:
+
 - An unregistered `KnowledgeEmbeddingPort` adapter uses official `@google/genai` 2.16.0, stable API `v1`, exact `gemini-embedding-001`, adapter version 1, and explicit output dimension 768 without latest, preview, alternate model/provider, deterministic fake, OpenAI, or Groq fallback.
 - Exact request-level `RETRIEVAL_DOCUMENT` and `RETRIEVAL_QUERY` map directly to Gemini task types. Purpose is never inferred from IDs, text, schema names, or callers.
 - One ordered multi-content Gemini call is issued per reached attempt. Only bounded exact text is sent; internal chunk/document/index/citation/ownership/database lineage remains local. Provider outputs correlate positionally under the SDK's documented ordered response contract.
@@ -2814,6 +2940,7 @@ Implementation:
 - Free-tier use is development-only and limited to synthetic or approved non-sensitive PLATFORM_KNOWLEDGE. Private/user/market/broker/financial/position/account/personal/confidential/production content is prohibited.
 
 Progress:
+
 ```text
 Track C:
 C-A   — ARCHITECTURE_ACCEPTED
@@ -2826,10 +2953,12 @@ C-B3  — BLOCKED pending guarded C-B2C live validation
 ```
 
 Known limitations:
+
 - Live exact-model access, dimensions, finite values, normalization, similarity behavior, latency, quota/rate limits, and usage metadata remain unmeasured.
 - The adapter is text-only and fixed to the initial 768-dimensional schema. There is no production vector database, runtime registration, private/market-content permission, or continuous embedding monitoring.
 
 Verification:
+
 - Focused C-B2C adapter/configuration/schema/purpose/translation/raw-vector/response/failure/retry/timeout/diagnostic/guard tests: 12 passed.
 - Combined C-B2C, C-B2B, B2/RAG and Gemini-generation regressions: 119 passed.
 - Full backend: 1,123 passed, 0 failed.
@@ -2845,6 +2974,7 @@ Status:
 ARCHITECTURE_ACCEPTED
 
 Mandatory stop and decision:
+
 - The Track C-B3 mandatory audit correctly stopped implementation because the canonical `KnowledgeEmbedding` collection cannot represent exact vector-index entry identity, index definition/version, namespace, metadata schema, or bounded searchable publication metadata without combining embedding and index-publication authorities.
 - ADR-063 separates canonical embedding persistence from an immutable provider-neutral vector-index projection authority. `KnowledgeEmbedding` remains the canonical vector authority.
 - One embedding may be published into multiple exact providers, index definitions, versions, namespaces, metadata-schema versions, and development or production targets using distinct exact index-entry identities/versions.
@@ -2858,6 +2988,7 @@ Mandatory stop and decision:
 - No projection model/repository, Atlas adapter, Atlas index, Atlas call, dependency, runtime registration, or production retrieval activation was introduced.
 
 Progress:
+
 ```text
 Track C:
 C-A   — ARCHITECTURE_ACCEPTED
@@ -2873,6 +3004,7 @@ C-C   — BLOCKED
 ```
 
 Known limitations:
+
 - The immutable projection authority is not implemented.
 - MongoDB Atlas write/search adapters and index administration are not implemented.
 - Guarded Gemini embedding live validation remains pending.
@@ -2889,6 +3021,7 @@ Status:
 COMPLETE
 
 Implementation:
+
 - Added provider-neutral immutable vector-index projection contracts with exact caller-supplied entry identity/version, exact index target, embedding/schema/purpose/normalization lineage, canonical vector copy and digest, source lineage, bounded searchable metadata, canonical projection digest, and database-owned creation time.
 - `KnowledgeEmbedding` remains the canonical vector authority. Its model and persistence semantics were not modified; projection vectors are detached copies used only for explicit index publication.
 - Added deterministic searchable-metadata projection from exact document and chunk authorities. Output is canonically ordered, deeply frozen, date-cloned, and excludes raw text, source URIs, credentials, private/tenant data, and market content.
@@ -2901,6 +3034,7 @@ Implementation:
 - No Atlas adapter, Atlas call, Atlas Vector Search index, provider call, runtime registration, bootstrap write, model hook, background job, API, scoring, compiler, template, feature-flag, dependency, or canonical embedding schema change was introduced.
 
 Verification:
+
 - Focused C-B3B projection, model, repository, digest, metadata, adapter, write-port, and indexing tests: 16 passed.
 - Combined B2/C-B2, Gemini, retrieval, citation, Track A shadow, template, and ScoreCheck regressions: 183 passed.
 - Full backend: 1,127 passed, 0 failed.
@@ -2909,6 +3043,7 @@ Verification:
 - `git diff --check` passed.
 
 Progress:
+
 ```text
 Track C:
 C-A   — ARCHITECTURE_ACCEPTED
@@ -2924,6 +3059,7 @@ C-C   — BLOCKED
 ```
 
 Known limitations:
+
 - MongoDB Atlas write/search adapters and Atlas index administration are not implemented.
 - Guarded Gemini embedding live validation remains pending, and the Atlas environment remains unverified.
 - No immutable production index-publication manifest or cleanup/reconciliation workflow exists.
@@ -2939,6 +3075,7 @@ Status:
 COMPLETE — ATLAS IDEMPOTENCY VERIFIED BY C-B3D0.1
 
 Implementation:
+
 - Added the first explicit development-only orchestration path from normalized platform-knowledge input through the existing immutable document, chunk, manifest, embedding, normalization, vector-indexing, and projection authorities.
 - Added six fixed system-owned platform-knowledge documents covering ETF net flow, DIRECT, INVERSE, FACTOR_NOT_REGISTERED, no silent substitution, and an approved ETF-flow template example. All identities and versions are explicit and stable.
 - Added a development-only deterministic SHA-256 expansion provider that returns exactly 768 finite, nonzero raw values without normalization, network access, randomness, or clock dependence.
@@ -2949,12 +3086,14 @@ Implementation:
 - The runner constructs only existing repositories and services. It has no direct model write, manual collection creation, Atlas search, Atlas index creation, query embedding, RAG generation, API, startup registration, scoring, compiler, or template behavior.
 
 Offline verification:
+
 - Six-document deterministic run: all document pipelines completed in the in-memory orchestration proof.
 - Exact repeat run: documents, chunks/manifests, embeddings, and projections were classified as existing with identical lineage and no new versions.
 - Independent conflict proof: five documents completed and one failed with overall `PARTIAL`; completed immutable records were retained.
 - Deterministic vectors are exactly 768-dimensional, finite, nonzero, stable by text, different across different text, and intentionally non-unit before the existing normalization service.
 
 Atlas persistence attempt:
+
 - The guarded deterministic command was executed for development database `yudiji_dev` using the configured `MONGO_URI`.
 - MongoDB connection failed during TLS negotiation with an SSL `tlsv1 alert internal error` before Mongoose connected.
 - The ingestion service did not run against Atlas. No collection was created and no record was written by this attempt.
@@ -2962,6 +3101,7 @@ Atlas persistence attempt:
 - Expected Mongoose collection names are `knowledgedocuments`, `knowledgechunks`, `knowledgechunksetmanifests`, `knowledgeembeddings`, and `knowledgevectorindexprojections`; their existence was not claimed.
 
 Verification:
+
 - Focused C-B3D0 corpus, guard, deterministic provider, normalization, idempotency, and partial-failure tests: 8 passed.
 - Combined authority, Atlas, retrieval, RAG, Gemini, template, ScoreCheck, and compiled-shadow regressions: 204 passed.
 - Full backend: 1,150 passed, 0 failed.
@@ -2970,6 +3110,7 @@ Verification:
 - `git diff --check` passed.
 
 Progress:
+
 ```text
 Track C:
 C-A    — ARCHITECTURE_ACCEPTED
@@ -2987,6 +3128,7 @@ C-C    — BLOCKED pending Atlas ingestion and search validation
 ```
 
 Known limitations:
+
 - Deterministic embeddings prove integration and persistence shape, not semantic retrieval quality.
 - Gemini ingestion still requires guarded live validation.
 - Atlas TLS connectivity must be resolved before persistence and database idempotency can be proven.
@@ -3003,6 +3145,7 @@ Status:
 COMPLETE
 
 Root cause and correction:
+
 - The deterministic fixture, admission digests, chunk digests, identities, versions, and content were stable. The conflict was caused only by Mongoose materializing omitted optional fields on persistence reread.
 - Document blocks gained `sourceSpan.rowIds: []`; non-table blocks also gained `table: { headers: [], rows: [] }`. Chunk source spans gained `rowIds: []` even when no `tableId` existed.
 - Exact duplicate classification used structural equality between the original canonical command and the persistence-shaped reread, so these storage-only defaults produced false immutable conflicts.
@@ -3010,12 +3153,14 @@ Root cause and correction:
 - The development corpus can be rebuilt as a detached, deeply frozen value to prove repeatability independently of module singleton identity.
 
 Atlas verification:
+
 - The pre-correction diagnostic rerun proved the document correction (`6` documents existing) and exposed the analogous chunk `CONTENT_CONFLICT` before any embedding or projection work.
 - First complete post-fix rerun: `COMPLETED`; documents `0/6/0` created/existing/failed, chunk sets `0/6/0`, manifests `0/6/0`, embeddings `0/9/0`, projections `0/9/0/0` created/existing/conflict/failed.
 - Second identical post-fix rerun produced exactly the same status, counts, and immutable lineage.
 - No record, collection, index, or authority version was deleted, replaced, updated, or recreated.
 
 Verification:
+
 - Focused idempotency, fixture, ingestion, and repository tests: 12 passed.
 - Full backend: 1,155 passed, 0 failed.
 - Typecheck passed.
@@ -3023,6 +3168,7 @@ Verification:
 - `git diff --check` passed.
 
 Known limitations:
+
 - Deterministic fixture embeddings validate publication and persistence shape, not semantic retrieval quality.
 - Gemini embedding ingestion and live Atlas vector-search behavior remain separately guarded and unverified by this correction.
 - Atlas Vector Search index creation/inspection and the C-B3C live validation benchmark remain next; no production activation was introduced.
@@ -3036,6 +3182,7 @@ Status:
 LIVE_ATLAS_VECTOR_VALIDATION_PASSED / CONDITIONALLY_APPROVED
 
 Index authority and administration:
+
 - Logical index: `YUDIJI_ATLAS_DEV_PLATFORM_KNOWLEDGE_DETERMINISTIC_768` v1; namespace `YUDIJI:PLATFORM_KNOWLEDGE:DEV:DETERMINISTIC_768:V1`.
 - Physical Atlas index: `yudiji_dev_platform_knowledge_deterministic_768_v1` on development collection `knowledgevectorindexprojections`.
 - The existing specification authority generated digest `4cf231876ffe1f7dbdddc3d1f524c6f910d0b8ae91b0bb12732e29c0589237a6` for vector path `vector`, 768 dimensions, and cosine similarity.
@@ -3043,6 +3190,7 @@ Index authority and administration:
 - Programmatic administration created the index. Bounded polling reached provider status `READY` and `INDEX_QUERYABLE`; a second exact inspection returned `ALREADY_EXISTS` with the same digest.
 
 Live validation:
+
 - Preflight verified exactly 9 deterministic projections with exact index/schema/corpus/purpose lineage, finite 768-dimensional vectors, and L2 unit magnitude within tolerance.
 - Six fixed deterministic query fixtures executed through real Atlas `$vectorSearch` in ANN mode with `limit=5` and `numCandidates=25`. Every query completed with 5 bounded candidates and all 30 candidate instances passed projection-first validation.
 - The adapter projected no vector or raw source text and used no native rank/score fusion. Provider scores were finite, candidates were unique, and provider ordinals were dense.
@@ -3052,12 +3200,14 @@ Live validation:
 - A validated live vector candidate combined with a controlled lexical source, passed existing deterministic reranking/context assembly, and produced one exact authority-derived `ycit_v1_` citation handle.
 
 Architecture notes:
+
 - The accepted deterministic document schema remains document-only. A separate immutable query-fixture schema authorizes only `RETRIEVAL_QUERY`; no persisted embedding was changed or recreated.
 - Atlas only discovers untrusted bounded candidates. Exact projection, embedding, document, manifest, and chunk authorities remain decisive for validation and citation participation.
 - This is infrastructure proof using deterministic hash-expansion embeddings, not semantic-quality proof and not production index publication approval.
 - Gemini embedding was not called. No private/market corpus, Atlas automated embedding, native fusion, production registration, scoring, template, or compiler behavior was introduced.
 
 Verification:
+
 - Focused Atlas guard, specification, administration, ANN/ENN adapter, and deterministic query-authority tests: 14 passed.
 - Full backend rerun: 1,157 passed, 0 failed. An immediately prior parallel full-suite run reported one transient failure; the isolated/final rerun passed completely.
 - Typecheck passed.
@@ -3065,6 +3215,7 @@ Verification:
 - `git diff --check` passed.
 
 Known limitations:
+
 - Gemini document/query embedding live validation remains pending.
 - No immutable index-publication manifest, production rollout, load test, monitoring, cleanup, or reconciliation exists.
 - Validation covers platform knowledge only; deterministic vectors are not semantically meaningful.
@@ -3078,24 +3229,29 @@ Status:
 C-B2C-LIVE PASSED / C-B3E BLOCKED AT INACTIVE RETRIEVAL AUTHORITY
 
 Live Gemini embedding:
+
 - `gemini-embedding-001` returned 6/6 document and 4/4 query embeddings at exactly 768 finite dimensions. All 10 normalized through `L2_UNIT_VECTOR` v1 within `1e-12`; four semantic smoke comparisons passed. Total benchmark latency was 2,124 ms, with no observed rate-limit event and no usage metadata exposed.
 - The accepted deterministic and Gemini schemas initially collided because development ingestion reused `DEV_EMBED`/`DEVPROJ` identities. Persistence failed closed with 9 failures and no Gemini projections. The runner now derives disjoint `GEMINI_EMBED`/`GEMINI_PROJ` identities while preserving every deterministic identity.
 - Corrected Gemini ingestion reused all 6 documents, chunk sets, and manifests and created exactly 9 Gemini embeddings plus 9 Gemini projections. One required repeat returned all 9 as existing with zero conflicts/failures.
 
 Gemini Atlas semantic proof:
+
 - Logical index `YUDIJI_ATLAS_PLATFORM_KNOWLEDGE_GEMINI_768` v1 was created programmatically as physical index `yudiji_atlas_platform_knowledge_gemini_768_v1`; provider status is `READY`/`INDEX_QUERYABLE` and specification digest is `c22cdcaa18faa4fea51ba28b7164df17e67624a14efce617cbc8d6a978f0bac0`.
 - Four real Gemini query embeddings executed against Atlas with five bounded candidates each; all 20 candidates passed exact projection, Gemini embedding, document, manifest, and chunk rereads. No deterministic projection crossed the exact index/schema/namespace filters.
 - Unsupported-factor retrieval hit both FACTOR_NOT_REGISTERED and no-silent-substitution documents; relationship retrieval hit DIRECT and INVERSE; ETF retrieval hit ETF factor and template example; silent-substitution retrieval hit the no-substitution authority. Every query produced authority-derived citation context.
 
 Mandatory blocker:
+
 - The frozen Gemini vector-index definition remains `retrievalEligible: false`. `KnowledgeRetrievalService` therefore deterministically returns `INDEX_INELIGIBLE` before RAG drafting. `RAG_TEMPLATE_DRAFTING_ENABLED` also remains off by default.
 - This phase prohibited changing feature defaults or activating production retrieval. The benchmark did not clone or weaken the index authority, bypass `KnowledgeRetrievalService` for generation, or build a second drafting pipeline.
 - Consequently, real Gemini structured generation supplied by live Atlas citation context, Tata Steel unresolved-concept proof, and live prompt-injection/citation safety proof were not run. `LIVE_GEMINI_ATLAS_RAG_VALIDATION_PASSED` is not claimed and C-B3E remains blocked pending an explicit development-only retrieval eligibility/activation authority.
 
 Protected boundaries:
+
 - No deterministic data deletion/overwrite, private or market corpus, query-vector persistence, Atlas automated embedding, native fusion, production API/registration, scoring, compiler, template persistence, fallback, deployment, or commit occurred.
 
 Verification:
+
 - Focused Gemini adapter, ingestion identity separation, embedding/persistence, indexing, retrieval validation/context, Atlas guards, and isolation regressions: 58 passed.
 - Full backend: 1,159 passed, 0 failed.
 - Typecheck passed.
@@ -3111,24 +3267,28 @@ Status:
 C-B3E0 COMPLETE / C-B3E COMPLETE / DEVELOPMENT_APPROVED
 
 Development execution authority:
+
 - Added exact static authority `YUDIJI_GEMINI_ATLAS_RAG_DEVELOPMENT_VALIDATION` v1 for environment `DEVELOPMENT_VALIDATION`, Gemini index `YUDIJI_ATLAS_PLATFORM_KNOWLEDGE_GEMINI_768` v1, namespace `YUDIJI:PLATFORM_KNOWLEDGE:ATLAS:GEMINI_768:V1`, embedding schema `YUDIJI_GEMINI_PLATFORM_KNOWLEDGE_EMBEDDING` v1, and `PLATFORM_KNOWLEDGE` only.
 - Authorization requires development environment, Gemini RAG confirmation, Atlas live confirmation, Gemini embedding confirmation, structured-generation confirmation, and configured Gemini credentials. Every index/version/namespace/schema/corpus field is exact; no wildcard/latest lookup or mutable state exists.
 - `KnowledgeRetrievalService` preserves ordinary `INDEX_INELIGIBLE` behavior and accepts the inactive index only with the exact call-scoped authorization. `TemplateDraftRagGenerationService` preserves the default feature flag and accepts the same authorization only for the guarded call.
 - The frozen Gemini index remains `retrievalEligible: false`; `RAG_TEMPLATE_DRAFTING_ENABLED` remains OFF by default. No runtime/global flag mutation or eligible index clone exists.
 
 Live structured RAG:
+
 - ETF case completed through registry projection, real Gemini query embedding, Atlas retrieval, exact projection/source validation, five citation passages, structured Gemini generation, strict Zod parsing, deterministic registry validation, citation validation, and review projection. The candidate used only `CRYPTO.ETF_NET_FLOW` with DIRECT semantics, returned 2/2 valid citations, and accepted no AI weight.
 - Tata Steel returned `UNSUPPORTED_REQUEST`; LONG, SHORT, RESULTS, and RESEARCH remained unresolved, with zero supported binding, zero `MARKET.PRICE` substitution, and no fabricated factor/provider/research authority.
 - Prompt-injection case completed only for the legitimate ETF factor. It accepted no `MARKET.SECRET_FACTOR`, VETO relationship, AI weight, ACTIVE template, prompt-disclosure authority, or registry override; 3/3 citations were valid.
 - No template was persisted and no acceptance action, ScoreCheck, scoring, compiler, runtime registration, fallback model, second explanation pass, or private/market retrieval occurred.
 
 Live status:
+
 - `LIVE_GEMINI_EMBEDDING_VALIDATION_PASSED`
 - `LIVE_GEMINI_ATLAS_SEMANTIC_VALIDATION_PASSED`
 - `LIVE_GEMINI_ATLAS_RAG_VALIDATION_PASSED`
 - Verdict: `DEVELOPMENT_APPROVED` (development only; no production activation).
 
 Verification:
+
 - Focused authorization and ordinary-runtime preservation tests passed.
 - Full backend: 1,163 passed, 0 failed.
 - Typecheck passed.
@@ -3136,6 +3296,7 @@ Verification:
 - `git diff --check` passed.
 
 Progress:
+
 ```text
 Track C:
 C-A        — ARCHITECTURE_ACCEPTED
@@ -3158,6 +3319,7 @@ C-C        — NEXT
 ```
 
 Known limitations:
+
 - Authorization is development-only.
 - The proof uses a small six-document platform-knowledge corpus.
 - Gemini/free-tier quotas remain externally imposed.
@@ -3176,6 +3338,7 @@ Verdict:
 INCONCLUSIVE
 
 Implementation:
+
 - Added immutable MongoDB Atlas adapter configuration for the explicit development database, the existing `knowledgevectorindexprojections` collection, Atlas index `yudiji_atlas_platform_knowledge_gemini_768_v1`, vector path `vector`, 768 dimensions, cosine similarity, and bounded write/search/time limits. Mongo credentials and URI are never serialized.
 - Registered the exact inactive logical index authority `YUDIJI_ATLAS_PLATFORM_KNOWLEDGE_GEMINI_768` v1 for Gemini platform-knowledge embeddings. It is not current, default, retrieval-eligible, or runtime-registered.
 - Added a deterministic Atlas Vector Search specification with SHA-256 digest `c22cdcaa18faa4fea51ba28b7164df17e67624a14efce617cbc8d6a978f0bac0`.
@@ -3190,11 +3353,13 @@ Implementation:
 - No Atlas automated embedding, native hybrid fusion, provider fallback, API, scoring, compiler, template, feature flag, bootstrap registration, production activation, private corpus, or market corpus was introduced.
 
 Live validation:
+
 - `LIVE_ATLAS_VECTOR_VALIDATION_NOT_RUN`.
 - Atlas credentials, deployment, tier, server version, exact index status, live writes, duplicate/conflict behavior, ANN queries, ENN capability, filter exclusions, latency, and live projection-first composition were not measured.
 - Deterministic adapter tests use synthetic normalized vectors only. Gemini-to-Atlas mode remains guarded behind separate Gemini embedding live proof.
 
 Verification:
+
 - Focused C-B3C configuration, specification, administration, write, search, ANN/ENN, candidate, and command-guard tests: 11 passed.
 - Combined Atlas, C-B3C0, C-B3B, C-B2, retrieval, RAG, projection, manifest, embedding, Gemini, ScoreCheck, and compiled-shadow regressions: 189 passed.
 - Full backend: 1,142 passed, 0 failed.
@@ -3203,6 +3368,7 @@ Verification:
 - `git diff --check` passed.
 
 Progress:
+
 ```text
 Track C:
 C-A    — ARCHITECTURE_ACCEPTED
@@ -3219,6 +3385,7 @@ C-C    — BLOCKED
 ```
 
 Known limitations:
+
 - Development approval cannot be granted until guarded Atlas validation is explicitly run against an isolated development deployment.
 - Gemini embedding live proof remains pending.
 - No durable index-publication manifest, production load test, monitoring, automatic failover, cleanup, or reconciliation exists.
@@ -3234,6 +3401,7 @@ Status:
 COMPLETE
 
 Implementation:
+
 - Added the retrieval request's exact `asOf` timestamp to the provider-neutral vector-search request as a detached date clone. The in-memory search fake rejects missing or invalid timestamps and never derives wall-clock time.
 - Replaced untrusted vector candidates' duplicated full chunk metadata with exact immutable publication lineage: index entry, index definition/version, namespace, embedding, document, chunk set, chunk, chunk digest, vector digest, raw provider score, and dense provider ordinal. Searchable metadata is optional and bounded.
 - Enriched vector candidate-source traces with the exact publication target and provider ordinal while preserving the existing retrieval ranking and citation contracts.
@@ -3244,6 +3412,7 @@ Implementation:
 - No Atlas adapter, Atlas query, Atlas index, dependency, persistence mutation, API, scoring, compiler, template, feature flag, runtime registration, or production activation was introduced.
 
 Verification:
+
 - Focused retrieval, vector projection, candidate validation, search-port, citation, and RAG tests: 50 passed.
 - Combined embedding, generation, projection, normalization, manifest, retrieval, RAG, ScoreCheck, and compiled-shadow regressions: 186 passed.
 - Full backend: 1,129 passed, 0 failed.
@@ -3252,6 +3421,7 @@ Verification:
 - `git diff --check` passed.
 
 Progress:
+
 ```text
 Track C:
 C-A    — ARCHITECTURE_ACCEPTED
@@ -3268,6 +3438,7 @@ C-C    — BLOCKED
 ```
 
 Known limitations:
+
 - MongoDB Atlas write/search adapters and Atlas index administration remain unimplemented.
 - Guarded Gemini embedding live validation remains pending, and the Atlas environment remains unverified.
 - The retrieval request does not select an Atlas namespace directly; exact namespace authority remains the immutable projection and exact index target selected by the configured vector-search port.
@@ -3275,12 +3446,14 @@ Known limitations:
 
 Next planning boundary:
 Track C-B3C — MongoDB Atlas Write/Search Adapters and Guarded Development Validation.
+
 ### Track C-C — Corpus and Index Publication Authorities
 
 Status:
 COMPLETE
 
 Publication proof:
+
 - Corpus publication `YUDIJI_PLATFORM_KNOWLEDGE_DEVELOPMENT_PUBLICATION` v1 freezes 6 SYSTEM-owned PLATFORM_KNOWLEDGE documents and 9 manifest-complete chunks.
 - Canonical corpus digest: `e4c09e7c6f0fe4f199e8271d596fa6f4c3a7f72dc86f2288e6c40b1a5ddda704`.
 - Exact embedding schema: `YUDIJI_GEMINI_PLATFORM_KNOWLEDGE_EMBEDDING` v1.
@@ -3293,6 +3466,7 @@ Publication proof:
 - Exact repositories expose identity/version reads only. No latest/current/recency selection exists.
 
 Verification:
+
 - Focused C-C tests: 5 passed.
 - Full backend: 1,168 passed, 0 failed.
 - Typecheck passed.
@@ -3300,11 +3474,13 @@ Verification:
 - `git diff --check` passed.
 
 Protected boundaries:
+
 - `retrievalEligible` remains false and the RAG feature remains OFF by default.
 - The publication runner generated no embeddings, invoked no Gemini generation, mutated no Atlas index, and activated no runtime.
 - No private or market corpus, provider fallback, scoring, template, compiler, controller, route, API, deployment, or production registration change exists.
 
 Progress:
+
 ```text
 Track C:
 C-C — COMPLETE
@@ -3312,23 +3488,28 @@ C-D — NEXT
 ```
 
 Known limitations:
+
 - Development publication only; small platform corpus.
 - No production rollout binding, market/private corpus, continuous rebuild scheduler, cleanup/reconciliation, or continuous monitoring.
+
 ### Track C-D1 / C-D2 — Final Controlled Shadow Runtime Proof
 
 Status:
 C-D2 LIVE SHADOW PROOF PASSED / C-D IMPLEMENTATION_IN_PROGRESS
 
 Completion note:
+
 - The guarded live shadow and exact rollback proofs passed, but C-D is not marked complete because the current outer `Promise.race` deadline cannot prove cancellation between embedding, Atlas retrieval, and generation stages, and stage-specific latency telemetry is not yet exposed by the RAG boundary.
 
 Runtime authority:
+
 - Exact binding `YUDIJI_TEMPLATE_DRAFT_RAG_RUNTIME` v1 resolves only `YUDIJI_PLATFORM_KNOWLEDGE_GEMINI_ATLAS_PUBLICATION` v1 and remains `SHADOW_ONLY`.
 - AI generation, knowledge retrieval, and RAG feature defaults remain OFF. The kill switch blocks before publication, budget, concurrency, embedding, retrieval, or generation work.
 - Execution policy remains bounded; budgets and concurrency are explicitly process-local. Provider adapter retry ownership remains unchanged.
 - Independent generation, embedding, and vector circuits implement CLOSED, OPEN, HALF_OPEN, successful reset, failed-probe reopen, rolling-window expiry, and failure-category isolation.
 
 Live proof:
+
 - `LIVE_RAG_SHADOW_RUNTIME_VALIDATION_PASSED` with 4 guarded development requests.
 - ETF: shadow COMPLETED, comparison MATCH, exact ETF factor retained, citation coverage/validity 1, zero accepted AI weights or safety regressions.
 - Tata Steel: RAG outcome UNSUPPORTED_REQUEST, comparison MATCH, all four concepts retained unresolved, zero silent substitution or invented factor.
@@ -3337,12 +3518,14 @@ Live proof:
 - Authoritative results were byte-stable before/after every live shadow case. No template, scoring, or compiler side effect occurred.
 
 Failure and rollback proof:
+
 - Feature and kill-switch blocking, budget denial, concurrency denial/release, provider failure, deadline failure, publication/binding failure, and independent circuit blocking fail closed before unauthorized downstream work.
 - Permits release after success, provider failure, and deadline failure.
 - Exact test-owned binding v2 resolves publication v2; explicit rollback to binding v1 resolves publication v1. Unknown v3 fails without fallback or latest selection.
 - Deterministic comparison reports MATCH, DIFFERENT_BUT_SAFE, RAG_SAFETY_REGRESSION, or NOT_COMPARABLE and exposes explicit safety counters only.
 
 Verification:
+
 - Focused C-D/C-D1/C-D2 tests: 9 passed.
 - Full backend: 1,177 passed, 0 failed.
 - Typecheck passed.
@@ -3350,9 +3533,11 @@ Verification:
 - Production formatting and `git diff --check` passed.
 
 Protected boundaries:
+
 - No production activation, public API/UI, global provider registration, generated-template persistence, market/private RAG, provider fallback, automatic rollback, latest selection, scoring/compiler change, deployment, or commit.
 
 Progress:
+
 ```text
 C-C — COMPLETE
 C-D — IMPLEMENTATION_IN_PROGRESS
@@ -3365,27 +3550,32 @@ Status:
 COMPLETE
 
 Deadline authority:
+
 - `AiRuntimeDeadlineContext` is the single provider-neutral request deadline contract. The top-level shadow runtime owns one `AbortController`, one deadline timer, explicit stage-entry checks, and deterministic stage timing.
 - The same caller signal propagates through query embedding, MongoDB Atlas vector search, and Gemini structured generation. Existing adapter-owned per-attempt timeouts remain composed with caller cancellation.
 - Runtime cancellation is reported as `DEADLINE_EXCEEDED` with the observed stage and is not manufactured as provider failure. Existing provider-attempt timeout and circuit eligibility semantics remain unchanged.
 
 Cancellation and lifecycle proof:
+
 - Deterministic post-embedding expiry prevents Atlas and generation from starting; deterministic post-retrieval expiry prevents generation from starting.
 - In-flight Gemini embedding, Atlas aggregation, and Gemini generation observe caller abort and settle without caller-cancellation retry.
 - The runtime timer is disposed idempotently and concurrency permits release through the authoritative `finally` path on success, provider failure, and cancellation/deadline failure.
 - Budget reservation behavior is unchanged: reservation occurs after pre-execution, publication, rollout, and circuit checks and before concurrency acquisition; no refund semantics were introduced.
 
 Telemetry:
+
 - Privacy-safe runtime traces expose total, embedding, retrieval, context-assembly, and generation latency in milliseconds.
 - Unreached stages are represented by `null`; no query, prompt, passage content, vectors, or provider payloads are added to telemetry.
 
 Live proof:
+
 - `LIVE_RAG_SHADOW_RUNTIME_VALIDATION_PASSED` with all 4 guarded development cases.
 - ETF, Tata Steel, prompt-injection, and no-retrieval-needed comparisons were `MATCH`.
 - `authoritativeEqual` remained true for every case; all citations were valid and template, scoring, and compiler side effects remained zero.
 - Exact binding v2 to publication v2 and explicit rollback to binding v1 to publication v1 remain proven without latest/current lookup.
 
 Verification:
+
 - Focused C-D3 tests: 42 passed, 0 failed.
 - Full backend: 1,183 passed, 0 failed.
 - Typecheck passed.
@@ -3393,15 +3583,62 @@ Verification:
 - Production formatting and `git diff --check` passed.
 
 Protected boundaries:
+
 - Rollout remains `SHADOW_ONLY`; production AI/RAG feature defaults remain OFF.
 - No public API/UI, persistence, scoring, compiler, template lifecycle, provider fallback, runtime registration, deployment, or production activation change exists.
 
 Progress:
+
 ```text
 C-C — COMPLETE
 C-D3 — COMPLETE
 C-D — COMPLETE / SHADOW_RUNTIME_PROVEN
 C-E — NEXT
+```
+
+### Track C-E1A0 — Provider Outcome, Circuit Attribution and Usage Lineage Amendment
+
+Status:
+COMPLETE
+
+Provider outcomes:
+
+- ADR-065 freezes synchronous metadata-only provider success/failure outcomes for generation, embedding, and vector retrieval without using diagnostics as authority.
+- Stages distinguish baseline generation, query embedding, vector retrieval, and RAG generation while both generation stages retain the shared generation-provider class.
+- Exact adapter failures are normalized into a closed vocabulary; no raw prompt, vector, Atlas pipeline, provider response, credential, or exception is retained.
+
+Circuit attribution:
+
+- One policy-owned orchestration observer records provider success and eligible failure after provider execution. Adapters do not mutate circuit state.
+- REQUEST_TIMEOUT, NETWORK_FAILED, and PROVIDER_UNAVAILABLE retain accepted circuit eligibility. Caller/runtime cancellation and downstream schema, registry, citation, and candidate validation do not penalize provider health.
+- Successful provider execution resets its exact circuit, including half-open success, before downstream deterministic validation.
+
+Usage and budget:
+
+- Stage-bearing usage preserves measured generation calls/tokens, embedding input counts, and vector request calls. Unknown values remain absent, not zero; pricing remains undefined without an authority.
+- Request admission remains `reserve`; post-execution `recordUsage` is separate and cannot create another request reservation or rewrite provider outcomes.
+
+Verification:
+
+- Focused C-E1A0/C-D tests passed.
+- Full backend: 1,198 passed, 0 failed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- Production formatting and `git diff --check` passed.
+
+Protected boundaries:
+
+- No dual-path execution, request assembly, route, public API, production activation, template persistence, scoring/compiler change, or private/market RAG change exists.
+
+Progress:
+
+```text
+C-D — COMPLETE / SHADOW_RUNTIME_PROVEN
+C-E0 — COMPLETE
+C-E1A0 — COMPLETE
+C-E1A — NEXT
+C-E1 — BLOCKED pending C-E1A
+C-E — BLOCKED
 ```
 
 ### Track C-E0 — Application Role Authority, Internal Authorization and Caller Cancellation Contract
@@ -3410,6 +3647,7 @@ Status:
 COMPLETE
 
 Role authority:
+
 - ADR-064 freezes the closed, canonically ordered `USER`, `INTERNAL`, and `ADMIN` vocabulary. Roles are multi-valued, unique, non-empty, and retain `USER`.
 - The current User record is authoritative. New records have the storage default `["USER"]`; legacy records without roles resolve as `["USER"]` at read time without a bulk migration or authorization-read write. A later ordinary User-model write may safely materialize the schema default.
 - JWTs remain identity-only. Authorization rereads current User roles for every request, so revocation is effective on the next request using the same JWT.
@@ -3417,11 +3655,13 @@ Role authority:
 - Email, headers, body, query parameters, environment inference, and JWT role claims cannot grant privilege. No role mutation route or automatic privileged bootstrap exists.
 
 Caller cancellation:
+
 - The governed shadow-runtime request accepts one optional caller `AbortSignal`, composed with the existing request-owned deadline controller.
 - First terminal cause wins: caller cancellation returns `CALLER_CANCELLED`; runtime expiry returns `DEADLINE_EXCEEDED`.
 - Cancellation propagates through embedding, Atlas retrieval, and generation, prevents later stages, avoids caller-cancellation retries and circuit-health failures, preserves authoritative output, releases concurrency, and clears deadline resources.
 
 Verification:
+
 - Focused C-E0/C-D3 tests: 51 passed, 0 failed.
 - Full backend: 1,192 passed, 0 failed.
 - Typecheck passed.
@@ -3429,9 +3669,11 @@ Verification:
 - Production formatting and `git diff --check` passed.
 
 Protected boundaries:
+
 - No C-E route, public RAG API, public role mutation API, production activation, template persistence, scoring/compiler change, or private/market RAG change exists.
 
 Progress:
+
 ```text
 C-D — COMPLETE / SHADOW_RUNTIME_PROVEN
 C-E0 — COMPLETE

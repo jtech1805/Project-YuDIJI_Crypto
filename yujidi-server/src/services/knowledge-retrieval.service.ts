@@ -21,6 +21,7 @@ import { KnowledgeRetrievalRerankingService } from "./knowledge-retrieval-rerank
 import type { KnowledgeRetrievalExecutionAuthorization } from "../types/knowledge-retrieval-execution-authorization.types.js";
 import { authorizesRetrieval } from "./knowledge-retrieval-execution-authorization.service.js";
 import type { AiRuntimeDeadlineContext } from "../types/ai-runtime-deadline.types.js";
+import type { AiProviderExecutionObserver } from "../types/ai-provider-execution.types.js";
 
 export type KnowledgeRetrievalExecution = Readonly<{
   enabled: boolean;
@@ -28,6 +29,7 @@ export type KnowledgeRetrievalExecution = Readonly<{
   contextVersion: number;
   authorization?: KnowledgeRetrievalExecutionAuthorization;
   deadline?: AiRuntimeDeadlineContext;
+  providerObserver?: AiProviderExecutionObserver;
 }>;
 export class KnowledgeRetrievalService {
   public constructor(
@@ -138,6 +140,12 @@ export class KnowledgeRetrievalService {
         },
         execution.deadline ? { signal: execution.deadline.signal } : undefined,
       );
+      if (provider.providerOutcome) {
+        execution.providerObserver?.record(
+          "QUERY_EMBEDDING",
+          provider.providerOutcome,
+        );
+      }
       execution.deadline?.complete("EMBEDDING");
       execution.deadline?.throwIfExpired("RETRIEVAL");
     } catch (error) {
@@ -187,6 +195,12 @@ export class KnowledgeRetrievalService {
             ? { signal: execution.deadline.signal }
             : undefined,
         );
+        if (vectors.providerOutcome) {
+          execution.providerObserver?.record(
+            "VECTOR_RETRIEVAL",
+            vectors.providerOutcome,
+          );
+        }
         execution.deadline?.complete("RETRIEVAL");
         execution.deadline?.throwIfExpired("CONTEXT_ASSEMBLY");
       } catch (error) {

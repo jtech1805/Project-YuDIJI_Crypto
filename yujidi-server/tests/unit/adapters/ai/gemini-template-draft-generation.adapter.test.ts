@@ -105,6 +105,8 @@ test("maps success, exact identity, usage, immutable output and leaves Zod autho
   if (!result.completed) return;
   assert.equal(result.provider, "GOOGLE_GEMINI");
   assert.equal(result.model, GEMINI_GENERATION_MODEL);
+  assert.equal(result.providerOutcome?.completed, true);
+  assert.equal(result.providerOutcome?.usage?.generationCalls, 1);
   assert.deepEqual(result.tokenUsage, {
     promptTokens: 100,
     completionTokens: 20,
@@ -243,6 +245,12 @@ test("caller cancellation aborts in-flight generation and never retries", async 
   const result = await pending;
   assert.equal(result.completed, false);
   assert.equal(diagnostics[0].failureCode, "CALLER_ABORTED");
+  assert.equal(
+    result.providerOutcome?.completed === false
+      ? result.providerOutcome.failure.failureCode
+      : null,
+    "CALLER_ABORTED",
+  );
   assert.equal(observed, true);
   assert.equal(calls, 1);
 });

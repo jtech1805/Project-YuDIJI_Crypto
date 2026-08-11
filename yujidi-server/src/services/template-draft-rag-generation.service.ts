@@ -18,6 +18,7 @@ import { TemplateDraftRagContradictionService } from "./template-draft-rag-contr
 import { TemplateDraftRagReviewReportService } from "./template-draft-rag-review-report.service.js";
 import type { KnowledgeRetrievalExecutionAuthorization } from "../types/knowledge-retrieval-execution-authorization.types.js";
 import type { AiRuntimeDeadlineContext } from "../types/ai-runtime-deadline.types.js";
+import type { AiProviderExecutionObserver } from "../types/ai-provider-execution.types.js";
 export class TemplateDraftRagGenerationService {
   public constructor(
     private readonly d: Readonly<{
@@ -38,6 +39,7 @@ export class TemplateDraftRagGenerationService {
     input: RagTemplateDraftGenerationRequest,
     authorization?: KnowledgeRetrievalExecutionAuthorization,
     deadline?: AiRuntimeDeadlineContext,
+    providerObserver?: AiProviderExecutionObserver,
   ): Promise<RagTemplateDraftGenerationResult> {
     const queries = this.d.queries ?? new TemplateDraftRetrievalQueryService(),
       prompts = this.d.prompts ?? new TemplateDraftRagPromptContextService(),
@@ -70,6 +72,7 @@ export class TemplateDraftRagGenerationService {
       contextVersion: input.retrieval.contextVersion,
       ...(authorization ? { authorization } : {}),
       ...(deadline ? { deadline } : {}),
+      ...(providerObserver ? { providerObserver } : {}),
     });
     if (retrieval.status !== "COMPLETED" && retrieval.status !== "PARTIAL") {
       const safe = [
@@ -107,6 +110,9 @@ export class TemplateDraftRagGenerationService {
         },
         deadline ? { signal: deadline.signal } : undefined,
       );
+      if (model.providerOutcome) {
+        providerObserver?.record("RAG_GENERATION", model.providerOutcome);
+      }
       deadline?.complete("GENERATION");
       deadline?.throwIfExpired("VALIDATION");
     } catch (error) {

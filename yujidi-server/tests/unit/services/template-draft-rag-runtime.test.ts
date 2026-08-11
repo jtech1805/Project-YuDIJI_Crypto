@@ -460,3 +460,64 @@ test("pre-aborted caller prevents provider work", async () => {
   assert.equal(result.reason, "CALLER_CANCELLED");
   assert.equal(providerCalls, 0);
 });
+
+test("standalone C-D supplies policy-owned provider circuit attribution", async () => {
+  let now = 1;
+  const circuits = new AiRuntimeCircuitBreakerService(
+    AI_PROVIDER_CIRCUIT_POLICY,
+  );
+  const runtime = new TemplateDraftRagRuntimeService(
+    {
+      resolve: async () => ({
+        valid: true,
+        binding: { ...TEMPLATE_DRAFT_RAG_RUNTIME_V1 },
+      }),
+    } as any,
+    { reserve: async () => ({ allowed: true, reservationId: "R" }) } as any,
+    {
+      acquire: async () => ({ acquired: true, permitId: "P" }),
+      release: async () => {},
+    } as any,
+    circuits,
+    {
+      generate: async (
+        _request: unknown,
+        _authorization: unknown,
+        _deadline: unknown,
+        observer: any,
+      ) => {
+        observer.record("RAG_GENERATION", {
+          completed: false,
+          failure: {
+            providerClass: "GENERATION_PROVIDER",
+            failureCode: "NETWORK_FAILED",
+          },
+        });
+        throw new Error("provider failed");
+      },
+    } as any,
+    1_000,
+    undefined,
+    () => now,
+  );
+  const input = {
+    bindingId: TEMPLATE_DRAFT_RAG_RUNTIME_V1.bindingId,
+    bindingVersion: 1,
+    caller: { userId: "U", isInternal: true },
+    request: {} as any,
+    authoritativeResult: { status: "PARTIAL" },
+    features: {
+      killSwitch: false,
+      aiTemplateGenerationEnabled: true,
+      knowledgeRetrievalEnabled: true,
+      ragTemplateDraftingEnabled: true,
+    },
+    requestedAt: new Date(1),
+  } as const;
+  for (let count = 0; count < 3; count++) {
+    await runtime.execute(input as any);
+    now++;
+  }
+  assert.equal(circuits.state("GENERATION_PROVIDER", now), "OPEN");
+  assert.equal(circuits.state("EMBEDDING_PROVIDER", now), "CLOSED");
+});

@@ -7,6 +7,7 @@ import {
 import type { GeminiEmbeddingAdapterConfig } from "../../config/gemini-embedding.config.js";
 import type { KnowledgeEmbeddingPort } from "../../ports/knowledge-embedding.port.js";
 import { freezeClone } from "../../services/knowledge-document-admission.service.js";
+import { projectAiProviderFailure } from "../../services/ai-provider-outcome-projection.service.js";
 import type {
   KnowledgeEmbeddingProviderRequest,
   KnowledgeEmbeddingProviderResult,
@@ -156,6 +157,18 @@ export class GeminiKnowledgeEmbeddingAdapter implements KnowledgeEmbeddingPort {
           modelVersion: GEMINI_EMBEDDING_MODEL,
           vectors,
           usage: { inputCount: request.inputs.length, totalCharacters },
+          providerOutcome: {
+            completed: true,
+            success: {
+              providerClass: "EMBEDDING_PROVIDER",
+              provider: GEMINI_EMBEDDING_PROVIDER,
+              model: GEMINI_EMBEDDING_MODEL,
+            },
+            usage: {
+              providerCalls: attempts,
+              embeddingInputs: request.inputs.length,
+            },
+          },
         });
       } catch (error: unknown) {
         clearTimeout(timer);
@@ -187,7 +200,25 @@ export class GeminiKnowledgeEmbeddingAdapter implements KnowledgeEmbeddingPort {
         {},
       ),
     );
-    return Object.freeze({ status: "FAILED", failureCode: code });
+    return freezeClone({
+      status: "FAILED",
+      failureCode: code,
+      ...(attempts > 0
+        ? {
+            providerOutcome: {
+              completed: false,
+              failure: projectAiProviderFailure("EMBEDDING_PROVIDER", code, {
+                provider: GEMINI_EMBEDDING_PROVIDER,
+                model: GEMINI_EMBEDDING_MODEL,
+              }),
+              usage: {
+                providerCalls: attempts,
+                embeddingInputs: request.inputs.length,
+              },
+            },
+          }
+        : {}),
+    });
   }
   private async trace(value: GeminiEmbeddingDiagnostic): Promise<void> {
     try {

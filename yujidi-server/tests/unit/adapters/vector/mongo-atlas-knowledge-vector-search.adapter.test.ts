@@ -102,6 +102,8 @@ test("search returns exact immutable lineage, raw score and dense provider ordin
   assert.equal(out.candidates[0]?.providerScore, 0.9);
   assert.deepEqual(out.candidates[0]?.chunkSetIdentity, row.chunkSetIdentity);
   assert.ok(Object.isFrozen(out));
+  assert.equal(out.providerOutcome?.completed, true);
+  assert.equal(out.providerOutcome?.usage?.providerCalls, 1);
   assert.equal(pipeline[1].$project.vector, undefined);
 });
 test("search rejects malformed, duplicate, unnormalized and out-of-bound results", async () => {
@@ -156,6 +158,12 @@ test("caller cancellation reaches Mongo aggregation and never retries", async ()
   const result = await pending;
   assert.equal(result.status, "SEARCH_FAILED");
   assert.equal(result.failureCode, "CALLER_ABORTED");
+  assert.equal(
+    result.providerOutcome?.completed === false
+      ? result.providerOutcome.failure.failureCode
+      : null,
+    "CALLER_ABORTED",
+  );
   assert.equal(observed, true);
   assert.equal(calls, 1);
 });

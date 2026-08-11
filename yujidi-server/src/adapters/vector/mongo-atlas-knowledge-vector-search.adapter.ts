@@ -1,4 +1,5 @@
 import { freezeClone } from "../../services/knowledge-document-admission.service.js";
+import { projectAiProviderFailure } from "../../services/ai-provider-outcome-projection.service.js";
 import type { KnowledgeVectorSearchPort } from "../../ports/knowledge-vector-search.port.js";
 import type {
   KnowledgeVectorSearchRequest,
@@ -87,6 +88,14 @@ export class MongoAtlasKnowledgeVectorSearchAdapter
         return freezeClone({
           status: parsed.candidates.length ? "COMPLETED" : "NO_CANDIDATES",
           candidates: parsed.candidates,
+          providerOutcome: {
+            completed: true,
+            success: {
+              providerClass: "VECTOR_INDEX_PROVIDER",
+              provider: "MONGODB_ATLAS_VECTOR_SEARCH",
+            },
+            usage: { providerCalls: attempts },
+          },
         });
       } catch (error) {
         const mapped = mapMongoAtlasError(error);
@@ -127,6 +136,17 @@ export class MongoAtlasKnowledgeVectorSearchAdapter
       status: status(code),
       candidates: [],
       failureCode: code,
+      ...(attempts > 0
+        ? {
+            providerOutcome: {
+              completed: false,
+              failure: projectAiProviderFailure("VECTOR_INDEX_PROVIDER", code, {
+                provider: "MONGODB_ATLAS_VECTOR_SEARCH",
+              }),
+              usage: { providerCalls: attempts },
+            },
+          }
+        : {}),
     });
   }
 }

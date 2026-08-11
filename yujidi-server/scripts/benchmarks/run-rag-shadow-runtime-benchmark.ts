@@ -97,8 +97,13 @@ export const run = async (environment: NodeJS.ProcessEnv = process.env) => {
       ),
       new AiRuntimeCircuitBreakerService(AI_PROVIDER_CIRCUIT_POLICY),
       {
-        generate: (request, _authorization, deadline) =>
-          rag.generate(request, guard.authorization, deadline),
+        generate: (request, _authorization, deadline, providerObserver) =>
+          rag.generate(
+            request,
+            guard.authorization,
+            deadline,
+            providerObserver,
+          ),
       } as TemplateDraftRagGenerationService,
     );
     const outcomes = [];

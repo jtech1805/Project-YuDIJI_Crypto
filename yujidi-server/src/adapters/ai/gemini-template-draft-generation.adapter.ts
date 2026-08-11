@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { GeminiGenerationAdapterConfig } from "../../config/gemini-generation.config.js";
 import type { TemplateDraftGenerationPort } from "../../ports/template-draft-generation.port.js";
 import { templateDraftCandidateSchema } from "../../services/template-draft-generation.service.js";
+import { projectAiProviderFailure } from "../../services/ai-provider-outcome-projection.service.js";
 import type {
   TemplateDraftModelRequest,
   TemplateDraftModelResult,
@@ -158,6 +159,14 @@ export class GeminiTemplateDraftGenerationAdapter
       provider: GEMINI_GENERATION_PROVIDER,
       model: GEMINI_GENERATION_MODEL,
       completedAt,
+      providerOutcome: {
+        completed: false,
+        failure: projectAiProviderFailure("GENERATION_PROVIDER", last, {
+          provider: GEMINI_GENERATION_PROVIDER,
+          model: GEMINI_GENERATION_MODEL,
+        }),
+        usage: { providerCalls: attempts, generationCalls: attempts },
+      },
     });
   }
 
@@ -220,6 +229,18 @@ export class GeminiTemplateDraftGenerationAdapter
           provider: GEMINI_GENERATION_PROVIDER,
           model: reported ?? GEMINI_GENERATION_MODEL,
           completedAt,
+          providerOutcome: {
+            completed: false,
+            failure: projectAiProviderFailure("GENERATION_PROVIDER", failure, {
+              provider: GEMINI_GENERATION_PROVIDER,
+              model: reported ?? GEMINI_GENERATION_MODEL,
+            }),
+            usage: {
+              providerCalls: attempts,
+              generationCalls: attempts,
+              ...representableUsage(usage).tokenUsage,
+            },
+          },
         },
         diagnostic: diagnostic(
           request.correlationId,
@@ -241,6 +262,19 @@ export class GeminiTemplateDraftGenerationAdapter
         model: reported ?? GEMINI_GENERATION_MODEL,
         completedAt,
         ...representableUsage(usage),
+        providerOutcome: {
+          completed: true,
+          success: {
+            providerClass: "GENERATION_PROVIDER",
+            provider: GEMINI_GENERATION_PROVIDER,
+            model: reported ?? GEMINI_GENERATION_MODEL,
+          },
+          usage: {
+            providerCalls: attempts,
+            generationCalls: attempts,
+            ...representableUsage(usage).tokenUsage,
+          },
+        },
       },
       diagnostic: diagnostic(
         request.correlationId,

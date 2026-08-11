@@ -103,6 +103,8 @@ test("maps document purpose, exact model/dimension and ordered text only", async
   });
   const result = await adapter.embed(request());
   assert.equal(result.status, "COMPLETED");
+  assert.equal(result.providerOutcome?.completed, true);
+  assert.equal(result.providerOutcome?.usage?.embeddingInputs, 2);
   assert.equal(sent.model, GEMINI_EMBEDDING_MODEL);
   assert.deepEqual(sent.contents, [
     "first synthetic text",
@@ -209,10 +211,14 @@ test("accepts absent usage/model metadata and rejects conflicting reported model
   const bad = await new GeminiKnowledgeEmbeddingAdapter(config(), {
     client: { embed: async () => ({ ...vectors(), modelVersion: "other" }) },
   }).embed(request());
-  assert.deepEqual(bad, {
-    status: "FAILED",
-    failureCode: "MODEL_IDENTITY_MISMATCH",
-  });
+  assert.equal(bad.status, "FAILED");
+  assert.equal(bad.failureCode, "MODEL_IDENTITY_MISMATCH");
+  assert.equal(
+    bad.providerOutcome?.completed === false
+      ? bad.providerOutcome.failure.failureCode
+      : null,
+    "IDENTITY_MISMATCH",
+  );
 });
 test("retries only transient failures once with identical request and never falls back", async () => {
   const sent: any[] = [];
@@ -268,10 +274,14 @@ test("timeout is bounded and exhausts at two attempts", async () => {
     },
   });
   const result = await adapter.embed(request());
-  assert.deepEqual(result, {
-    status: "FAILED",
-    failureCode: "REQUEST_TIMEOUT",
-  });
+  assert.equal(result.status, "FAILED");
+  assert.equal(result.failureCode, "REQUEST_TIMEOUT");
+  assert.equal(
+    result.providerOutcome?.completed === false
+      ? result.providerOutcome.failure.failureCode
+      : null,
+    "REQUEST_TIMEOUT",
+  );
   assert.equal(calls, 2);
 });
 test("caller cancellation aborts the in-flight embedding and never retries", async () => {
@@ -296,10 +306,15 @@ test("caller cancellation aborts the in-flight embedding and never retries", asy
   });
   const pending = adapter.embed(request(), { signal: caller.signal });
   caller.abort("RUNTIME_DEADLINE_EXCEEDED");
-  assert.deepEqual(await pending, {
-    status: "FAILED",
-    failureCode: "CALLER_ABORTED",
-  });
+  const result = await pending;
+  assert.equal(result.status, "FAILED");
+  assert.equal(result.failureCode, "CALLER_ABORTED");
+  assert.equal(
+    result.providerOutcome?.completed === false
+      ? result.providerOutcome.failure.failureCode
+      : null,
+    "CALLER_ABORTED",
+  );
   assert.equal(observed, true);
   assert.equal(calls, 1);
 });
