@@ -3596,6 +3596,49 @@ C-D — COMPLETE / SHADOW_RUNTIME_PROVEN
 C-E — NEXT
 ```
 
+### Track C-E1A — Governed Registry-Only Baseline and Dual-Path Execution Contract
+
+Status:
+COMPLETE
+
+Shared execution governance:
+
+- One internal, request-scoped governed execution context proves exact binding resolution, feature and rollout admission, one request-count reservation, one concurrency permit, one overall deadline, and one caller-cancellation chain.
+- Cleanup is idempotent and releases deadline resources and the single permit through one finalization path. The context is non-persisted, frozen, and accepted only from the internal authority that issued it.
+- Provider activity remains separately attributable as BASELINE_GENERATION, QUERY_EMBEDDING, VECTOR_RETRIEVAL, and RAG_GENERATION usage; unknown usage remains unknown.
+
+Baseline and shadow semantics:
+
+- The authoritative baseline reuses registry-grounded B1 structured generation, strict candidate parsing, deterministic validation, and review projection without retrieval, embeddings, Atlas, or retrieved citations.
+- Baseline generation checks the shared generation circuit and shared deadline, propagates the shared caller signal, and records exact C-E1A0 provider outcome and usage lineage before domain validation.
+- Baseline failure prevents shadow execution. Once a valid baseline exists, embedding, Atlas, RAG generation, validation, citation, deadline, or caller failure in the shadow path cannot replace or mutate it.
+- C-D exposes an additive governed-context entry without another budget reservation, concurrency acquisition, deadline, or caller signal. Its existing standalone entry retains its original ownership and behavior.
+
+Application retrieval authority:
+
+- `YUDIJI_TEMPLATE_DRAFT_RAG_APPLICATION_RETRIEVAL` v1 authorizes only the exact runtime binding, immutable index and corpus publications, embedding schema, namespace, PLATFORM_KNOWLEDGE corpus, and SHADOW_ONLY/INTERNAL rollout lineage.
+- The application authority has no development environment or benchmark-confirmation requirement, does not use the development-validation authority, and provides no wildcard, latest, physical-index inference, or LIMITED_PRODUCTION permission.
+
+Verification:
+
+- Focused C-E1A/C-E1A0/C-D characterization passed.
+- Full backend, typecheck, circular-dependency audit, production formatting, guarded standalone C-D benchmark, and `git diff --check` passed.
+
+Protected boundaries:
+
+- No C-E1 request assembly, Express route/controller, public API, production activation, template persistence, private/market RAG, scoring/compiler change, fallback, deployment, or commit exists.
+
+Progress:
+
+```text
+C-D — COMPLETE / SHADOW_RUNTIME_PROVEN
+C-E0 — COMPLETE
+C-E1A0 — COMPLETE
+C-E1A — COMPLETE
+C-E1 — NEXT
+C-E — BLOCKED pending C-E1
+```
+
 ### Track C-E1A0 — Provider Outcome, Circuit Attribution and Usage Lineage Amendment
 
 Status:

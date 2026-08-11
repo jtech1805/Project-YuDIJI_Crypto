@@ -13,9 +13,12 @@ import { AiRuntimeDeadlineContextService } from "./ai-runtime-deadline-context.s
 import {
   AiRuntimeCallerCancelledError,
   AiRuntimeDeadlineExceededError,
+  type AiRuntimeDeadlineContext,
 } from "../types/ai-runtime-deadline.types.js";
 import { AiProviderCircuitAttributionService } from "./ai-provider-circuit-attribution.service.js";
 import { AI_PROVIDER_CIRCUIT_POLICY } from "../registries/ai-runtime-execution-policy.registry.js";
+import type { AiGovernedExecutionContext } from "../types/ai-governed-execution-context.types.js";
+import type { AiProviderExecutionObserver } from "../types/ai-provider-execution.types.js";
 export class TemplateDraftRagRuntimeService {
   public constructor(
     private readonly bindingService: TemplateDraftRagRuntimeBindingService,
@@ -174,15 +177,98 @@ export class TemplateDraftRagRuntimeService {
     }
 
     try {
+      return await this.runAdmitted(
+        input,
+        resolved.binding,
+        deadline,
+        startedAt,
+      );
+    } finally {
+      deadline.dispose();
+      await this.concurrency.release(permit.permitId);
+    }
+  }
+
+  public async executeWithinGovernedContext(
+    context: AiGovernedExecutionContext,
+    input: TemplateDraftRagShadowRequest,
+    providerObserver?: AiProviderExecutionObserver,
+  ): Promise<TemplateDraftRagShadowResult> {
+    const startedAt = this.now();
+    if (
+      context.runtimeBindingId !== input.bindingId ||
+      context.runtimeBindingVersion !== input.bindingVersion
+    ) {
+      return out(
+        "SKIPPED",
+        "RUNTIME_BINDING_INVALID",
+        { authoritativeResultUntouched: true as const },
+        input,
+        startedAt,
+        this.now(),
+        "ALLOWED",
+        "ACQUIRED",
+      );
+    }
+    for (const providerClass of [
+      "GENERATION_PROVIDER",
+      "EMBEDDING_PROVIDER",
+      "VECTOR_INDEX_PROVIDER",
+    ] as const) {
+      if (!this.circuits.allow(providerClass, this.now())) {
+        return out(
+          "SKIPPED",
+          `${providerClass}_CIRCUIT_OPEN`,
+          { authoritativeResultUntouched: true as const },
+          input,
+          startedAt,
+          this.now(),
+          "ALLOWED",
+          "ACQUIRED",
+          context.deadlineContext.latencies(),
+        );
+      }
+    }
+    return this.runAdmitted(
+      input,
+      {
+        bindingId: context.runtimeBindingId,
+        bindingVersion: context.runtimeBindingVersion,
+        indexPublicationId: context.indexPublicationId,
+        indexPublicationVersion: context.indexPublicationVersion,
+        rolloutMode: context.rolloutMode,
+      },
+      context.deadlineContext,
+      startedAt,
+      providerObserver,
+    );
+  }
+
+  private async runAdmitted(
+    input: TemplateDraftRagShadowRequest,
+    binding: Readonly<{
+      bindingId: string;
+      bindingVersion: number;
+      indexPublicationId: string;
+      indexPublicationVersion: number;
+      rolloutMode: string;
+    }>,
+    deadline: AiRuntimeDeadlineContext,
+    startedAt: number,
+    providerObserver?: AiProviderExecutionObserver,
+  ): Promise<TemplateDraftRagShadowResult> {
+    const base = { authoritativeResultUntouched: true as const };
+    try {
       const result = await this.ragGeneration.generate(
         input.request,
         undefined,
         deadline,
-        new AiProviderCircuitAttributionService(
-          this.circuits,
-          AI_PROVIDER_CIRCUIT_POLICY,
-          this.now,
-        ),
+        providerObserver ??
+          new AiProviderCircuitAttributionService(
+            this.circuits,
+            AI_PROVIDER_CIRCUIT_POLICY,
+            this.now,
+          ),
       );
       const comparison = this.comparisonService.compare(
         input.authoritativeResult,
@@ -196,11 +282,11 @@ export class TemplateDraftRagRuntimeService {
         ragResult: result,
         comparison,
         trace: {
-          bindingId: input.bindingId,
-          bindingVersion: input.bindingVersion,
-          indexPublicationId: resolved.binding.indexPublicationId,
-          indexPublicationVersion: resolved.binding.indexPublicationVersion,
-          rolloutMode: "SHADOW_ONLY",
+          bindingId: binding.bindingId,
+          bindingVersion: binding.bindingVersion,
+          indexPublicationId: binding.indexPublicationId,
+          indexPublicationVersion: binding.indexPublicationVersion,
+          rolloutMode: binding.rolloutMode,
           featureControls: input.features,
           budgetDecision: "ALLOWED",
           concurrencyDecision: "ACQUIRED",
@@ -247,9 +333,6 @@ export class TemplateDraftRagRuntimeService {
         stageLatencies,
         deadline.failureStage() ?? undefined,
       );
-    } finally {
-      deadline.dispose();
-      await this.concurrency.release(permit.permitId);
     }
   }
 }
