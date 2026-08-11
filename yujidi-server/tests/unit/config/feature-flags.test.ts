@@ -13,7 +13,7 @@ import {
 test("parseFeatureFlags defaults every approved flag to false", () => {
   const snapshot = parseFeatureFlags({});
 
-  assert.equal(FEATURE_FLAG_KEYS.length, 9);
+  assert.equal(FEATURE_FLAG_KEYS.length, 12);
   assert.deepEqual(Object.keys(snapshot).sort(), [...FEATURE_FLAG_KEYS].sort());
 
   for (const flagKey of FEATURE_FLAG_KEYS) {

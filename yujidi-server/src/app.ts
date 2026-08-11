@@ -29,6 +29,7 @@ import { aiExplanationRouter } from "./routes/ai-explanation.routes.js";
 import { scoringContextRouter } from "./routes/scoring-context.routes.js";
 import { scoringTemplateRouter } from "./routes/scoring-template.routes.js";
 import { internalTemplateDraftRagRouter } from "./routes/internal-template-draft-rag.routes.js";
+import { copilotRouter } from "./routes/copilot.routes.js";
 
 const loggerOptions: LoggerOptions = {
   level: process.env.NODE_ENV === "production" ? "info" : "debug",
@@ -128,6 +129,7 @@ app.use("/api/ai-explanations", aiExplanationRouter);
 app.use("/api/scoring", scoringContextRouter);
 app.use("/api/scoring-templates", scoringTemplateRouter);
 app.use("/internal/ai/rag", internalTemplateDraftRagRouter);
+app.use("/api/copilot", copilotRouter);
 
 app.use((_req: Request, _res: Response, next: NextFunction): void => {
   next(new AppError("Route not found", 404));

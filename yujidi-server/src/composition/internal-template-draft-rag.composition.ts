@@ -55,6 +55,10 @@ import { KnowledgeRetrievalRerankingService } from "../services/knowledge-retrie
 import { KnowledgeContextAssemblyService } from "../services/knowledge-context-assembly.service.js";
 import { KnowledgeEmbeddingNormalizationService } from "../services/knowledge-embedding-normalization.service.js";
 import { PinoInternalRagLifecycleLogger } from "../services/internal-rag-lifecycle-logger.service.js";
+import { GeminiTemplateDraftIntentAdapter } from "../adapters/ai/gemini-template-draft-intent.adapter.js";
+import { TemplateDraftIntentExtractionService } from "../services/template-draft-intent-extraction.service.js";
+import { TemplateDraftPromptApplicationService } from "../services/template-draft-prompt-application.service.js";
+import { CopilotTemplateDraftApplicationService } from "../services/copilot-template-draft-application.service.js";
 
 export const createInternalTemplateDraftRagApplicationService = (
   environment: NodeJS.ProcessEnv = process.env,
@@ -235,3 +239,28 @@ export const createInternalTemplateDraftRagApplicationService = (
     new PinoInternalRagLifecycleLogger(),
   );
 };
+
+export const createTemplateDraftPromptApplicationService = (
+  environment: NodeJS.ProcessEnv = process.env,
+): TemplateDraftPromptApplicationService => {
+  const lifecycle = new PinoInternalRagLifecycleLogger();
+  return new TemplateDraftPromptApplicationService(
+    new TemplateDraftIntentExtractionService(
+      new GeminiTemplateDraftIntentAdapter(
+        createGeminiGenerationAdapterConfig(environment),
+      ),
+    ),
+    createInternalTemplateDraftRagApplicationService(environment),
+    lifecycle,
+  );
+};
+
+export const createCopilotTemplateDraftApplicationService = (
+  environment: NodeJS.ProcessEnv = process.env,
+): CopilotTemplateDraftApplicationService =>
+  new CopilotTemplateDraftApplicationService(
+    createFeatureFlagService(environment),
+    createTemplateDraftPromptApplicationService(environment),
+    undefined,
+    new PinoInternalRagLifecycleLogger(),
+  );
