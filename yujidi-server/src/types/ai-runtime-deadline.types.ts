@@ -35,3 +35,10 @@ export class AiRuntimeDeadlineExceededError extends Error {
     this.name = "AiRuntimeDeadlineExceededError";
   }
 }
+
+export class AiRuntimeCallerCancelledError extends Error {
+  public constructor(public readonly stage: AiRuntimeStage) {
+    super("CALLER_CANCELLED");
+    this.name = "AiRuntimeCallerCancelledError";
+  }
+}

@@ -10,7 +10,10 @@ import type { TemplateDraftRagGenerationService } from "./template-draft-rag-gen
 import { AiRuntimeCircuitBreakerService } from "./ai-runtime-circuit-breaker.service.js";
 import { TemplateDraftRagShadowComparisonService } from "./template-draft-rag-shadow-comparison.service.js";
 import { AiRuntimeDeadlineContextService } from "./ai-runtime-deadline-context.service.js";
-import { AiRuntimeDeadlineExceededError } from "../types/ai-runtime-deadline.types.js";
+import {
+  AiRuntimeCallerCancelledError,
+  AiRuntimeDeadlineExceededError,
+} from "../types/ai-runtime-deadline.types.js";
 export class TemplateDraftRagRuntimeService {
   public constructor(
     private readonly bindingService: TemplateDraftRagRuntimeBindingService,
@@ -55,11 +58,32 @@ export class TemplateDraftRagRuntimeService {
       );
     }
 
-    const deadline = new AiRuntimeDeadlineContextService(this.deadlineMs, {
-      now: this.now,
-    });
-    deadline.enter("PRE_EXECUTION");
-    deadline.complete("PRE_EXECUTION");
+    const deadline = new AiRuntimeDeadlineContextService(
+      this.deadlineMs,
+      { now: this.now },
+      undefined,
+      input.callerSignal,
+    );
+    try {
+      deadline.enter("PRE_EXECUTION");
+      deadline.complete("PRE_EXECUTION");
+    } catch (error) {
+      deadline.dispose();
+      return out(
+        "FAILED",
+        error instanceof AiRuntimeCallerCancelledError
+          ? "CALLER_CANCELLED"
+          : "DEADLINE_EXCEEDED",
+        base,
+        input,
+        startedAt,
+        this.now(),
+        "NOT_REACHED",
+        "NOT_REACHED",
+        deadline.latencies(),
+        deadline.failureStage() ?? undefined,
+      );
+    }
 
     const resolved = await this.bindingService.resolve(
       input.bindingId,
@@ -195,10 +219,18 @@ export class TemplateDraftRagRuntimeService {
       const stageLatencies = deadline.latencies();
       const deadlineFailure =
         error instanceof AiRuntimeDeadlineExceededError ||
-        deadline.signal.aborted;
+        (deadline.signal.aborted &&
+          deadline.signal.reason === "RUNTIME_DEADLINE_EXCEEDED");
+      const callerCancellation =
+        error instanceof AiRuntimeCallerCancelledError ||
+        deadline.signal.reason === "CALLER_CANCELLED";
       return out(
         "FAILED",
-        deadlineFailure ? "DEADLINE_EXCEEDED" : "PROVIDER_FAILURE",
+        callerCancellation
+          ? "CALLER_CANCELLED"
+          : deadlineFailure
+            ? "DEADLINE_EXCEEDED"
+            : "PROVIDER_FAILURE",
         base,
         input,
         startedAt,

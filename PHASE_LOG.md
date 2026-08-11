@@ -3403,3 +3403,37 @@ C-D3 — COMPLETE
 C-D — COMPLETE / SHADOW_RUNTIME_PROVEN
 C-E — NEXT
 ```
+
+### Track C-E0 — Application Role Authority, Internal Authorization and Caller Cancellation Contract
+
+Status:
+COMPLETE
+
+Role authority:
+- ADR-064 freezes the closed, canonically ordered `USER`, `INTERNAL`, and `ADMIN` vocabulary. Roles are multi-valued, unique, non-empty, and retain `USER`.
+- The current User record is authoritative. New records have the storage default `["USER"]`; legacy records without roles resolve as `["USER"]` at read time without a bulk migration or authorization-read write. A later ordinary User-model write may safely materialize the schema default.
+- JWTs remain identity-only. Authorization rereads current User roles for every request, so revocation is effective on the next request using the same JWT.
+- USER is denied internal authorization; INTERNAL and ADMIN are admitted. Missing, malformed, and unavailable authorities fail closed with sanitized outcomes.
+- Email, headers, body, query parameters, environment inference, and JWT role claims cannot grant privilege. No role mutation route or automatic privileged bootstrap exists.
+
+Caller cancellation:
+- The governed shadow-runtime request accepts one optional caller `AbortSignal`, composed with the existing request-owned deadline controller.
+- First terminal cause wins: caller cancellation returns `CALLER_CANCELLED`; runtime expiry returns `DEADLINE_EXCEEDED`.
+- Cancellation propagates through embedding, Atlas retrieval, and generation, prevents later stages, avoids caller-cancellation retries and circuit-health failures, preserves authoritative output, releases concurrency, and clears deadline resources.
+
+Verification:
+- Focused C-E0/C-D3 tests: 51 passed, 0 failed.
+- Full backend: 1,192 passed, 0 failed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- Production formatting and `git diff --check` passed.
+
+Protected boundaries:
+- No C-E route, public RAG API, public role mutation API, production activation, template persistence, scoring/compiler change, or private/market RAG change exists.
+
+Progress:
+```text
+C-D — COMPLETE / SHADOW_RUNTIME_PROVEN
+C-E0 — COMPLETE
+C-E — NEXT
+```

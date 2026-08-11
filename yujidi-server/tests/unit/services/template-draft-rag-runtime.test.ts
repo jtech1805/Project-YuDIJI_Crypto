@@ -348,3 +348,115 @@ test("failed half-open probe reopens only its provider circuit", () => {
   circuit.failure("EMBEDDING_PROVIDER", "VALIDATION_FAILED", 30_002);
   assert.equal(circuit.state("EMBEDDING_PROVIDER", 30_002), "CLOSED");
 });
+
+test("upstream caller cancellation is typed, preserves authority, and releases permits", async () => {
+  for (const stage of ["EMBEDDING", "RETRIEVAL", "GENERATION"] as const) {
+    let activePermits = 0;
+    let observedAbort = false;
+    const caller = new AbortController();
+    const circuits = new AiRuntimeCircuitBreakerService(
+      AI_PROVIDER_CIRCUIT_POLICY,
+    );
+    const runtime = new TemplateDraftRagRuntimeService(
+      {
+        resolve: async () => ({
+          valid: true,
+          binding: { ...TEMPLATE_DRAFT_RAG_RUNTIME_V1 },
+        }),
+      } as any,
+      { reserve: async () => ({ allowed: true, reservationId: "R" }) } as any,
+      {
+        acquire: async () => {
+          activePermits++;
+          return { acquired: true, permitId: "P" };
+        },
+        release: async () => {
+          activePermits--;
+        },
+      } as any,
+      circuits,
+      {
+        generate: async (
+          _request: unknown,
+          _authorization: unknown,
+          deadline: any,
+        ) => {
+          deadline.enter(stage);
+          return new Promise((_resolve, reject) => {
+            deadline.signal.addEventListener(
+              "abort",
+              () => {
+                observedAbort = true;
+                reject(new Error("caller cancelled"));
+              },
+              { once: true },
+            );
+            caller.abort();
+          });
+        },
+      } as any,
+    );
+    const authoritativeResult = Object.freeze({ status: "PARTIAL" });
+    const result = await runtime.execute({
+      bindingId: TEMPLATE_DRAFT_RAG_RUNTIME_V1.bindingId,
+      bindingVersion: 1,
+      caller: { userId: "U", isInternal: true },
+      callerSignal: caller.signal,
+      request: {} as any,
+      authoritativeResult,
+      features: {
+        killSwitch: false,
+        aiTemplateGenerationEnabled: true,
+        knowledgeRetrievalEnabled: true,
+        ragTemplateDraftingEnabled: true,
+      },
+      requestedAt: new Date(0),
+    });
+    assert.equal(result.status, "FAILED");
+    assert.equal(result.reason, "CALLER_CANCELLED");
+    assert.equal(result.authoritativeResultUntouched, true);
+    assert.equal(observedAbort, true);
+    assert.equal(activePermits, 0);
+    assert.equal(circuits.state("EMBEDDING_PROVIDER", 0), "CLOSED");
+    assert.equal(circuits.state("VECTOR_INDEX_PROVIDER", 0), "CLOSED");
+    assert.equal(circuits.state("GENERATION_PROVIDER", 0), "CLOSED");
+  }
+});
+
+test("pre-aborted caller prevents provider work", async () => {
+  const caller = new AbortController();
+  caller.abort();
+  let providerCalls = 0;
+  const runtime = new TemplateDraftRagRuntimeService(
+    { resolve: async () => ({ valid: false }) } as any,
+    { reserve: async () => ({ allowed: true, reservationId: "R" }) } as any,
+    {
+      acquire: async () => ({ acquired: true, permitId: "P" }),
+      release: async () => {},
+    } as any,
+    new AiRuntimeCircuitBreakerService(AI_PROVIDER_CIRCUIT_POLICY),
+    {
+      generate: async () => {
+        providerCalls++;
+        return {};
+      },
+    } as any,
+  );
+  const result = await runtime.execute({
+    bindingId: TEMPLATE_DRAFT_RAG_RUNTIME_V1.bindingId,
+    bindingVersion: 1,
+    caller: { userId: "U", isInternal: true },
+    callerSignal: caller.signal,
+    request: {} as any,
+    authoritativeResult: { status: "PARTIAL" },
+    features: {
+      killSwitch: false,
+      aiTemplateGenerationEnabled: true,
+      knowledgeRetrievalEnabled: true,
+      ragTemplateDraftingEnabled: true,
+    },
+    requestedAt: new Date(0),
+  });
+  assert.equal(result.reason, "CALLER_CANCELLED");
+  assert.equal(providerCalls, 0);
+});

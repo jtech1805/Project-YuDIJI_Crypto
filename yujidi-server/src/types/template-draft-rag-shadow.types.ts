@@ -22,6 +22,7 @@ export type TemplateDraftRagShadowRequest = Readonly<{
   authoritativeResult: unknown;
   features: RagRuntimeFeatures;
   requestedAt: Date;
+  callerSignal?: AbortSignal;
 }>;
 export const TEMPLATE_DRAFT_RAG_SHADOW_COMPARISON_OUTCOMES = [
   "MATCH",

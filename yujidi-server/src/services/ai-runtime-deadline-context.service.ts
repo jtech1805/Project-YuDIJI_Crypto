@@ -1,4 +1,5 @@
 import {
+  AiRuntimeCallerCancelledError,
   AiRuntimeDeadlineExceededError,
   type AiRuntimeDeadlineContext,
   type AiRuntimeStage,
@@ -25,6 +26,7 @@ export class AiRuntimeDeadlineContextService
   private observedFailureStage: AiRuntimeStage | null = null;
   private activeStage: AiRuntimeStage = "PRE_EXECUTION";
   private disposed = false;
+  private readonly cancelCallerListener: () => void;
 
   public constructor(
     deadlineMs: number,
@@ -33,15 +35,31 @@ export class AiRuntimeDeadlineContextService
       set: (callback, milliseconds) => setTimeout(callback, milliseconds),
       clear: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
     },
+    callerSignal?: AbortSignal,
   ) {
     const started = clock.now();
     this.startedAtEpochMs = started;
     this.deadlineAtEpochMs = started + Math.max(0, deadlineMs);
     this.signal = this.controller.signal;
+    const cancelFromCaller = (): void => {
+      if (!this.signal.aborted) {
+        this.observedFailureStage = this.activeStage;
+        this.controller.abort("CALLER_CANCELLED");
+      }
+    };
+    if (callerSignal?.aborted) cancelFromCaller();
+    else
+      callerSignal?.addEventListener("abort", cancelFromCaller, {
+        once: true,
+      });
+    this.cancelCallerListener = () =>
+      callerSignal?.removeEventListener("abort", cancelFromCaller);
     this.timerHandle = timer.set(
       () => {
-        this.observedFailureStage = this.activeStage;
-        this.controller.abort("RUNTIME_DEADLINE_EXCEEDED");
+        if (!this.signal.aborted) {
+          this.observedFailureStage = this.activeStage;
+          this.controller.abort("RUNTIME_DEADLINE_EXCEEDED");
+        }
       },
       Math.max(0, deadlineMs),
     );
@@ -60,7 +78,14 @@ export class AiRuntimeDeadlineContextService
   }
 
   public throwIfExpired(stage: AiRuntimeStage): void {
-    if (this.signal.aborted || this.remainingMs() === 0) {
+    if (this.signal.aborted) {
+      this.observedFailureStage = stage;
+      if (this.signal.reason === "CALLER_CANCELLED") {
+        throw new AiRuntimeCallerCancelledError(stage);
+      }
+      throw new AiRuntimeDeadlineExceededError(stage);
+    }
+    if (this.remainingMs() === 0) {
       this.observedFailureStage = stage;
       this.controller.abort("RUNTIME_DEADLINE_EXCEEDED");
       throw new AiRuntimeDeadlineExceededError(stage);
@@ -96,6 +121,7 @@ export class AiRuntimeDeadlineContextService
   public dispose(): void {
     if (!this.disposed) {
       this.timer.clear(this.timerHandle);
+      this.cancelCallerListener();
       this.disposed = true;
     }
   }

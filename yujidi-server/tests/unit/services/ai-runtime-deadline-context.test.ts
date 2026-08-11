@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { AiRuntimeDeadlineContextService } from "../../../src/services/ai-runtime-deadline-context.service.js";
 import { AiRuntimeDeadlineExceededError } from "../../../src/types/ai-runtime-deadline.types.js";
+import { AiRuntimeCallerCancelledError } from "../../../src/types/ai-runtime-deadline.types.js";
 
 test("deadline context suppresses retrieval after embedding expiry", () => {
   let now = 100;
@@ -83,4 +84,49 @@ test("one timer aborts the shared signal observed by an in-flight stage", async 
   assert.equal(context.failureStage(), "GENERATION");
   context.dispose();
   assert.equal(cleared, 1);
+});
+
+test("caller and deadline cancellation preserve the first terminal cause", () => {
+  let deadlineTimer: (() => void) | undefined;
+  const caller = new AbortController();
+  const callerFirst = new AiRuntimeDeadlineContextService(
+    10,
+    { now: () => 0 },
+    {
+      set: (callback) => {
+        deadlineTimer = callback;
+        return "TIMER";
+      },
+      clear: () => {},
+    },
+    caller.signal,
+  );
+  callerFirst.enter("EMBEDDING");
+  caller.abort();
+  deadlineTimer?.();
+  assert.throws(
+    () => callerFirst.throwIfExpired("RETRIEVAL"),
+    AiRuntimeCallerCancelledError,
+  );
+
+  const laterCaller = new AbortController();
+  const deadlineFirst = new AiRuntimeDeadlineContextService(
+    10,
+    { now: () => 0 },
+    {
+      set: (callback) => {
+        deadlineTimer = callback;
+        return "TIMER";
+      },
+      clear: () => {},
+    },
+    laterCaller.signal,
+  );
+  deadlineFirst.enter("GENERATION");
+  deadlineTimer?.();
+  laterCaller.abort();
+  assert.throws(
+    () => deadlineFirst.throwIfExpired("VALIDATION"),
+    AiRuntimeDeadlineExceededError,
+  );
 });
