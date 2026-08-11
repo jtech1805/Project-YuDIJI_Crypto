@@ -22,7 +22,8 @@
     "benchmark:atlas-vector-search": "tsx scripts/benchmarks/run-atlas-vector-search-benchmark.ts",
     "benchmark:gemini-atlas-semantic": "tsx scripts/benchmarks/run-gemini-atlas-semantic-benchmark.ts",
     "benchmark:gemini-atlas-rag": "tsx scripts/benchmarks/run-gemini-atlas-rag-benchmark.ts",
-    "dev:ingest-platform-knowledge": "tsx scripts/dev/ingest-platform-knowledge.ts"
+    "dev:ingest-platform-knowledge": "tsx scripts/dev/ingest-platform-knowledge.ts",
+    "dev:publish-platform-knowledge-index": "tsx scripts/dev/publish-platform-knowledge-index.ts"
   },
   "keywords": [],
   "author": "",

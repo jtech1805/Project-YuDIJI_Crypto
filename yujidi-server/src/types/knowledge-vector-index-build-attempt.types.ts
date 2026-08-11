@@ -1,0 +1,7 @@
+export const KNOWLEDGE_VECTOR_INDEX_BUILD_OUTCOMES=["READY","FAILED","TIMED_OUT","SPECIFICATION_MISMATCH"] as const;
+export type KnowledgeVectorIndexBuildOutcome=typeof KNOWLEDGE_VECTOR_INDEX_BUILD_OUTCOMES[number];
+export type KnowledgeVectorIndexBuildDiagnostic=Readonly<{code:string;value?:string|number|boolean}>;
+export type KnowledgeVectorIndexBuildAttemptCommand=Readonly<{buildAttemptId:string;buildAttemptVersion:number;corpusPublicationId:string;corpusPublicationVersion:number;indexId:string;indexVersion:number;indexSpecificationDigest:string;embeddingSchemaId:string;embeddingSchemaVersion:number;namespace:string;provider:string;physicalIndexName:string;projectionCount:number;requestedAt:Date;outcome:KnowledgeVectorIndexBuildOutcome;providerState?:string;completedAt?:Date;diagnostics:readonly KnowledgeVectorIndexBuildDiagnostic[]}>;
+export type PersistedKnowledgeVectorIndexBuildAttempt=KnowledgeVectorIndexBuildAttemptCommand&Readonly<{createdAt:Date}>;
+export type KnowledgeVectorIndexBuildAttemptResult=Readonly<{status:"CREATED"|"ALREADY_EXISTS";attempt:PersistedKnowledgeVectorIndexBuildAttempt}>|Readonly<{status:"CONFLICT"|"INVARIANT_VIOLATION"|"PERSISTENCE_FAILED"}>;
+export type KnowledgeVectorIndexBuildAttemptReadResult=Readonly<{found:true;attempt:PersistedKnowledgeVectorIndexBuildAttempt}>|Readonly<{found:false;code:"NOT_FOUND"|"INVARIANT_VIOLATION"|"PERSISTENCE_FAILED"}>;

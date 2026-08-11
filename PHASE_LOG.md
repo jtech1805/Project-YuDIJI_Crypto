@@ -3275,3 +3275,42 @@ Known limitations:
 
 Next planning boundary:
 Track C-B3C — MongoDB Atlas Write/Search Adapters and Guarded Development Validation.
+### Track C-C — Corpus and Index Publication Authorities
+
+Status:
+COMPLETE
+
+Publication proof:
+- Corpus publication `YUDIJI_PLATFORM_KNOWLEDGE_DEVELOPMENT_PUBLICATION` v1 freezes 6 SYSTEM-owned PLATFORM_KNOWLEDGE documents and 9 manifest-complete chunks.
+- Canonical corpus digest: `e4c09e7c6f0fe4f199e8271d596fa6f4c3a7f72dc86f2288e6c40b1a5ddda704`.
+- Exact embedding schema: `YUDIJI_GEMINI_PLATFORM_KNOWLEDGE_EMBEDDING` v1.
+- Exact vector index: `YUDIJI_ATLAS_PLATFORM_KNOWLEDGE_GEMINI_768` v1; physical Atlas index `yudiji_atlas_platform_knowledge_gemini_768_v1`.
+- Atlas specification digest: `c22cdcaa18faa4fea51ba28b7164df17e67624a14efce617cbc8d6a978f0bac0`.
+- Projection population verification proved 9 expected and 9 verified projections with no missing or unexpected population.
+- Immutable build attempt `YUDIJI_PLATFORM_KNOWLEDGE_GEMINI_ATLAS_INSPECTION` v1 recorded provider state READY from exact real inspection.
+- Index publication `YUDIJI_PLATFORM_KNOWLEDGE_GEMINI_ATLAS_PUBLICATION` v1 has digest `10770888605ad77b6b7570b13a88879edb5ad53a831f5fcecc88c22554474b04`.
+- Successful publication run created the index publication; the second identical run returned corpus and index publication `ALREADY_EXISTS` with identical digests.
+- Exact repositories expose identity/version reads only. No latest/current/recency selection exists.
+
+Verification:
+- Focused C-C tests: 5 passed.
+- Full backend: 1,168 passed, 0 failed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- `git diff --check` passed.
+
+Protected boundaries:
+- `retrievalEligible` remains false and the RAG feature remains OFF by default.
+- The publication runner generated no embeddings, invoked no Gemini generation, mutated no Atlas index, and activated no runtime.
+- No private or market corpus, provider fallback, scoring, template, compiler, controller, route, API, deployment, or production registration change exists.
+
+Progress:
+```text
+Track C:
+C-C — COMPLETE
+C-D — NEXT
+```
+
+Known limitations:
+- Development publication only; small platform corpus.
+- No production rollout binding, market/private corpus, continuous rebuild scheduler, cleanup/reconciliation, or continuous monitoring.
