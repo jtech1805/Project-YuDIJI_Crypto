@@ -3314,3 +3314,92 @@ C-D — NEXT
 Known limitations:
 - Development publication only; small platform corpus.
 - No production rollout binding, market/private corpus, continuous rebuild scheduler, cleanup/reconciliation, or continuous monitoring.
+### Track C-D1 / C-D2 — Final Controlled Shadow Runtime Proof
+
+Status:
+C-D2 LIVE SHADOW PROOF PASSED / C-D IMPLEMENTATION_IN_PROGRESS
+
+Completion note:
+- The guarded live shadow and exact rollback proofs passed, but C-D is not marked complete because the current outer `Promise.race` deadline cannot prove cancellation between embedding, Atlas retrieval, and generation stages, and stage-specific latency telemetry is not yet exposed by the RAG boundary.
+
+Runtime authority:
+- Exact binding `YUDIJI_TEMPLATE_DRAFT_RAG_RUNTIME` v1 resolves only `YUDIJI_PLATFORM_KNOWLEDGE_GEMINI_ATLAS_PUBLICATION` v1 and remains `SHADOW_ONLY`.
+- AI generation, knowledge retrieval, and RAG feature defaults remain OFF. The kill switch blocks before publication, budget, concurrency, embedding, retrieval, or generation work.
+- Execution policy remains bounded; budgets and concurrency are explicitly process-local. Provider adapter retry ownership remains unchanged.
+- Independent generation, embedding, and vector circuits implement CLOSED, OPEN, HALF_OPEN, successful reset, failed-probe reopen, rolling-window expiry, and failure-category isolation.
+
+Live proof:
+- `LIVE_RAG_SHADOW_RUNTIME_VALIDATION_PASSED` with 4 guarded development requests.
+- ETF: shadow COMPLETED, comparison MATCH, exact ETF factor retained, citation coverage/validity 1, zero accepted AI weights or safety regressions.
+- Tata Steel: RAG outcome UNSUPPORTED_REQUEST, comparison MATCH, all four concepts retained unresolved, zero silent substitution or invented factor.
+- Prompt injection: comparison MATCH with zero injection acceptance, invented factor, registry overrule, or AI weight acceptance.
+- No-retrieval-needed: RAG completed with comparison MATCH and no material authoritative improvement.
+- Authoritative results were byte-stable before/after every live shadow case. No template, scoring, or compiler side effect occurred.
+
+Failure and rollback proof:
+- Feature and kill-switch blocking, budget denial, concurrency denial/release, provider failure, deadline failure, publication/binding failure, and independent circuit blocking fail closed before unauthorized downstream work.
+- Permits release after success, provider failure, and deadline failure.
+- Exact test-owned binding v2 resolves publication v2; explicit rollback to binding v1 resolves publication v1. Unknown v3 fails without fallback or latest selection.
+- Deterministic comparison reports MATCH, DIFFERENT_BUT_SAFE, RAG_SAFETY_REGRESSION, or NOT_COMPARABLE and exposes explicit safety counters only.
+
+Verification:
+- Focused C-D/C-D1/C-D2 tests: 9 passed.
+- Full backend: 1,177 passed, 0 failed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- Production formatting and `git diff --check` passed.
+
+Protected boundaries:
+- No production activation, public API/UI, global provider registration, generated-template persistence, market/private RAG, provider fallback, automatic rollback, latest selection, scoring/compiler change, deployment, or commit.
+
+Progress:
+```text
+C-C — COMPLETE
+C-D — IMPLEMENTATION_IN_PROGRESS
+C-E — BLOCKED
+```
+
+### Track C-D3 — Deadline Context, Abort Propagation and Stage-Latency Completion
+
+Status:
+COMPLETE
+
+Deadline authority:
+- `AiRuntimeDeadlineContext` is the single provider-neutral request deadline contract. The top-level shadow runtime owns one `AbortController`, one deadline timer, explicit stage-entry checks, and deterministic stage timing.
+- The same caller signal propagates through query embedding, MongoDB Atlas vector search, and Gemini structured generation. Existing adapter-owned per-attempt timeouts remain composed with caller cancellation.
+- Runtime cancellation is reported as `DEADLINE_EXCEEDED` with the observed stage and is not manufactured as provider failure. Existing provider-attempt timeout and circuit eligibility semantics remain unchanged.
+
+Cancellation and lifecycle proof:
+- Deterministic post-embedding expiry prevents Atlas and generation from starting; deterministic post-retrieval expiry prevents generation from starting.
+- In-flight Gemini embedding, Atlas aggregation, and Gemini generation observe caller abort and settle without caller-cancellation retry.
+- The runtime timer is disposed idempotently and concurrency permits release through the authoritative `finally` path on success, provider failure, and cancellation/deadline failure.
+- Budget reservation behavior is unchanged: reservation occurs after pre-execution, publication, rollout, and circuit checks and before concurrency acquisition; no refund semantics were introduced.
+
+Telemetry:
+- Privacy-safe runtime traces expose total, embedding, retrieval, context-assembly, and generation latency in milliseconds.
+- Unreached stages are represented by `null`; no query, prompt, passage content, vectors, or provider payloads are added to telemetry.
+
+Live proof:
+- `LIVE_RAG_SHADOW_RUNTIME_VALIDATION_PASSED` with all 4 guarded development cases.
+- ETF, Tata Steel, prompt-injection, and no-retrieval-needed comparisons were `MATCH`.
+- `authoritativeEqual` remained true for every case; all citations were valid and template, scoring, and compiler side effects remained zero.
+- Exact binding v2 to publication v2 and explicit rollback to binding v1 to publication v1 remain proven without latest/current lookup.
+
+Verification:
+- Focused C-D3 tests: 42 passed, 0 failed.
+- Full backend: 1,183 passed, 0 failed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- Production formatting and `git diff --check` passed.
+
+Protected boundaries:
+- Rollout remains `SHADOW_ONLY`; production AI/RAG feature defaults remain OFF.
+- No public API/UI, persistence, scoring, compiler, template lifecycle, provider fallback, runtime registration, deployment, or production activation change exists.
+
+Progress:
+```text
+C-C — COMPLETE
+C-D3 — COMPLETE
+C-D — COMPLETE / SHADOW_RUNTIME_PROVEN
+C-E — NEXT
+```

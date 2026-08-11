@@ -9,6 +9,8 @@ import { TemplateDraftRagRuntimeBindingService } from "./template-draft-rag-runt
 import type { TemplateDraftRagGenerationService } from "./template-draft-rag-generation.service.js";
 import { AiRuntimeCircuitBreakerService } from "./ai-runtime-circuit-breaker.service.js";
 import { TemplateDraftRagShadowComparisonService } from "./template-draft-rag-shadow-comparison.service.js";
+import { AiRuntimeDeadlineContextService } from "./ai-runtime-deadline-context.service.js";
+import { AiRuntimeDeadlineExceededError } from "../types/ai-runtime-deadline.types.js";
 export class TemplateDraftRagRuntimeService {
   public constructor(
     private readonly bindingService: TemplateDraftRagRuntimeBindingService,
@@ -53,11 +55,18 @@ export class TemplateDraftRagRuntimeService {
       );
     }
 
+    const deadline = new AiRuntimeDeadlineContextService(this.deadlineMs, {
+      now: this.now,
+    });
+    deadline.enter("PRE_EXECUTION");
+    deadline.complete("PRE_EXECUTION");
+
     const resolved = await this.bindingService.resolve(
       input.bindingId,
       input.bindingVersion,
     );
     if (!resolved.valid) {
+      deadline.dispose();
       return out(
         "SKIPPED",
         "PUBLICATION_UNAVAILABLE",
@@ -68,6 +77,7 @@ export class TemplateDraftRagRuntimeService {
       );
     }
     if (resolved.binding.rolloutMode !== "SHADOW_ONLY") {
+      deadline.dispose();
       return out(
         "SKIPPED",
         "ROLLOUT_NOT_ELIGIBLE",
@@ -84,6 +94,7 @@ export class TemplateDraftRagRuntimeService {
       "VECTOR_INDEX_PROVIDER",
     ] as const) {
       if (!this.circuits.allow(providerClass, input.requestedAt.getTime())) {
+        deadline.dispose();
         return out(
           "SKIPPED",
           `${providerClass}_CIRCUIT_OPEN`,
@@ -109,6 +120,7 @@ export class TemplateDraftRagRuntimeService {
       },
     });
     if (!budgetDecision.allowed) {
+      deadline.dispose();
       return out(
         "SKIPPED",
         "BUDGET_EXCEEDED",
@@ -122,6 +134,7 @@ export class TemplateDraftRagRuntimeService {
 
     const permit = await this.concurrency.acquire("TEMPLATE_DRAFT_RAG");
     if (!permit.acquired) {
+      deadline.dispose();
       return out(
         "SKIPPED",
         "CONCURRENCY_LIMIT",
@@ -135,21 +148,17 @@ export class TemplateDraftRagRuntimeService {
     }
 
     try {
-      let timeout: ReturnType<typeof setTimeout> | undefined;
-      const result = await Promise.race([
-        this.ragGeneration.generate(input.request),
-        new Promise<never>((_, reject) => {
-          timeout = setTimeout(
-            () => reject(new Error("DEADLINE_EXCEEDED")),
-            this.deadlineMs,
-          );
-        }),
-      ]).finally(() => timeout && clearTimeout(timeout));
+      const result = await this.ragGeneration.generate(
+        input.request,
+        undefined,
+        deadline,
+      );
       const comparison = this.comparisonService.compare(
         input.authoritativeResult,
         result,
       );
       const citations = result.citations ?? [];
+      const stageLatencies = deadline.latencies();
       return freezeClone({
         status: "COMPLETED",
         ...base,
@@ -169,6 +178,7 @@ export class TemplateDraftRagRuntimeService {
             input.requestedAt.getTime(),
           ),
           totalLatencyMs: Math.max(0, this.now() - startedAt),
+          ...stageLatencies,
           contextPassageCount: result.retrievalContext?.passages.length ?? 0,
           citationCount: citations.length,
           validCitationCount: citations.filter(
@@ -181,18 +191,25 @@ export class TemplateDraftRagRuntimeService {
           comparisonOutcome: comparison.outcome,
         },
       });
-    } catch {
+    } catch (error) {
+      const stageLatencies = deadline.latencies();
+      const deadlineFailure =
+        error instanceof AiRuntimeDeadlineExceededError ||
+        deadline.signal.aborted;
       return out(
         "FAILED",
-        "DEADLINE_OR_PROVIDER_FAILURE",
+        deadlineFailure ? "DEADLINE_EXCEEDED" : "PROVIDER_FAILURE",
         base,
         input,
         startedAt,
         this.now(),
         "ALLOWED",
         "ACQUIRED",
+        stageLatencies,
+        deadline.failureStage() ?? undefined,
       );
     } finally {
+      deadline.dispose();
       await this.concurrency.release(permit.permitId);
     }
   }
@@ -207,6 +224,13 @@ const out = (
   completedAt: number,
   budgetDecision: "NOT_REACHED" | "ALLOWED" | "DENIED" = "NOT_REACHED",
   concurrencyDecision: "NOT_REACHED" | "ACQUIRED" | "DENIED" = "NOT_REACHED",
+  stageLatencies: import("../types/ai-runtime-deadline.types.js").AiRuntimeStageLatencies = {
+    embeddingLatencyMs: null,
+    retrievalLatencyMs: null,
+    contextAssemblyLatencyMs: null,
+    generationLatencyMs: null,
+  },
+  failureStage?: import("../types/ai-runtime-deadline.types.js").AiRuntimeStage,
 ): TemplateDraftRagShadowResult =>
   freezeClone({
     status,
@@ -218,11 +242,13 @@ const out = (
       concurrencyDecision,
       circuitStates: {},
       totalLatencyMs: Math.max(0, completedAt - startedAt),
+      ...stageLatencies,
       contextPassageCount: 0,
       citationCount: 0,
       validCitationCount: 0,
       registryOnlyOutcome: outcome(input.authoritativeResult) ?? "UNKNOWN",
       failureCode: reason,
+      ...(failureStage ? { failureStage } : {}),
     },
   });
 

@@ -6,7 +6,12 @@ import type {
 export class AiRuntimeCircuitBreakerService {
   private values = new Map<
     AiProviderClass,
-    { failures: number; openedAt: number; probes: number }
+    {
+      failures: number;
+      firstFailureAt: number;
+      openedAt: number;
+      probes: number;
+    }
   >();
   constructor(private p: AiProviderCircuitPolicy) {}
   state(c: AiProviderClass, now: number): AiCircuitState {
@@ -30,9 +35,19 @@ export class AiRuntimeCircuitBreakerService {
   }
   failure(c: AiProviderClass, code: string, now: number) {
     if (!this.p.eligibleFailureCodes.includes(code)) return;
-    const x = this.values.get(c) ?? { failures: 0, openedAt: 0, probes: 0 };
+    const current = this.values.get(c);
+    const halfOpen = current && this.state(c, now) === "HALF_OPEN";
+    const expired =
+      current && now - current.firstFailureAt > this.p.rollingWindowMs;
+    const x =
+      !current || expired
+        ? { failures: 0, firstFailureAt: now, openedAt: 0, probes: 0 }
+        : current;
     x.failures++;
-    if (x.failures >= this.p.failureThreshold) x.openedAt = now;
+    if (halfOpen || x.failures >= this.p.failureThreshold) {
+      x.openedAt = now;
+      x.probes = 0;
+    }
     this.values.set(c, x);
   }
 }

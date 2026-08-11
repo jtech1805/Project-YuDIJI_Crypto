@@ -73,7 +73,10 @@ export class TemplateDraftRagShadowComparisonService {
       silentSubstitutionCount,
       registryOverruleCount,
       aiWeightAcceptanceCount,
-      citationCoverage: ratio(citations.length, proposedBindings.length),
+      citationCoverage: Math.min(
+        1,
+        ratio(citations.length, proposedBindings.length),
+      ),
       citationValidity: ratio(validCitations, citations.length),
       promptInjectionAcceptanceCount,
     });

@@ -2,6 +2,7 @@ import type {
   RagTemplateDraftGenerationRequest,
   RagTemplateDraftGenerationResult,
 } from "./template-draft-rag.types.js";
+import type { AiRuntimeStage } from "./ai-runtime-deadline.types.js";
 export type RagRuntimeFeatures = Readonly<{
   aiTemplateGenerationEnabled: boolean;
   knowledgeRetrievalEnabled: boolean;
@@ -53,6 +54,10 @@ export type TemplateDraftRagRuntimeTrace = Readonly<{
   concurrencyDecision: "NOT_REACHED" | "ACQUIRED" | "DENIED";
   circuitStates: Readonly<Record<string, string>>;
   totalLatencyMs: number;
+  embeddingLatencyMs: number | null;
+  retrievalLatencyMs: number | null;
+  contextAssemblyLatencyMs: number | null;
+  generationLatencyMs: number | null;
   contextPassageCount: number;
   citationCount: number;
   validCitationCount: number;
@@ -62,6 +67,7 @@ export type TemplateDraftRagRuntimeTrace = Readonly<{
   ragOutcome?: string;
   comparisonOutcome?: TemplateDraftRagShadowComparisonOutcome;
   failureCode?: string;
+  failureStage?: AiRuntimeStage;
 }>;
 export type TemplateDraftRagShadowResult = Readonly<{
   status: "COMPLETED" | "SKIPPED" | "FAILED";

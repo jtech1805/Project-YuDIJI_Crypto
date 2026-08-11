@@ -13,6 +13,7 @@ import { ProcessLocalAiRuntimeConcurrencyService } from "../../../src/services/a
 import { AiRuntimeCircuitBreakerService } from "../../../src/services/ai-runtime-circuit-breaker.service.js";
 import { TemplateDraftRagRuntimeService } from "../../../src/services/template-draft-rag-runtime.service.js";
 import { TemplateDraftRagShadowComparisonService } from "../../../src/services/template-draft-rag-shadow-comparison.service.js";
+import { TemplateDraftRagRuntimeBindingService } from "../../../src/services/template-draft-rag-runtime-binding.service.js";
 test("binding is exact immutable shadow-only and has no latest selection", () => {
   const r = new TemplateDraftRagRuntimeBindingRegistry(),
     b = r.getExact("YUDIJI_TEMPLATE_DRAFT_RAG_RUNTIME", 1)!;
@@ -190,7 +191,11 @@ test("feature matrix, publication failure, circuit denial, and zero deadline sup
       } as any,
       new AiRuntimeCircuitBreakerService(AI_PROVIDER_CIRCUIT_POLICY),
       {
-        generate: async () => {
+        generate: async (
+          _request: unknown,
+          _authorization: unknown,
+          deadline: any,
+        ) => {
           calls++;
           return {};
         },
@@ -208,4 +213,138 @@ test("feature matrix, publication failure, circuit denial, and zero deadline sup
     assert.equal(result.status, "SKIPPED");
     assert.equal(calls, 0);
   }
+});
+
+test("exact binding v2 and explicit rollback to v1 resolve without fallback", async () => {
+  const binding = (version: number) => ({
+    ...TEMPLATE_DRAFT_RAG_RUNTIME_V1,
+    bindingVersion: version,
+    indexPublicationId: `PUBLICATION_${version}`,
+    indexPublicationVersion: version,
+  });
+  const requested: number[] = [];
+  const service = new TemplateDraftRagRuntimeBindingService(
+    {
+      getExact: (_id: string, version: number) =>
+        version === 1 || version === 2 ? binding(version) : null,
+    } as any,
+    {
+      findExact: async (_id: string, version: number) => {
+        requested.push(version);
+        return {
+          found: true,
+          publication: {
+            corpusPublicationId: `CORPUS_${version}`,
+            corpusPublicationVersion: version,
+            embeddingSchemaId: TEMPLATE_DRAFT_RAG_RUNTIME_V1.embeddingSchemaId,
+            embeddingSchemaVersion: 1,
+          },
+        };
+      },
+    } as any,
+    {
+      findExact: async () => ({
+        found: true,
+        publication: { corpus: "PLATFORM_KNOWLEDGE" },
+      }),
+    } as any,
+  );
+  assert.equal(
+    (await service.resolve(TEMPLATE_DRAFT_RAG_RUNTIME_V1.bindingId, 2)).valid,
+    true,
+  );
+  assert.equal(
+    (await service.resolve(TEMPLATE_DRAFT_RAG_RUNTIME_V1.bindingId, 1)).valid,
+    true,
+  );
+  assert.deepEqual(requested, [2, 1]);
+  assert.equal(
+    (await service.resolve(TEMPLATE_DRAFT_RAG_RUNTIME_V1.bindingId, 3)).valid,
+    false,
+  );
+  assert.deepEqual(requested, [2, 1]);
+});
+
+test("permits release on success, provider failure, and deadline failure", async () => {
+  for (const behavior of ["SUCCESS", "FAILURE", "DEADLINE"] as const) {
+    let active = 0;
+    const concurrency = {
+      acquire: async () => {
+        active++;
+        return { acquired: true as const, permitId: "P" };
+      },
+      release: async () => {
+        active--;
+      },
+    };
+    const runtime = new TemplateDraftRagRuntimeService(
+      {
+        resolve: async () => ({
+          valid: true,
+          binding: { ...TEMPLATE_DRAFT_RAG_RUNTIME_V1 },
+        }),
+      } as any,
+      { reserve: async () => ({ allowed: true as const, reservationId: "R" }) },
+      concurrency,
+      new AiRuntimeCircuitBreakerService(AI_PROVIDER_CIRCUIT_POLICY),
+      {
+        generate: async (
+          _request: unknown,
+          _authorization: unknown,
+          deadline: any,
+        ) => {
+          if (behavior === "FAILURE") throw new Error("PROVIDER");
+          if (behavior === "DEADLINE") {
+            return new Promise((_resolve, reject) =>
+              deadline.signal.addEventListener(
+                "abort",
+                () => reject(new Error("DEADLINE")),
+                { once: true },
+              ),
+            );
+          }
+          return {
+            status: "COMPLETED",
+            citations: [],
+            contradictions: [],
+            summary: {},
+            knowledgeMode: "REGISTRY_PLUS_PLATFORM_KNOWLEDGE",
+            fallbackUsed: false,
+            retrieval: null,
+            retrievalContext: null,
+          };
+        },
+      } as any,
+      behavior === "DEADLINE" ? 1 : 1_000,
+    );
+    await runtime.execute({
+      bindingId: TEMPLATE_DRAFT_RAG_RUNTIME_V1.bindingId,
+      bindingVersion: 1,
+      caller: { userId: "U", isInternal: true },
+      request: {} as any,
+      authoritativeResult: { status: "PARTIAL" },
+      features: {
+        killSwitch: false,
+        aiTemplateGenerationEnabled: true,
+        knowledgeRetrievalEnabled: true,
+        ragTemplateDraftingEnabled: true,
+      },
+      requestedAt: new Date(),
+    });
+    assert.equal(active, 0);
+  }
+});
+
+test("failed half-open probe reopens only its provider circuit", () => {
+  const circuit = new AiRuntimeCircuitBreakerService(
+    AI_PROVIDER_CIRCUIT_POLICY,
+  );
+  for (let count = 0; count < 3; count++)
+    circuit.failure("VECTOR_INDEX_PROVIDER", "PROVIDER_UNAVAILABLE", 1);
+  assert.equal(circuit.allow("VECTOR_INDEX_PROVIDER", 30_001), true);
+  circuit.failure("VECTOR_INDEX_PROVIDER", "PROVIDER_UNAVAILABLE", 30_001);
+  assert.equal(circuit.state("VECTOR_INDEX_PROVIDER", 30_002), "OPEN");
+  assert.equal(circuit.state("EMBEDDING_PROVIDER", 30_002), "CLOSED");
+  circuit.failure("EMBEDDING_PROVIDER", "VALIDATION_FAILED", 30_002);
+  assert.equal(circuit.state("EMBEDDING_PROVIDER", 30_002), "CLOSED");
 });
