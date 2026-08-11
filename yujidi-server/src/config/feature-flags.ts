@@ -7,10 +7,12 @@ export const FEATURE_FLAG_KEYS = [
   "EVENT_CLASSIFICATION_READONLY",
   "EVENT_CLASSIFICATION_AFFECTS_RISK",
   "RAG_TEMPLATE_DRAFTING_ENABLED",
+  "AI_TEMPLATE_GENERATION_ENABLED",
+  "KNOWLEDGE_RETRIEVAL_ENABLED",
   "WEIGHT_PROPOSALS_ENABLED",
 ] as const;
 
-export type FeatureFlagKey = typeof FEATURE_FLAG_KEYS[number];
+export type FeatureFlagKey = (typeof FEATURE_FLAG_KEYS)[number];
 
 export type FeatureFlagSnapshot = Readonly<Record<FeatureFlagKey, boolean>>;
 
@@ -40,7 +42,9 @@ export class FeatureFlagService {
   }
 }
 
-export function parseFeatureFlags(environment: NodeJS.ProcessEnv): FeatureFlagSnapshot {
+export function parseFeatureFlags(
+  environment: NodeJS.ProcessEnv,
+): FeatureFlagSnapshot {
   const snapshot = {} as Record<FeatureFlagKey, boolean>;
 
   for (const flagKey of FEATURE_FLAG_KEYS) {
@@ -56,9 +60,13 @@ export function createFeatureFlagService(
   return new FeatureFlagService(parseFeatureFlags(environment));
 }
 
-export const sharedFeatureFlagService: FeatureFlagService = createFeatureFlagService();
+export const sharedFeatureFlagService: FeatureFlagService =
+  createFeatureFlagService();
 
-function parseFeatureFlagValue(flagKey: FeatureFlagKey, value: string | undefined): boolean {
+function parseFeatureFlagValue(
+  flagKey: FeatureFlagKey,
+  value: string | undefined,
+): boolean {
   const normalizedValue = value?.trim().toLowerCase() ?? "";
 
   if (normalizedValue.length === 0 || normalizedValue === "false") {
