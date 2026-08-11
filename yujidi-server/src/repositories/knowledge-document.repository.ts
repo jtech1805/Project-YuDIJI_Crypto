@@ -30,7 +30,16 @@ export class KnowledgeDocumentRepository {
 }
 const classify = (c: AdmittedKnowledgeDocument, e: PersistedKnowledgeDocument | null): KnowledgeDocumentInsertResult => !e ? Object.freeze({ inserted: false, code: "PERSISTENCE_FAILED" }) : isDeepStrictEqual(c, withoutCreated(e)) ? Object.freeze({ inserted: false, code: "ALREADY_EXISTS", document: e }) : Object.freeze({ inserted: false, code: c.contentDigest === e.contentDigest ? "IDENTITY_CONFLICT" : "CONTENT_CONFLICT" });
 const toRow = (d: AdmittedKnowledgeDocument) => ({ documentId: d.identity.documentId, documentVersion: d.identity.documentVersion, corpus: d.corpus, documentType: d.documentType, title: d.title, ownership: d.ownership, source: d.source, trustLevel: d.trustLevel, effectiveFrom: d.effectiveFrom, effectiveUntil: d.effectiveUntil, parser: d.parser, admissionPolicy: d.admissionPolicy, supersedes: d.supersedes, blocks: d.blocks, contentDigest: d.contentDigest });
-const parse = (r: Record<string, any> | undefined): PersistedKnowledgeDocument | null => r && r.createdAt instanceof Date ? freezeClone({ identity: { documentId: r.documentId, documentVersion: r.documentVersion }, corpus: r.corpus, documentType: r.documentType, title: r.title, ownership: r.ownership, source: r.source, trustLevel: r.trustLevel, ...(r.effectiveFrom ? { effectiveFrom: r.effectiveFrom } : {}), ...(r.effectiveUntil ? { effectiveUntil: r.effectiveUntil } : {}), parser: r.parser, admissionPolicy: r.admissionPolicy, ...(r.supersedes ? { supersedes: r.supersedes } : {}), blocks: r.blocks, contentDigest: r.contentDigest, createdAt: r.createdAt }) : null;
+const parse = (r: Record<string, any> | undefined): PersistedKnowledgeDocument | null => r && r.createdAt instanceof Date ? freezeClone({ identity: { documentId: r.documentId, documentVersion: r.documentVersion }, corpus: r.corpus, documentType: r.documentType, title: r.title, ownership: r.ownership, source: r.source, trustLevel: r.trustLevel, ...(r.effectiveFrom ? { effectiveFrom: r.effectiveFrom } : {}), ...(r.effectiveUntil ? { effectiveUntil: r.effectiveUntil } : {}), parser: r.parser, admissionPolicy: r.admissionPolicy, ...(r.supersedes ? { supersedes: r.supersedes } : {}), blocks: canonicalBlocks(r.blocks), contentDigest: r.contentDigest, createdAt: r.createdAt }) : null;
+const canonicalBlocks = (blocks: readonly Record<string, any>[]): PersistedKnowledgeDocument["blocks"] => blocks.map((block) => {
+  const { table, ...value } = block;
+  const canonical = { ...value, sourceSpan: canonicalSourceSpan(block.sourceSpan) };
+  if (table === undefined || (typeof block.text === "string" && Array.isArray(table.headers) && table.headers.length === 0 && Array.isArray(table.rows) && table.rows.length === 0)) return canonical;
+  return { ...canonical, table };
+}) as unknown as PersistedKnowledgeDocument["blocks"];
+const canonicalSourceSpan = (span: Record<string, any>) => {
+  const { rowIds, ...value } = span;
+  return Array.isArray(rowIds) && rowIds.length === 0 && span.tableId === undefined ? value : span;
+};
 const withoutCreated = ({ createdAt: _, ...d }: PersistedKnowledgeDocument): AdmittedKnowledgeDocument => d;
 const duplicate = (e: unknown) => typeof e === "object" && e !== null && (e as any).code === 11000;
-

@@ -2936,7 +2936,7 @@ Track C-B3C — MongoDB Atlas Write/Search Adapters and Guarded Development Vali
 ### Track C-B3D0 — Development Knowledge Ingestion and Vector Publication Runner
 
 Status:
-IMPLEMENTATION_COMPLETE / ATLAS_PERSISTENCE_BLOCKED
+COMPLETE — ATLAS IDEMPOTENCY VERIFIED BY C-B3D0.1
 
 Implementation:
 - Added the first explicit development-only orchestration path from normalized platform-knowledge input through the existing immutable document, chunk, manifest, embedding, normalization, vector-indexing, and projection authorities.
@@ -2982,7 +2982,7 @@ C-B3A  — ARCHITECTURE_ACCEPTED
 C-B3B  — COMPLETE
 C-B3C0 — COMPLETE
 C-B3C  — IMPLEMENTATION_COMPLETE / LIVE_VALIDATION_PENDING
-C-B3D0 — IMPLEMENTATION_COMPLETE / ATLAS_PERSISTENCE_BLOCKED
+C-B3D0 — COMPLETE / ATLAS IDEMPOTENCY VERIFIED
 C-C    — BLOCKED pending Atlas ingestion and search validation
 ```
 
@@ -2995,7 +2995,40 @@ Known limitations:
 - Scope remains platform knowledge only; private and market corpora remain prohibited.
 
 Next planning boundary:
-Resolve Atlas TLS connectivity, run the guarded deterministic ingestion twice, verify all five authorities through exact repository reads, then create/inspect the Atlas index and run the guarded C-B3C benchmark.
+Create/inspect the Atlas index and run the guarded C-B3C live validation benchmark.
+
+### Track C-B3D0.1 — Development Knowledge Ingestion Idempotency Correction
+
+Status:
+COMPLETE
+
+Root cause and correction:
+- The deterministic fixture, admission digests, chunk digests, identities, versions, and content were stable. The conflict was caused only by Mongoose materializing omitted optional fields on persistence reread.
+- Document blocks gained `sourceSpan.rowIds: []`; non-table blocks also gained `table: { headers: [], rows: [] }`. Chunk source spans gained `rowIds: []` even when no `tableId` existed.
+- Exact duplicate classification used structural equality between the original canonical command and the persistence-shaped reread, so these storage-only defaults produced false immutable conflicts.
+- Repository reread projection now removes only those semantically empty Mongoose defaults. Non-empty tables, non-empty row IDs, and table-associated source spans remain unchanged. Conflict vocabulary, digest calculation, identity, versions, timestamps, and persistence behavior remain unchanged.
+- The development corpus can be rebuilt as a detached, deeply frozen value to prove repeatability independently of module singleton identity.
+
+Atlas verification:
+- The pre-correction diagnostic rerun proved the document correction (`6` documents existing) and exposed the analogous chunk `CONTENT_CONFLICT` before any embedding or projection work.
+- First complete post-fix rerun: `COMPLETED`; documents `0/6/0` created/existing/failed, chunk sets `0/6/0`, manifests `0/6/0`, embeddings `0/9/0`, projections `0/9/0/0` created/existing/conflict/failed.
+- Second identical post-fix rerun produced exactly the same status, counts, and immutable lineage.
+- No record, collection, index, or authority version was deleted, replaced, updated, or recreated.
+
+Verification:
+- Focused idempotency, fixture, ingestion, and repository tests: 12 passed.
+- Full backend: 1,155 passed, 0 failed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- `git diff --check` passed.
+
+Known limitations:
+- Deterministic fixture embeddings validate publication and persistence shape, not semantic retrieval quality.
+- Gemini embedding ingestion and live Atlas vector-search behavior remain separately guarded and unverified by this correction.
+- Atlas Vector Search index creation/inspection and the C-B3C live validation benchmark remain next; no production activation was introduced.
+
+Next planning boundary:
+Create or inspect the exact Atlas development vector index, then run the guarded C-B3C live validation benchmark without changing the immutable ingestion authorities.
 
 ### Track C-B3C — MongoDB Atlas Write/Search Adapters and Guarded Development Validation
 
