@@ -19,6 +19,7 @@ import { TemplateDraftRagReviewReportService } from "./template-draft-rag-review
 import type { KnowledgeRetrievalExecutionAuthorization } from "../types/knowledge-retrieval-execution-authorization.types.js";
 import type { AiRuntimeDeadlineContext } from "../types/ai-runtime-deadline.types.js";
 import type { AiProviderExecutionObserver } from "../types/ai-provider-execution.types.js";
+import type { ApplicationRagRetrievalAuthorization } from "../types/application-rag-retrieval-authorization.types.js";
 export class TemplateDraftRagGenerationService {
   public constructor(
     private readonly d: Readonly<{
@@ -37,7 +38,9 @@ export class TemplateDraftRagGenerationService {
   ) {}
   public async generate(
     input: RagTemplateDraftGenerationRequest,
-    authorization?: KnowledgeRetrievalExecutionAuthorization,
+    authorization?:
+      | KnowledgeRetrievalExecutionAuthorization
+      | ApplicationRagRetrievalAuthorization,
     deadline?: AiRuntimeDeadlineContext,
     providerObserver?: AiProviderExecutionObserver,
   ): Promise<RagTemplateDraftGenerationResult> {

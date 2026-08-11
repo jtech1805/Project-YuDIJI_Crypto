@@ -18,8 +18,12 @@ export const TEMPLATE_DRAFT_APPLICATION_RETRIEVAL_AUTHORIZATION: ApplicationRagR
     corpusPublicationVersion: 1,
     embeddingSchemaId: "YUDIJI_GEMINI_PLATFORM_KNOWLEDGE_EMBEDDING",
     embeddingSchemaVersion: 1,
+    indexId: "YUDIJI_ATLAS_PLATFORM_KNOWLEDGE_GEMINI_768",
+    indexVersion: 1,
     namespace: "YUDIJI:PLATFORM_KNOWLEDGE:ATLAS:GEMINI_768:V1",
     corpus: "PLATFORM_KNOWLEDGE",
+    retrievalAllowed: true,
+    ragGenerationAllowed: true,
     permittedRolloutModes: Object.freeze(["SHADOW_ONLY", "INTERNAL"] as const),
   });
 
@@ -49,6 +53,8 @@ export class ApplicationRagRetrievalAuthorizationService {
       corpusPublicationVersion: authority.corpusPublicationVersion,
       embeddingSchemaId: authority.embeddingSchemaId,
       embeddingSchemaVersion: authority.embeddingSchemaVersion,
+      indexId: authority.indexId,
+      indexVersion: authority.indexVersion,
       namespace: authority.namespace,
       corpus: authority.corpus,
       rolloutMode: request.rolloutMode,

@@ -11,8 +11,12 @@ export type ApplicationRagRetrievalAuthorization = Readonly<{
   corpusPublicationVersion: number;
   embeddingSchemaId: "YUDIJI_GEMINI_PLATFORM_KNOWLEDGE_EMBEDDING";
   embeddingSchemaVersion: 1;
+  indexId: "YUDIJI_ATLAS_PLATFORM_KNOWLEDGE_GEMINI_768";
+  indexVersion: 1;
   namespace: string;
   corpus: "PLATFORM_KNOWLEDGE";
+  retrievalAllowed: true;
+  ragGenerationAllowed: true;
   permittedRolloutModes: readonly Extract<
     RagRolloutMode,
     "SHADOW_ONLY" | "INTERNAL"
@@ -30,6 +34,8 @@ export type ApplicationRagRetrievalAuthorizationRequest = Readonly<{
   corpusPublicationVersion: number;
   embeddingSchemaId: string;
   embeddingSchemaVersion: number;
+  indexId: string;
+  indexVersion: number;
   namespace: string;
   corpus: string;
   rolloutMode: RagRolloutMode;

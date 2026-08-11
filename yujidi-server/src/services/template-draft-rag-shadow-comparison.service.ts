@@ -13,6 +13,13 @@ export class TemplateDraftRagShadowComparisonService {
     authoritativeResult: unknown,
     ragResult: RagTemplateDraftGenerationResult,
   ): TemplateDraftRagShadowComparison {
+    if (
+      !["COMPLETED", "PARTIAL", "UNSUPPORTED_REQUEST"].includes(
+        ragResult.status,
+      )
+    ) {
+      return empty("NOT_COMPARABLE");
+    }
     const authoritative = comparable(authoritativeResult);
     const rag = comparable(ragResult);
     if (!authoritative || !rag) {

@@ -1,0 +1,43 @@
+import type { KnowledgeRetrievalPolicy } from "../types/knowledge-retrieval.types.js";
+
+export const APPLICATION_TEMPLATE_DRAFT_RAG_RETRIEVAL_POLICY: KnowledgeRetrievalPolicy =
+  Object.freeze({
+    policyId: "GEMINI_ATLAS_RAG_LIVE",
+    policyVersion: 1,
+    allowedCorpora: Object.freeze(["PLATFORM_KNOWLEDGE"] as const),
+    allowedTrustLevels: Object.freeze([
+      "AUTHORITATIVE",
+      "APPROVED_GUIDANCE",
+      "EXPLANATORY",
+    ] as const),
+    maxQueryCharacters: 10_000,
+    maxQueryConcepts: 24,
+    maxEligibleDocuments: 100,
+    vectorCandidateLimit: 20,
+    lexicalCandidateLimit: 5,
+    finalTopK: 5,
+    vectorWeight: 0.8,
+    lexicalWeight: 0,
+    metadataMatchWeight: 0,
+    trustWeight: 0.2,
+    vectorScoreRange: { minimum: 0, maximum: 1, clamp: true },
+    lexicalScoreRange: { minimum: 0, maximum: 1, clamp: true },
+    trustScores: {
+      AUTHORITATIVE: 1,
+      APPROVED_GUIDANCE: 0.8,
+      EXPLANATORY: 0.5,
+    },
+    maxChunksPerDocument: 5,
+    maxParentChunks: 1,
+    maxSiblingChunks: 1,
+    contextCharacterBudget: 10_000,
+    maxPassageCharacters: 10_000,
+    includeVectorSearch: true,
+    includeLexicalSearch: false,
+    includeParentContext: true,
+    includeSiblingContext: true,
+    excludeSupersededMembers: true,
+    vectorFailureFallback: "FAIL",
+    lexicalFailureFallback: "VECTOR_ONLY",
+    noContextBehavior: "NO_CONTEXT",
+  });

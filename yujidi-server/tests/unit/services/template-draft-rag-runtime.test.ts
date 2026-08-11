@@ -121,6 +121,7 @@ test("comparison distinguishes exact agreement, safe difference, and safety regr
     },
   };
   const safe: any = {
+    status: "COMPLETED",
     validatedCandidate: authoritative.validatedCandidate,
     candidate: {
       proposedBindings: [
@@ -153,6 +154,77 @@ test("comparison distinguishes exact agreement, safe difference, and safety regr
     service.compare(authoritative, unsafe as any).outcome,
     "RAG_SAFETY_REGRESSION",
   );
+  assert.equal(
+    service.compare(authoritative, {
+      status: "RETRIEVAL_FAILED",
+      citations: [],
+      contradictions: [],
+    } as any).outcome,
+    "NOT_COMPARABLE",
+  );
+});
+
+test("failed RAG domain outcome is a failed shadow and is not comparable", async () => {
+  const service = new TemplateDraftRagRuntimeService(
+    {} as any,
+    {} as any,
+    {} as any,
+    new AiRuntimeCircuitBreakerService(AI_PROVIDER_CIRCUIT_POLICY),
+    {
+      generate: async () => ({
+        status: "RETRIEVAL_FAILED",
+        knowledgeMode: "REGISTRY_PLUS_PLATFORM_KNOWLEDGE",
+        fallbackUsed: false,
+        retrieval: null,
+        retrievalContext: null,
+        citations: [],
+        contradictions: [],
+        summary: {},
+      }),
+    } as any,
+    60_000,
+    new TemplateDraftRagShadowComparisonService(),
+    () => 100,
+  );
+  const context = {
+    runtimeBindingId: "B",
+    runtimeBindingVersion: 1,
+    indexPublicationId: "I",
+    indexPublicationVersion: 1,
+    rolloutMode: "SHADOW_ONLY",
+    deadlineContext: {
+      signal: new AbortController().signal,
+      latencies: () => ({
+        embeddingLatencyMs: 1,
+        retrievalLatencyMs: 1,
+        contextAssemblyLatencyMs: null,
+        generationLatencyMs: null,
+      }),
+    },
+  } as any;
+  const result = await service.executeWithinGovernedContext(context, {
+    bindingId: "B",
+    bindingVersion: 1,
+    caller: { userId: "U", isInternal: true },
+    request: {} as any,
+    authoritativeResult: {
+      status: "COMPLETED",
+      validatedCandidate: {
+        supportedBindings: [],
+        unresolvedConcepts: [],
+      },
+    },
+    features: {
+      killSwitch: false,
+      aiTemplateGenerationEnabled: true,
+      knowledgeRetrievalEnabled: true,
+      ragTemplateDraftingEnabled: true,
+    },
+    requestedAt: new Date(100),
+  });
+  assert.equal(result.status, "FAILED");
+  assert.equal(result.reason, "RETRIEVAL_FAILED");
+  assert.equal(result.comparison?.outcome, "NOT_COMPARABLE");
 });
 
 test("feature matrix, publication failure, circuit denial, and zero deadline suppress execution", async () => {

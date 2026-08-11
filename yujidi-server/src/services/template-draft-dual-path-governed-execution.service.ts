@@ -80,6 +80,9 @@ export class TemplateDraftDualPathGovernedExecutionService {
         corpusPublicationVersion: context.corpusPublicationVersion,
         embeddingSchemaId: context.embeddingSchemaId,
         embeddingSchemaVersion: context.embeddingSchemaVersion,
+        indexId: TEMPLATE_DRAFT_APPLICATION_RETRIEVAL_AUTHORIZATION.indexId,
+        indexVersion:
+          TEMPLATE_DRAFT_APPLICATION_RETRIEVAL_AUTHORIZATION.indexVersion,
         namespace: context.namespace,
         corpus: context.corpus,
         rolloutMode: context.rolloutMode,
@@ -123,6 +126,7 @@ export class TemplateDraftDualPathGovernedExecutionService {
           ...(input.callerSignal ? { callerSignal: input.callerSignal } : {}),
         },
         observer,
+        authorized.authorization,
       );
       const preserved =
         JSON.stringify(beforeShadow) === JSON.stringify(authoritativeBaseline);

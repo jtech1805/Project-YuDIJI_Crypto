@@ -19,6 +19,7 @@ import { AiProviderCircuitAttributionService } from "./ai-provider-circuit-attri
 import { AI_PROVIDER_CIRCUIT_POLICY } from "../registries/ai-runtime-execution-policy.registry.js";
 import type { AiGovernedExecutionContext } from "../types/ai-governed-execution-context.types.js";
 import type { AiProviderExecutionObserver } from "../types/ai-provider-execution.types.js";
+import type { ApplicationRagRetrievalAuthorization } from "../types/application-rag-retrieval-authorization.types.js";
 export class TemplateDraftRagRuntimeService {
   public constructor(
     private readonly bindingService: TemplateDraftRagRuntimeBindingService,
@@ -193,6 +194,7 @@ export class TemplateDraftRagRuntimeService {
     context: AiGovernedExecutionContext,
     input: TemplateDraftRagShadowRequest,
     providerObserver?: AiProviderExecutionObserver,
+    retrievalAuthorization?: ApplicationRagRetrievalAuthorization,
   ): Promise<TemplateDraftRagShadowResult> {
     const startedAt = this.now();
     if (
@@ -241,6 +243,7 @@ export class TemplateDraftRagRuntimeService {
       context.deadlineContext,
       startedAt,
       providerObserver,
+      retrievalAuthorization,
     );
   }
 
@@ -256,12 +259,13 @@ export class TemplateDraftRagRuntimeService {
     deadline: AiRuntimeDeadlineContext,
     startedAt: number,
     providerObserver?: AiProviderExecutionObserver,
+    retrievalAuthorization?: ApplicationRagRetrievalAuthorization,
   ): Promise<TemplateDraftRagShadowResult> {
     const base = { authoritativeResultUntouched: true as const };
     try {
       const result = await this.ragGeneration.generate(
         input.request,
-        undefined,
+        retrievalAuthorization,
         deadline,
         providerObserver ??
           new AiProviderCircuitAttributionService(
@@ -270,6 +274,11 @@ export class TemplateDraftRagRuntimeService {
             this.now,
           ),
       );
+      const shadowCompleted = [
+        "COMPLETED",
+        "PARTIAL",
+        "UNSUPPORTED_REQUEST",
+      ].includes(result.status);
       const comparison = this.comparisonService.compare(
         input.authoritativeResult,
         result,
@@ -277,7 +286,8 @@ export class TemplateDraftRagRuntimeService {
       const citations = result.citations ?? [];
       const stageLatencies = deadline.latencies();
       return freezeClone({
-        status: "COMPLETED",
+        status: shadowCompleted ? "COMPLETED" : "FAILED",
+        ...(!shadowCompleted ? { reason: result.status } : {}),
         ...base,
         ragResult: result,
         comparison,

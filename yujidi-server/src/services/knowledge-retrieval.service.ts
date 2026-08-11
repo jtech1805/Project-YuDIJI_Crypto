@@ -19,6 +19,7 @@ import { KnowledgeEmbeddingNormalizationService } from "./knowledge-embedding-no
 import { KnowledgeRetrievalCandidateValidationService } from "./knowledge-retrieval-candidate-validation.service.js";
 import { KnowledgeRetrievalRerankingService } from "./knowledge-retrieval-reranking.service.js";
 import type { KnowledgeRetrievalExecutionAuthorization } from "../types/knowledge-retrieval-execution-authorization.types.js";
+import type { ApplicationRagRetrievalAuthorization } from "../types/application-rag-retrieval-authorization.types.js";
 import { authorizesRetrieval } from "./knowledge-retrieval-execution-authorization.service.js";
 import type { AiRuntimeDeadlineContext } from "../types/ai-runtime-deadline.types.js";
 import type { AiProviderExecutionObserver } from "../types/ai-provider-execution.types.js";
@@ -27,7 +28,9 @@ export type KnowledgeRetrievalExecution = Readonly<{
   enabled: boolean;
   contextId: string;
   contextVersion: number;
-  authorization?: KnowledgeRetrievalExecutionAuthorization;
+  authorization?:
+    | KnowledgeRetrievalExecutionAuthorization
+    | ApplicationRagRetrievalAuthorization;
   deadline?: AiRuntimeDeadlineContext;
   providerObserver?: AiProviderExecutionObserver;
 }>;
