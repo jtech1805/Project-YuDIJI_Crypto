@@ -19,7 +19,8 @@
     "benchmark:gemini-generation": "tsx scripts/benchmarks/run-gemini-structured-generation-benchmark.ts",
     "benchmark:gemini-embedding": "tsx scripts/benchmarks/run-gemini-embedding-benchmark.ts",
     "atlas:create-vector-index": "tsx scripts/atlas/create-platform-knowledge-vector-index.ts",
-    "benchmark:atlas-vector-search": "tsx scripts/benchmarks/run-atlas-vector-search-benchmark.ts"
+    "benchmark:atlas-vector-search": "tsx scripts/benchmarks/run-atlas-vector-search-benchmark.ts",
+    "dev:ingest-platform-knowledge": "tsx scripts/dev/ingest-platform-knowledge.ts"
   },
   "keywords": [],
   "author": "",

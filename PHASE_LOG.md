@@ -2933,6 +2933,70 @@ Known limitations:
 Next planning boundary:
 Track C-B3C — MongoDB Atlas Write/Search Adapters and Guarded Development Validation.
 
+### Track C-B3D0 — Development Knowledge Ingestion and Vector Publication Runner
+
+Status:
+IMPLEMENTATION_COMPLETE / ATLAS_PERSISTENCE_BLOCKED
+
+Implementation:
+- Added the first explicit development-only orchestration path from normalized platform-knowledge input through the existing immutable document, chunk, manifest, embedding, normalization, vector-indexing, and projection authorities.
+- Added six fixed system-owned platform-knowledge documents covering ETF net flow, DIRECT, INVERSE, FACTOR_NOT_REGISTERED, no silent substitution, and an approved ETF-flow template example. All identities and versions are explicit and stable.
+- Added a development-only deterministic SHA-256 expansion provider that returns exactly 768 finite, nonzero raw values without normalization, network access, randomness, or clock dependence.
+- Added exact deterministic schema `YUDIJI_DEV_DETERMINISTIC_PLATFORM_KNOWLEDGE_768` v1 and separate inactive index `YUDIJI_ATLAS_DEV_PLATFORM_KNOWLEDGE_DETERMINISTIC_768` v1 in namespace `YUDIJI:PLATFORM_KNOWLEDGE:DEV:DETERMINISTIC_768:V1`. Fake vectors are never published under Gemini lineage.
+- Existing `L2_UNIT_VECTOR` v1 performs canonical normalization before immutable embedding persistence. Existing embedding and projection digest authorities remain unchanged.
+- The ingestion service continues across independent documents, returns explicit partial failures, performs no rollback, and rereads every exact projection after indexing.
+- Added `npm run dev:ingest-platform-knowledge` with explicit confirmation, non-production database, exact mode, and Gemini-specific credential/live-validation guards.
+- The runner constructs only existing repositories and services. It has no direct model write, manual collection creation, Atlas search, Atlas index creation, query embedding, RAG generation, API, startup registration, scoring, compiler, or template behavior.
+
+Offline verification:
+- Six-document deterministic run: all document pipelines completed in the in-memory orchestration proof.
+- Exact repeat run: documents, chunks/manifests, embeddings, and projections were classified as existing with identical lineage and no new versions.
+- Independent conflict proof: five documents completed and one failed with overall `PARTIAL`; completed immutable records were retained.
+- Deterministic vectors are exactly 768-dimensional, finite, nonzero, stable by text, different across different text, and intentionally non-unit before the existing normalization service.
+
+Atlas persistence attempt:
+- The guarded deterministic command was executed for development database `yudiji_dev` using the configured `MONGO_URI`.
+- MongoDB connection failed during TLS negotiation with an SSL `tlsv1 alert internal error` before Mongoose connected.
+- The ingestion service did not run against Atlas. No collection was created and no record was written by this attempt.
+- Consequently, first-run persistence, second-run database idempotency, exact repository rereads against Atlas, record counts, and canonical stored-vector magnitude remain unproven.
+- Expected Mongoose collection names are `knowledgedocuments`, `knowledgechunks`, `knowledgechunksetmanifests`, `knowledgeembeddings`, and `knowledgevectorindexprojections`; their existence was not claimed.
+
+Verification:
+- Focused C-B3D0 corpus, guard, deterministic provider, normalization, idempotency, and partial-failure tests: 8 passed.
+- Combined authority, Atlas, retrieval, RAG, Gemini, template, ScoreCheck, and compiled-shadow regressions: 204 passed.
+- Full backend: 1,150 passed, 0 failed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- `git diff --check` passed.
+
+Progress:
+```text
+Track C:
+C-A    — ARCHITECTURE_ACCEPTED
+C-B1A  — OFFLINE_COMPLETE
+C-B1B  — DEVELOPMENT_ADAPTER_COMPLETE
+C-B2A  — ARCHITECTURE_ACCEPTED
+C-B2B  — COMPLETE
+C-B2C  — IMPLEMENTATION_COMPLETE / LIVE_VALIDATION_PENDING
+C-B3A  — ARCHITECTURE_ACCEPTED
+C-B3B  — COMPLETE
+C-B3C0 — COMPLETE
+C-B3C  — IMPLEMENTATION_COMPLETE / LIVE_VALIDATION_PENDING
+C-B3D0 — IMPLEMENTATION_COMPLETE / ATLAS_PERSISTENCE_BLOCKED
+C-C    — BLOCKED pending Atlas ingestion and search validation
+```
+
+Known limitations:
+- Deterministic embeddings prove integration and persistence shape, not semantic retrieval quality.
+- Gemini ingestion still requires guarded live validation.
+- Atlas TLS connectivity must be resolved before persistence and database idempotency can be proven.
+- The Atlas Vector Search index may still need guarded creation after projections exist.
+- No production scheduler, parser/upload workflow, cleanup/reconciliation, monitoring, or index-publication manifest exists.
+- Scope remains platform knowledge only; private and market corpora remain prohibited.
+
+Next planning boundary:
+Resolve Atlas TLS connectivity, run the guarded deterministic ingestion twice, verify all five authorities through exact repository reads, then create/inspect the Atlas index and run the guarded C-B3C benchmark.
+
 ### Track C-B3C — MongoDB Atlas Write/Search Adapters and Guarded Development Validation
 
 Status:

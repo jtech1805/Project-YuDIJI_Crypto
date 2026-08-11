@@ -80,3 +80,10 @@ export const MONGO_ATLAS_PLATFORM_KNOWLEDGE_VECTOR_INDEX_DEFINITION: KnowledgeVe
 export const MONGO_ATLAS_KNOWLEDGE_VECTOR_INDEX_AUTHORITY = new KnowledgeVectorIndexDefinitionRegistry(
   [MONGO_ATLAS_PLATFORM_KNOWLEDGE_VECTOR_INDEX_DEFINITION], new KnowledgeEmbeddingSchemaRegistry([GEMINI_PLATFORM_KNOWLEDGE_EMBEDDING_SCHEMA]),
 );
+
+export const MONGO_ATLAS_DEV_DETERMINISTIC_VECTOR_INDEX_DEFINITION: KnowledgeVectorIndexDefinition = Object.freeze({
+  indexId:"YUDIJI_ATLAS_DEV_PLATFORM_KNOWLEDGE_DETERMINISTIC_768",indexVersion:1,indexSchemaId:"YUDIJI_ATLAS_DEV_VECTOR_INDEX_SCHEMA",indexSchemaVersion:1,
+  namespace:"YUDIJI:PLATFORM_KNOWLEDGE:DEV:DETERMINISTIC_768:V1",corpus:"PLATFORM_KNOWLEDGE",allowedTrustLevels:Object.freeze(["AUTHORITATIVE","APPROVED_GUIDANCE","EXPLANATORY"] as const),
+  embeddingSchema:{embeddingSchemaId:"YUDIJI_DEV_DETERMINISTIC_PLATFORM_KNOWLEDGE_768",embeddingSchemaVersion:1},vectorDimension:768,similarityMetric:"COSINE",
+  metadataSchemaId:"PLATFORM_KNOWLEDGE_INDEX_METADATA",metadataSchemaVersion:1,writePolicyId:"PLATFORM_KNOWLEDGE_INDEX_WRITE",writePolicyVersion:1,retrievalEligible:false,
+});
