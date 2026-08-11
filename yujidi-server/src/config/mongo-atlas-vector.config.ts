@@ -7,6 +7,7 @@ export const MONGO_ATLAS_VECTOR_DIMENSION = 768 as const;
 export const MONGO_ATLAS_VECTOR_METRIC = "COSINE" as const;
 export const MONGO_ATLAS_PROJECTION_COLLECTION = "knowledgevectorindexprojections" as const;
 export const MONGO_ATLAS_VECTOR_INDEX_NAME = "yudiji_atlas_platform_knowledge_gemini_768_v1" as const;
+export const MONGO_ATLAS_DEV_DETERMINISTIC_VECTOR_INDEX_NAME = "yudiji_dev_platform_knowledge_deterministic_768_v1" as const;
 
 export class MongoAtlasVectorAdapterConfig implements MongoAtlasVectorAdapterConfigValue {
   readonly providerId = MONGO_ATLAS_VECTOR_PROVIDER; readonly adapterVersion = MONGO_ATLAS_VECTOR_ADAPTER_VERSION;

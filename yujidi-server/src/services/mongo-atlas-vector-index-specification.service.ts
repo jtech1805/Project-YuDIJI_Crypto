@@ -14,7 +14,6 @@ export const MONGO_ATLAS_VECTOR_FILTER_PATHS = Object.freeze([
 export class MongoAtlasVectorIndexSpecificationService {
   public create(definition:KnowledgeVectorIndexDefinition,config:MongoAtlasVectorAdapterConfig,filterPaths:readonly string[]=MONGO_ATLAS_VECTOR_FILTER_PATHS):MongoAtlasVectorIndexSpecification {
     if(config.vectorPath!=="vector"||definition.vectorDimension!==config.dimension||definition.similarityMetric!==config.similarityMetric
-      ||definition.embeddingSchema.embeddingSchemaId!=="YUDIJI_GEMINI_PLATFORM_KNOWLEDGE_EMBEDDING"||definition.embeddingSchema.embeddingSchemaVersion!==1
       ||definition.corpus!=="PLATFORM_KNOWLEDGE")throw new Error("ATLAS_VECTOR_INDEX_DEFINITION_MISMATCH");
     if(new Set(filterPaths).size!==filterPaths.length)throw new Error("DUPLICATE_ATLAS_VECTOR_FILTER_PATH");
     if(filterPaths.some(path=>!MONGO_ATLAS_VECTOR_FILTER_PATHS.includes(path as typeof MONGO_ATLAS_VECTOR_FILTER_PATHS[number])))throw new Error("UNKNOWN_ATLAS_VECTOR_FILTER_PATH");

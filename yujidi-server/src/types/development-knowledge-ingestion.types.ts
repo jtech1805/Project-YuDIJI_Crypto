@@ -11,6 +11,12 @@ export const DEV_DETERMINISTIC_EMBEDDING_SCHEMA:KnowledgeEmbeddingSchemaDefiniti
   allowedCorpora:Object.freeze(["PLATFORM_KNOWLEDGE"] as const),allowedTrustLevels:Object.freeze(["AUTHORITATIVE","APPROVED_GUIDANCE","EXPLANATORY"] as const),
   allowedPurposes:Object.freeze(["RETRIEVAL_DOCUMENT"] as const),activeForGeneration:true,
 });
+export const DEV_DETERMINISTIC_QUERY_EMBEDDING_SCHEMA:KnowledgeEmbeddingSchemaDefinition=Object.freeze({
+  ...DEV_DETERMINISTIC_EMBEDDING_SCHEMA,
+  embeddingSchemaId:"YUDIJI_DEV_DETERMINISTIC_PLATFORM_KNOWLEDGE_QUERY_768",
+  allowedPurposes:Object.freeze(["RETRIEVAL_QUERY"] as const),
+  activeForGeneration:false,
+});
 export type DevelopmentKnowledgeCorpusEntry=Readonly<{document:KnowledgeDocumentMaterial;strategy:Readonly<{strategyId:string;strategyVersion:number}>;manifestIdentity:Readonly<{chunkSetId:string;chunkSetVersion:number}>}>;
 export type DevelopmentKnowledgeIngestionRequest=Readonly<{requestId:string;requestVersion:number;mode:DevelopmentKnowledgeEmbeddingMode;corpus:readonly DevelopmentKnowledgeCorpusEntry[]}>;
 export type DevelopmentKnowledgeDocumentOutcome=Readonly<{documentIdentity:KnowledgeDocumentIdentity;status:"COMPLETED"|"FAILED";document:"CREATED"|"ALREADY_EXISTS"|"FAILED";chunks:"CREATED"|"ALREADY_EXISTS"|"FAILED";manifest:"CREATED"|"ALREADY_EXISTS"|"FAILED";embeddings:Readonly<{created:number;existing:number;failed:number}>;projections:Readonly<{created:number;existing:number;conflict:number;failed:number}>;failureCode?:string;lineage:Readonly<{chunkSetId:string;chunkSetVersion:number;embeddingSchemaId:string;embeddingSchemaVersion:number;indexId:string;indexVersion:number;namespace:string;embeddingIds:readonly string[];projectionEntryIds:readonly string[]}>}>;

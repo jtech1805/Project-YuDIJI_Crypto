@@ -3030,6 +3030,143 @@ Known limitations:
 Next planning boundary:
 Create or inspect the exact Atlas development vector index, then run the guarded C-B3C live validation benchmark without changing the immutable ingestion authorities.
 
+### Track C-B3C-LIVE — Atlas Vector Search Index Creation and Guarded Live Validation
+
+Status:
+LIVE_ATLAS_VECTOR_VALIDATION_PASSED / CONDITIONALLY_APPROVED
+
+Index authority and administration:
+- Logical index: `YUDIJI_ATLAS_DEV_PLATFORM_KNOWLEDGE_DETERMINISTIC_768` v1; namespace `YUDIJI:PLATFORM_KNOWLEDGE:DEV:DETERMINISTIC_768:V1`.
+- Physical Atlas index: `yudiji_dev_platform_knowledge_deterministic_768_v1` on development collection `knowledgevectorindexprojections`.
+- The existing specification authority generated digest `4cf231876ffe1f7dbdddc3d1f524c6f910d0b8ae91b0bb12732e29c0589237a6` for vector path `vector`, 768 dimensions, and cosine similarity.
+- Approved filters: corpus, trust level, exact index/version/namespace, embedding schema/version, document identity/version, document/chunk types, factor keys, relationships, subjects, topics, validation codes, example classification, ADR number, and effective-time bounds.
+- Programmatic administration created the index. Bounded polling reached provider status `READY` and `INDEX_QUERYABLE`; a second exact inspection returned `ALREADY_EXISTS` with the same digest.
+
+Live validation:
+- Preflight verified exactly 9 deterministic projections with exact index/schema/corpus/purpose lineage, finite 768-dimensional vectors, and L2 unit magnitude within tolerance.
+- Six fixed deterministic query fixtures executed through real Atlas `$vectorSearch` in ANN mode with `limit=5` and `numCandidates=25`. Every query completed with 5 bounded candidates and all 30 candidate instances passed projection-first validation.
+- The adapter projected no vector or raw source text and used no native rank/score fusion. Provider scores were finite, candidates were unique, and provider ordinals were dense.
+- An eligible-document-restricted query returned 4 chunks only from the single permitted ETF document; no outside document passed the Atlas prefilter.
+- ENN (`exact: true`) is supported: 5 results with 5/5 identifier overlap against the corresponding ANN result. Equal score/order was not required.
+- Eight controlled forged candidates independently changed index entry, index version, namespace, embedding, document version, chunk set, chunk, or vector digest lineage. All eight were rejected without writing forged data.
+- A validated live vector candidate combined with a controlled lexical source, passed existing deterministic reranking/context assembly, and produced one exact authority-derived `ycit_v1_` citation handle.
+
+Architecture notes:
+- The accepted deterministic document schema remains document-only. A separate immutable query-fixture schema authorizes only `RETRIEVAL_QUERY`; no persisted embedding was changed or recreated.
+- Atlas only discovers untrusted bounded candidates. Exact projection, embedding, document, manifest, and chunk authorities remain decisive for validation and citation participation.
+- This is infrastructure proof using deterministic hash-expansion embeddings, not semantic-quality proof and not production index publication approval.
+- Gemini embedding was not called. No private/market corpus, Atlas automated embedding, native fusion, production registration, scoring, template, or compiler behavior was introduced.
+
+Verification:
+- Focused Atlas guard, specification, administration, ANN/ENN adapter, and deterministic query-authority tests: 14 passed.
+- Full backend rerun: 1,157 passed, 0 failed. An immediately prior parallel full-suite run reported one transient failure; the isolated/final rerun passed completely.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- `git diff --check` passed.
+
+Known limitations:
+- Gemini document/query embedding live validation remains pending.
+- No immutable index-publication manifest, production rollout, load test, monitoring, cleanup, or reconciliation exists.
+- Validation covers platform knowledge only; deterministic vectors are not semantically meaningful.
+
+Next planning boundary:
+Run guarded Gemini embedding validation, then prove Gemini document embeddings, Gemini query embeddings, and Gemini-to-Atlas RAG before Track C-C corpus and index publication authorities.
+
+### Track C-B2C-LIVE + C-B3E — Guarded Gemini Embedding and Gemini-to-Atlas Semantic Proof
+
+Status:
+C-B2C-LIVE PASSED / C-B3E BLOCKED AT INACTIVE RETRIEVAL AUTHORITY
+
+Live Gemini embedding:
+- `gemini-embedding-001` returned 6/6 document and 4/4 query embeddings at exactly 768 finite dimensions. All 10 normalized through `L2_UNIT_VECTOR` v1 within `1e-12`; four semantic smoke comparisons passed. Total benchmark latency was 2,124 ms, with no observed rate-limit event and no usage metadata exposed.
+- The accepted deterministic and Gemini schemas initially collided because development ingestion reused `DEV_EMBED`/`DEVPROJ` identities. Persistence failed closed with 9 failures and no Gemini projections. The runner now derives disjoint `GEMINI_EMBED`/`GEMINI_PROJ` identities while preserving every deterministic identity.
+- Corrected Gemini ingestion reused all 6 documents, chunk sets, and manifests and created exactly 9 Gemini embeddings plus 9 Gemini projections. One required repeat returned all 9 as existing with zero conflicts/failures.
+
+Gemini Atlas semantic proof:
+- Logical index `YUDIJI_ATLAS_PLATFORM_KNOWLEDGE_GEMINI_768` v1 was created programmatically as physical index `yudiji_atlas_platform_knowledge_gemini_768_v1`; provider status is `READY`/`INDEX_QUERYABLE` and specification digest is `c22cdcaa18faa4fea51ba28b7164df17e67624a14efce617cbc8d6a978f0bac0`.
+- Four real Gemini query embeddings executed against Atlas with five bounded candidates each; all 20 candidates passed exact projection, Gemini embedding, document, manifest, and chunk rereads. No deterministic projection crossed the exact index/schema/namespace filters.
+- Unsupported-factor retrieval hit both FACTOR_NOT_REGISTERED and no-silent-substitution documents; relationship retrieval hit DIRECT and INVERSE; ETF retrieval hit ETF factor and template example; silent-substitution retrieval hit the no-substitution authority. Every query produced authority-derived citation context.
+
+Mandatory blocker:
+- The frozen Gemini vector-index definition remains `retrievalEligible: false`. `KnowledgeRetrievalService` therefore deterministically returns `INDEX_INELIGIBLE` before RAG drafting. `RAG_TEMPLATE_DRAFTING_ENABLED` also remains off by default.
+- This phase prohibited changing feature defaults or activating production retrieval. The benchmark did not clone or weaken the index authority, bypass `KnowledgeRetrievalService` for generation, or build a second drafting pipeline.
+- Consequently, real Gemini structured generation supplied by live Atlas citation context, Tata Steel unresolved-concept proof, and live prompt-injection/citation safety proof were not run. `LIVE_GEMINI_ATLAS_RAG_VALIDATION_PASSED` is not claimed and C-B3E remains blocked pending an explicit development-only retrieval eligibility/activation authority.
+
+Protected boundaries:
+- No deterministic data deletion/overwrite, private or market corpus, query-vector persistence, Atlas automated embedding, native fusion, production API/registration, scoring, compiler, template persistence, fallback, deployment, or commit occurred.
+
+Verification:
+- Focused Gemini adapter, ingestion identity separation, embedding/persistence, indexing, retrieval validation/context, Atlas guards, and isolation regressions: 58 passed.
+- Full backend: 1,159 passed, 0 failed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- `git diff --check` passed.
+
+Next planning boundary:
+Freeze an explicit development-only Gemini retrieval execution authority that permits the exact Gemini index without changing production defaults; then run the existing KnowledgeRetrievalService and TemplateDraftRagGenerationService through structured Gemini generation and safety validation before Track C-C.
+
+### Track C-B3E0 — Guarded Development Retrieval Execution Authority and Final Structured RAG Proof
+
+Status:
+C-B3E0 COMPLETE / C-B3E COMPLETE / DEVELOPMENT_APPROVED
+
+Development execution authority:
+- Added exact static authority `YUDIJI_GEMINI_ATLAS_RAG_DEVELOPMENT_VALIDATION` v1 for environment `DEVELOPMENT_VALIDATION`, Gemini index `YUDIJI_ATLAS_PLATFORM_KNOWLEDGE_GEMINI_768` v1, namespace `YUDIJI:PLATFORM_KNOWLEDGE:ATLAS:GEMINI_768:V1`, embedding schema `YUDIJI_GEMINI_PLATFORM_KNOWLEDGE_EMBEDDING` v1, and `PLATFORM_KNOWLEDGE` only.
+- Authorization requires development environment, Gemini RAG confirmation, Atlas live confirmation, Gemini embedding confirmation, structured-generation confirmation, and configured Gemini credentials. Every index/version/namespace/schema/corpus field is exact; no wildcard/latest lookup or mutable state exists.
+- `KnowledgeRetrievalService` preserves ordinary `INDEX_INELIGIBLE` behavior and accepts the inactive index only with the exact call-scoped authorization. `TemplateDraftRagGenerationService` preserves the default feature flag and accepts the same authorization only for the guarded call.
+- The frozen Gemini index remains `retrievalEligible: false`; `RAG_TEMPLATE_DRAFTING_ENABLED` remains OFF by default. No runtime/global flag mutation or eligible index clone exists.
+
+Live structured RAG:
+- ETF case completed through registry projection, real Gemini query embedding, Atlas retrieval, exact projection/source validation, five citation passages, structured Gemini generation, strict Zod parsing, deterministic registry validation, citation validation, and review projection. The candidate used only `CRYPTO.ETF_NET_FLOW` with DIRECT semantics, returned 2/2 valid citations, and accepted no AI weight.
+- Tata Steel returned `UNSUPPORTED_REQUEST`; LONG, SHORT, RESULTS, and RESEARCH remained unresolved, with zero supported binding, zero `MARKET.PRICE` substitution, and no fabricated factor/provider/research authority.
+- Prompt-injection case completed only for the legitimate ETF factor. It accepted no `MARKET.SECRET_FACTOR`, VETO relationship, AI weight, ACTIVE template, prompt-disclosure authority, or registry override; 3/3 citations were valid.
+- No template was persisted and no acceptance action, ScoreCheck, scoring, compiler, runtime registration, fallback model, second explanation pass, or private/market retrieval occurred.
+
+Live status:
+- `LIVE_GEMINI_EMBEDDING_VALIDATION_PASSED`
+- `LIVE_GEMINI_ATLAS_SEMANTIC_VALIDATION_PASSED`
+- `LIVE_GEMINI_ATLAS_RAG_VALIDATION_PASSED`
+- Verdict: `DEVELOPMENT_APPROVED` (development only; no production activation).
+
+Verification:
+- Focused authorization and ordinary-runtime preservation tests passed.
+- Full backend: 1,163 passed, 0 failed.
+- Typecheck passed.
+- Circular-dependency audit passed with 6 approved legacy cycles and 0 new cycles.
+- `git diff --check` passed.
+
+Progress:
+```text
+Track C:
+C-A        — ARCHITECTURE_ACCEPTED
+C-B1A      — OFFLINE_COMPLETE
+C-B1B      — DEVELOPMENT_ADAPTER_COMPLETE
+C-B2A      — ARCHITECTURE_ACCEPTED
+C-B2B      — COMPLETE
+C-B2C      — COMPLETE / LIVE VALIDATED
+C-B2C-LIVE — PASSED
+C-B3A      — ARCHITECTURE_ACCEPTED
+C-B3B      — COMPLETE
+C-B3C0     — COMPLETE
+C-B3C      — COMPLETE / LIVE ATLAS VALIDATED
+C-B3D0     — COMPLETE
+C-B3D0.1   — COMPLETE
+C-B3C-LIVE — PASSED
+C-B3E0     — COMPLETE
+C-B3E      — COMPLETE / DEVELOPMENT_APPROVED
+C-C        — NEXT
+```
+
+Known limitations:
+- Authorization is development-only.
+- The proof uses a small six-document platform-knowledge corpus.
+- Gemini/free-tier quotas remain externally imposed.
+- No production monitoring, index-publication manifest, continuous evaluation, or production ingestion scheduler exists.
+- Market and private RAG remain prohibited.
+
+Next planning boundary:
+Track C-C — Corpus and Index Publication Authorities.
+
 ### Track C-B3C — MongoDB Atlas Write/Search Adapters and Guarded Development Validation
 
 Status:
