@@ -7,10 +7,10 @@ import { MongoAtlasKnowledgeVectorSearchAdapter } from "../../src/adapters/vecto
 import { createGeminiEmbeddingAdapterConfig } from "../../src/config/gemini-embedding.config.js";
 import { createMongoAtlasVectorAdapterConfig, MONGO_ATLAS_VECTOR_INDEX_NAME } from "../../src/config/mongo-atlas-vector.config.js";
 import { MONGO_ATLAS_PLATFORM_KNOWLEDGE_VECTOR_INDEX_DEFINITION as definition } from "../../src/registries/knowledge-vector-index-definition.registry.js";
-import { KnowledgeContextAssemblyService } from "../../src/services/knowledge-context-assembly.service.js";
-import { KnowledgeEmbeddingNormalizationService } from "../../src/services/knowledge-embedding-normalization.service.js";
-import { KnowledgeRetrievalCandidateValidationService } from "../../src/services/knowledge-retrieval-candidate-validation.service.js";
-import { KnowledgeRetrievalRerankingService } from "../../src/services/knowledge-retrieval-reranking.service.js";
+import { KnowledgeContextAssemblyService } from "../../src/services/knowledge/knowledge-context-assembly.service.js";
+import { KnowledgeEmbeddingNormalizationService } from "../../src/services/knowledge/knowledge-embedding-normalization.service.js";
+import { KnowledgeRetrievalCandidateValidationService } from "../../src/services/knowledge/knowledge-retrieval-candidate-validation.service.js";
+import { KnowledgeRetrievalRerankingService } from "../../src/services/knowledge/knowledge-retrieval-reranking.service.js";
 import { GEMINI_PLATFORM_KNOWLEDGE_EMBEDDING_SCHEMA as schema } from "../../src/types/gemini-embedding-adapter.types.js";
 import type { KnowledgeRetrievalCandidate,KnowledgeRetrievalPolicy,KnowledgeRetrievalRequest,KnowledgeUntrustedVectorCandidate } from "../../src/types/knowledge-retrieval.types.js";
 

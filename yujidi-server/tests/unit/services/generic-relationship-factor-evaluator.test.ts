@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { FactorEvaluatorContractService } from "../../../src/services/factor-evaluator-contract.service.js";
-import { GenericRelationshipFactorEvaluator, validateGenericConditionalBinding, validateGenericRelationshipConfiguration } from "../../../src/services/generic-relationship-factor-evaluator.js";
+import { FactorEvaluatorContractService } from "../../../src/services/scoring/factor-evaluator-contract.service.js";
+import { GenericRelationshipFactorEvaluator, validateGenericConditionalBinding, validateGenericRelationshipConfiguration } from "../../../src/services/scoring/generic-relationship-factor-evaluator.js";
 import type { AssembledFactorInput } from "../../../src/types/factor-input-assembly.types.js";
 import type { GenericRelationshipEvaluatorConfiguration } from "../../../src/types/generic-relationship-evaluator.types.js";
 import { classifyGenericFactorRelationship } from "../../../src/types/generic-factor-relationship.types.js";

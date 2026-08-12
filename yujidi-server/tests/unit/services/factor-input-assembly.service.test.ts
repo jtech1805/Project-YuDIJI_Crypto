@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import { FactorInputAssemblyService } from "../../../src/services/factor-input-assembly.service.js";
+import { FactorInputAssemblyService } from "../../../src/services/scoring/factor-input-assembly.service.js";
 import type { EvidenceReadResult } from "../../../src/types/evidence-read.types.js";
 import type { EvidenceReadRecord } from "../../../src/types/evidence-lifecycle.types.js";
 import type { CreateEvidenceObservationInput } from "../../../src/types/evidence.types.js";
@@ -421,7 +421,7 @@ test("fixed logical dependency results are deterministic", async () => {
 
 test("assembler has no repository, lifecycle, provider, clock, evaluator, scoring, or runtime imports", () => {
   const source = readFileSync(
-    new URL("../../../src/services/factor-input-assembly.service.ts", import.meta.url),
+    new URL("../../../src/services/scoring/factor-input-assembly.service.ts", import.meta.url),
     "utf8",
   );
   assert.doesNotMatch(

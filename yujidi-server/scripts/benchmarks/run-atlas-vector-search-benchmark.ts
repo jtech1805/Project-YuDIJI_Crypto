@@ -6,10 +6,10 @@ import { MongoAtlasKnowledgeVectorSearchAdapter } from "../../src/adapters/vecto
 import { DevelopmentDeterministic768KnowledgeEmbeddingAdapter } from "../../src/adapters/ai/development-deterministic-768-knowledge-embedding.adapter.js";
 import { createMongoAtlasVectorAdapterConfig, MONGO_ATLAS_DEV_DETERMINISTIC_VECTOR_INDEX_NAME } from "../../src/config/mongo-atlas-vector.config.js";
 import { MONGO_ATLAS_DEV_DETERMINISTIC_VECTOR_INDEX_DEFINITION as definition } from "../../src/registries/knowledge-vector-index-definition.registry.js";
-import { KnowledgeEmbeddingNormalizationService } from "../../src/services/knowledge-embedding-normalization.service.js";
-import { KnowledgeRetrievalCandidateValidationService } from "../../src/services/knowledge-retrieval-candidate-validation.service.js";
-import { KnowledgeRetrievalRerankingService } from "../../src/services/knowledge-retrieval-reranking.service.js";
-import { KnowledgeContextAssemblyService } from "../../src/services/knowledge-context-assembly.service.js";
+import { KnowledgeEmbeddingNormalizationService } from "../../src/services/knowledge/knowledge-embedding-normalization.service.js";
+import { KnowledgeRetrievalCandidateValidationService } from "../../src/services/knowledge/knowledge-retrieval-candidate-validation.service.js";
+import { KnowledgeRetrievalRerankingService } from "../../src/services/knowledge/knowledge-retrieval-reranking.service.js";
+import { KnowledgeContextAssemblyService } from "../../src/services/knowledge/knowledge-context-assembly.service.js";
 import { DEV_DETERMINISTIC_EMBEDDING_SCHEMA, DEV_DETERMINISTIC_QUERY_EMBEDDING_SCHEMA as querySchema } from "../../src/types/development-knowledge-ingestion.types.js";
 import type { KnowledgeRetrievalCandidate, KnowledgeRetrievalPolicy, KnowledgeRetrievalRequest, KnowledgeUntrustedVectorCandidate } from "../../src/types/knowledge-retrieval.types.js";
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CompiledSubjectResolutionService } from "../../../src/services/compiled-subject-resolution.service.js";
+import { CompiledSubjectResolutionService } from "../../../src/services/compiled-rulebook/compiled-subject-resolution.service.js";
 
 const service = new CompiledSubjectResolutionService();
 const context = { tradedInstrument: { type: "INSTRUMENT", key: "NSE:TATASTEEL" }, underlyingAsset: { type: "ASSET", key: "BTC" } };

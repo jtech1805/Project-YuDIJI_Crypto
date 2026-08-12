@@ -7,10 +7,10 @@ import {
   calculateTradeGeometry,
   type CreateScoreCheckInput,
   ScoreCheckService,
-} from "../../../src/services/score-check.service.js";
+} from "../../../src/services/scoring/score-check.service.js";
 import { ScoreCheckSnapshotModel } from "../../../src/models/score-check-snapshot.model.js";
-import { ScoringContextBuilderService } from "../../../src/services/scoring-context-builder.service.js";
-import { ScoringTemplateCrudService } from "../../../src/services/scoring-template-crud.service.js";
+import { ScoringContextBuilderService } from "../../../src/services/scoring/scoring-context-builder.service.js";
+import { ScoringTemplateCrudService } from "../../../src/services/scoring/scoring-template-crud.service.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 const symbolId = "65abc0000000000000000001";

@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 
 import { AppError } from "../errors/AppError.js";
-import { BrokerConnectionService } from "../services/broker-connection.service.js";
+import { BrokerConnectionService } from "../services/market-data/broker-connection.service.js";
 
 const connectAngelSchema = z.object({
   clientCode: z.string().min(1).max(64),

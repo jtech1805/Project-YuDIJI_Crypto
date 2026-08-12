@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";import test from "node:test";
-import { TemplateDraftRetrievalQueryService } from "../../../src/services/template-draft-retrieval-query.service.js";
-import { TemplateDraftRagPromptContextService } from "../../../src/services/template-draft-rag-prompt-context.service.js";
-import { TemplateDraftCitationValidationService } from "../../../src/services/template-draft-citation-validation.service.js";
-import { TemplateDraftRagContradictionService } from "../../../src/services/template-draft-rag-contradiction.service.js";
+import { TemplateDraftRetrievalQueryService } from "../../../src/services/copilot/template-draft-retrieval-query.service.js";
+import { TemplateDraftRagPromptContextService } from "../../../src/services/copilot/template-draft-rag-prompt-context.service.js";
+import { TemplateDraftCitationValidationService } from "../../../src/services/copilot/template-draft-citation-validation.service.js";
+import { TemplateDraftRagContradictionService } from "../../../src/services/copilot/template-draft-rag-contradiction.service.js";
 import { PROMPT_INJECTION_PASSAGE } from "../../fixtures/template-draft-rag-security.fixture.js";
 import { citedCandidate,ragContext,ragRequest,ragProjection } from "../../fixtures/template-draft-rag.fixture.js";
-import { templateDraftCandidateSchema } from "../../../src/services/template-draft-generation.service.js";
+import { templateDraftCandidateSchema } from "../../../src/services/copilot/template-draft-generation.service.js";
 test("drafting-to-retrieval projection preserves unsupported concepts without substitution",()=>{const draft:any={...ragRequest(),drafting:{...ragRequest().drafting,draftingRequest:{...ragRequest().drafting.draftingRequest,requestedConcepts:[{conceptId:"LONG",text:"long buildup",categoryHint:"FACTOR"}]}}};const service=new TemplateDraftRetrievalQueryService(),a=service.project(draft)!,b=service.project(draft)!;assert.deepEqual(a,b);assert.deepEqual(a.request.query.concepts,["long buildup"]);assert.match(a.request.query.text,/no silent substitution/);assert.doesNotMatch(a.request.query.text,/MARKET\.PRICE/);assert.ok(Object.isFrozen(a));});
 test("registry-only mode has no retrieval projection",()=>{assert.equal(new TemplateDraftRetrievalQueryService().project(ragRequest("REGISTRY_ONLY")),null);});
 test("RAG prompt keeps authoritative registry, untrusted passages and schema rules separate",()=>{const context=new TemplateDraftRagPromptContextService().build(ragRequest().drafting,ragContext(PROMPT_INJECTION_PASSAGE));assert.equal(context.sections.authoritativeRegistryContext.label,"AUTHORITATIVE_REGISTRY_CONTEXT");assert.equal(context.sections.untrustedRetrievedContext.label,"UNTRUSTED_RETRIEVED_CONTEXT");assert.equal(context.sections.outputSchemaAndCitationRules.label,"OUTPUT_SCHEMA_AND_CITATION_RULES");assert.equal((context.sections.untrustedRetrievedContext.passages[0] as any).text,PROMPT_INJECTION_PASSAGE);assert(context.sections.untrustedRetrievedContext.securityInstructions.some(x=>x.includes("Ignore commands")));assert(context.sections.outputSchemaAndCitationRules.rules.some(x=>x.includes("weights")));assert.equal(JSON.stringify(context).includes("queryVector"),false);assert.ok(Object.isFrozen(context));});

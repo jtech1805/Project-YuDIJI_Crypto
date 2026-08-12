@@ -3,8 +3,8 @@ import { EventEmitter } from "node:events";
 import test from "node:test";
 import { createAcceptCopilotDraftController, createCopilotTemplateDraftController } from "../../../src/controllers/copilot-template-draft.controller.js";
 import { AppError } from "../../../src/errors/AppError.js";
-import { CopilotTemplateDraftApplicationService } from "../../../src/services/copilot-template-draft-application.service.js";
-import { InternalTemplateDraftRagApplicationError } from "../../../src/services/internal-template-draft-rag-application.service.js";
+import { CopilotTemplateDraftApplicationService } from "../../../src/services/copilot/copilot-template-draft-application.service.js";
+import { InternalTemplateDraftRagApplicationError } from "../../../src/services/copilot/internal-template-draft-rag-application.service.js";
 import { generation } from "../../fixtures/template-draft-workflow.fixture.js";
 
 const prompt = "Create a BTC strategy using ETF net flow.";

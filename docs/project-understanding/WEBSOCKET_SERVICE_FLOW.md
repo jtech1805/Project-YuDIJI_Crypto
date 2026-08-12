@@ -4,14 +4,14 @@ This document explains how `WebSocketManager` coordinates browser sockets, Binan
 
 Primary files:
 
-- `yujidi-server/src/services/websocket.service.ts`
-- `yujidi-server/src/services/market-subscription-resolver.service.ts`
-- `yujidi-server/src/services/market-subscription-router.service.ts`
-- `yujidi-server/src/services/angel-user-market-data-session.service.ts`
+- `yujidi-server/src/services/trading/websocket.service.ts`
+- `yujidi-server/src/services/market-data/market-subscription-resolver.service.ts`
+- `yujidi-server/src/services/market-data/market-subscription-router.service.ts`
+- `yujidi-server/src/services/market-data/angel-user-market-data-session.service.ts`
 - `yujidi-server/src/integrations/market-data/angel/angel-market-data.provider.ts`
-- `yujidi-server/src/services/market-snapshot.service.ts`
-- `yujidi-server/src/services/analyzer.service.ts`
-- `yujidi-server/src/services/active-trade-live-monitor.service.ts`
+- `yujidi-server/src/services/market-data/market-snapshot.service.ts`
+- `yujidi-server/src/services/trading/analyzer.service.ts`
+- `yujidi-server/src/services/trading/active-trade-live-monitor.service.ts`
 
 ## Purpose
 

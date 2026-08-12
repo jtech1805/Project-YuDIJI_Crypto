@@ -1,7 +1,7 @@
 import {
   GENERIC_RELATIONSHIP_FACTOR_EVALUATOR_ID,
   validateGenericRelationshipConfiguration,
-} from "../services/generic-relationship-factor-evaluator.js";
+} from "../services/scoring/generic-relationship-factor-evaluator.js";
 import {
   EvaluatorConfigurationRegistryError,
   MAX_EVALUATOR_CONFIGURATION_IDENTIFIER_LENGTH,

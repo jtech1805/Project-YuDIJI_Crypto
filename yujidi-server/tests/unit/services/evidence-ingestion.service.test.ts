@@ -4,7 +4,7 @@ import test from "node:test";
 import type { EvidenceDocument } from "../../../src/models/evidence.model.js";
 import type { EvidenceProviderAdapter } from "../../../src/ports/evidence-provider-adapter.port.js";
 import type { EvidenceRepositoryContract } from "../../../src/repositories/evidence.repository.js";
-import { EvidenceIngestionService } from "../../../src/services/evidence-ingestion.service.js";
+import { EvidenceIngestionService } from "../../../src/services/evidence/evidence-ingestion.service.js";
 import type { EvidenceCandidate } from "../../../src/types/evidence-ingestion.types.js";
 import type { CreateEvidenceInput } from "../../../src/types/evidence.types.js";
 

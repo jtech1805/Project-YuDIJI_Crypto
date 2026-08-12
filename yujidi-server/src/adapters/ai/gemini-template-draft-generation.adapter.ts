@@ -7,8 +7,8 @@ import {
 import { z } from "zod";
 import type { GeminiGenerationAdapterConfig } from "../../config/gemini-generation.config.js";
 import type { TemplateDraftGenerationPort } from "../../ports/template-draft-generation.port.js";
-import { templateDraftCandidateSchema } from "../../services/template-draft-generation.service.js";
-import { projectAiProviderFailure } from "../../services/ai-provider-outcome-projection.service.js";
+import { templateDraftCandidateSchema } from "../../services/copilot/template-draft-generation.service.js";
+import { projectAiProviderFailure } from "../../services/ai-runtime/ai-provider-outcome-projection.service.js";
 import type {
   TemplateDraftModelRequest,
   TemplateDraftModelResult,

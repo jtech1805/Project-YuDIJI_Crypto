@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CanonicalTemplateSnapshotService } from "../../../src/services/canonical-template-snapshot.service.js";
+import { CanonicalTemplateSnapshotService } from "../../../src/services/templates/canonical-template-snapshot.service.js";
 
 const snapshot = (config: any = { a: 1, b: 2 }): any => ({ templateId: "BTC_CONTEXT_EXPERIMENTAL", templateVersion: 1, templateKind: "USER" as const, status: "DRAFT" as const, visibility: "PRIVATE" as const, scope: { marketType: "CRYPTO", tradeStyle: "INTRADAY", instrumentType: "SPOT", allowedTradableSymbols: [] }, aggregationMode: "WEIGHTED_SUM" as const, sections: [{ sectionKey: "CRYPTO_CONTEXT", weight: 100, enabled: true, missingDataPolicy: "BLOCK" as const, evaluators: [{ evaluatorKey: "GENERIC_FACTOR:CRYPTO.ETF_NET_FLOW", label: "ETF flow", weight: 100, enabled: true, config }] }] });
 const service = new CanonicalTemplateSnapshotService();

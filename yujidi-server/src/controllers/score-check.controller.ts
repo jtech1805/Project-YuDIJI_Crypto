@@ -6,7 +6,7 @@ import {
   deleteScoreCheckSchema,
   ScoreCheckService,
   updateScoreCheckSchema,
-} from "../services/score-check.service.js";
+} from "../services/scoring/score-check.service.js";
 
 const getUserId = (req: Request): string => {
   const userId = req.user?.id;

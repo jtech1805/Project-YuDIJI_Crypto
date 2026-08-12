@@ -3,7 +3,7 @@ import test from "node:test";
 
 import {
   EvidenceDeduplicationKeyBuilder,
-} from "../../../src/services/evidence-deduplication-key.service.js";
+} from "../../../src/services/evidence/evidence-deduplication-key.service.js";
 import type { EvidenceCandidate } from "../../../src/types/evidence-ingestion.types.js";
 
 const candidate = (): EvidenceCandidate => ({

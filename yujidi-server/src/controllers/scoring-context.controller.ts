@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 
 import { AppError } from "../errors/AppError.js";
-import { ScoringContextService } from "../services/scoring-context.service.js";
+import { ScoringContextService } from "../services/scoring/scoring-context.service.js";
 import { SCORING_TEMPLATE_KEYS } from "../types/scoring.types.js";
 
 const querySchema = z.object({

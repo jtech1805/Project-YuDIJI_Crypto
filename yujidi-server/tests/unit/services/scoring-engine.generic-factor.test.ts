@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ScoringEngineService, type ScoringEngineInput } from "../../../src/services/scoring-engine.service.js";
-import { GenericRelationshipFactorEvaluator } from "../../../src/services/generic-relationship-factor-evaluator.js";
-import { GenericFactorCompatibilityDispatcher, GenericFactorLegacyResultAdapter } from "../../../src/services/generic-factor-legacy-compatibility.service.js";
+import { ScoringEngineService, type ScoringEngineInput } from "../../../src/services/scoring/scoring-engine.service.js";
+import { GenericRelationshipFactorEvaluator } from "../../../src/services/scoring/generic-relationship-factor-evaluator.js";
+import { GenericFactorCompatibilityDispatcher, GenericFactorLegacyResultAdapter } from "../../../src/services/scoring/generic-factor-legacy-compatibility.service.js";
 import { factorRegistry } from "../../../src/registries/factor.registry.js";
 import { sharedFeatureFlagService } from "../../../src/config/feature-flags.js";
 import type { AssembledFactorInput } from "../../../src/types/factor-input-assembly.types.js";

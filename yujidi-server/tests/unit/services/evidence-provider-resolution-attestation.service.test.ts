@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { EvidenceProviderResolutionAttestationService } from "../../../src/services/evidence-provider-resolution-attestation.service.js";
+import { EvidenceProviderResolutionAttestationService } from "../../../src/services/evidence/evidence-provider-resolution-attestation.service.js";
 
 const CREATED_AT = new Date("2026-08-04T10:00:01.000Z");
 const candidate = (change: Record<string, unknown> = {}) => ({

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import type { DeterministicFactorEvaluator } from "../../../src/ports/deterministic-factor-evaluator.port.js";
-import { ExplicitFactorEvaluatorExecutionService } from "../../../src/services/explicit-factor-evaluator-execution.service.js";
+import { ExplicitFactorEvaluatorExecutionService } from "../../../src/services/scoring/explicit-factor-evaluator-execution.service.js";
 import type { FactorEvaluatorResultValidationResult } from "../../../src/types/factor-evaluator.types.js";
 import type { AssembledFactorInput } from "../../../src/types/factor-input-assembly.types.js";
 
@@ -316,7 +316,7 @@ test("returns frozen boundary objects and does not generate runtime fields", () 
 test("new execution files do not import forbidden I/O, assembly, legacy, or runtime modules", () => {
   const files = [
     "src/types/factor-evaluator-execution.types.ts",
-    "src/services/explicit-factor-evaluator-execution.service.ts",
+    "src/services/scoring/explicit-factor-evaluator-execution.service.ts",
   ];
   const forbidden = [
     "factor-input-assembly.service", "evidence.repository", "evidence-read.service",

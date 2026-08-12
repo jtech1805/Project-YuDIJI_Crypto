@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { ProviderResolutionExecutionService } from "../../../src/services/provider-resolution-execution.service.js";
+import { ProviderResolutionExecutionService } from "../../../src/services/providers/provider-resolution-execution.service.js";
 import {
   PROVIDER_RESOLUTION_ATTEMPT_OUTCOMES,
   PROVIDER_RESOLUTION_EXECUTION_FAILURE_CODES,

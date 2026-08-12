@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 
 import { AppError } from "../errors/AppError.js";
-import { SymbolSearchService } from "../services/symbol-search.service.js";
+import { SymbolSearchService } from "../services/market-data/symbol-search.service.js";
 import {
   EXCHANGES,
   INSTRUMENT_TYPES,

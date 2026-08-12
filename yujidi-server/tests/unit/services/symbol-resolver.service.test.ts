@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Types } from "mongoose";
 
-import { SymbolResolverService } from "../../../src/services/symbol-resolver.service.js";
+import { SymbolResolverService } from "../../../src/services/market-data/symbol-resolver.service.js";
 
 const execResult = <T>(value: T) => ({
   exec: async () => value,

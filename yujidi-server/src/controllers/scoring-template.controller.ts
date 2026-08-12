@@ -5,7 +5,7 @@ import {
   duplicateScoringTemplateSchema,
   ScoringTemplateCrudService,
   updateScoringTemplateSchema,
-} from "../services/scoring-template-crud.service.js";
+} from "../services/scoring/scoring-template-crud.service.js";
 import {
   SCORING_TEMPLATE_KEYS,
   type ScoringTemplateKey,

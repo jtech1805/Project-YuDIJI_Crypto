@@ -3,7 +3,7 @@ import { KnowledgeChunkModel } from "../models/knowledge-chunk.model.js";
 import type { KnowledgeChunkCandidate, KnowledgeChunkInsertResult, KnowledgeChunkReadResult, StoredKnowledgeChunkSetReadResult, PersistedKnowledgeChunk } from "../types/knowledge-chunk.types.js";
 import type { KnowledgeChunkSetStrategyIdentity } from "../types/knowledge-chunk-set-manifest.types.js";
 import type { KnowledgeDocumentIdentity } from "../types/knowledge-document.types.js";
-import { freezeClone } from "../services/knowledge-document-admission.service.js";
+import { freezeClone } from "../services/knowledge/knowledge-document-admission.service.js";
 
 type Query<T> = { lean(): { exec(): Promise<T> } }; type Find<T> = { sort(v: Record<string, 1 | -1>): Query<T[]>; limit(n: number): Query<T[]> };
 export type KnowledgeChunkModelPort = { insertMany(values: readonly unknown[], options: { ordered: true }): Promise<unknown>; find(filter: Record<string, unknown>): Find<Record<string, unknown>> };

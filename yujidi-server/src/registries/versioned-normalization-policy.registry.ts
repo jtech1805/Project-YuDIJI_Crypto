@@ -1,4 +1,4 @@
-import type { FactorAggregateNormalizationPolicyService } from "../services/factor-aggregate-normalization-policy.service.js";
+import type { FactorAggregateNormalizationPolicyService } from "../services/scoring/factor-aggregate-normalization-policy.service.js";
 import { VersionedNormalizationPolicyRegistryError, type NormalizationPolicyRegistration, type VersionedNormalizationPolicy, type VersionedNormalizationPolicyRegistry } from "../types/versioned-normalization-policy.types.js";
 import { ImmutableHistoricalAuthority } from "./historical-authority.internal.js";
 const ID = /^[A-Z0-9_]{1,120}$/;

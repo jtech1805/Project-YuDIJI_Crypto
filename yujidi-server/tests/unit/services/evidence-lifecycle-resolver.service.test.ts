@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { EvidenceLifecycleResolverService } from "../../../src/services/evidence-lifecycle-resolver.service.js";
+import { EvidenceLifecycleResolverService } from "../../../src/services/evidence/evidence-lifecycle-resolver.service.js";
 import type { EvidenceLifecycleInputRecord } from "../../../src/types/evidence-lifecycle.types.js";
 import type {
   CreateEvidenceObservationInput,

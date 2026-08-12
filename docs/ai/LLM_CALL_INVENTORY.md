@@ -37,8 +37,8 @@ AnalyzerEngine threshold breach
 
 Main files:
 
-- `yujidi-server/src/services/analyzer.service.ts`
-- `yujidi-server/src/services/llm.service.ts`
+- `yujidi-server/src/services/trading/analyzer.service.ts`
+- `yujidi-server/src/services/ai-runtime/llm.service.ts`
 - `yujidi-server/src/ports/llm-provider.port.ts`
 - `yujidi-server/src/integrations/llm/groq/groq-llm.provider.ts`
 - `yujidi-server/src/models/Alert.ts`
@@ -122,7 +122,7 @@ Main files:
 
 - `yujidi-server/src/routes/chat.routes.ts`
 - `yujidi-server/src/controllers/chat.controller.ts`
-- `yujidi-server/src/services/llm.service.ts`
+- `yujidi-server/src/services/ai-runtime/llm.service.ts`
 - `yujidi-server/src/ports/llm-provider.port.ts`
 - `yujidi-server/src/integrations/llm/groq/groq-llm.provider.ts`
 - `yujidi-server/src/models/chatSession.ts`
@@ -203,9 +203,9 @@ POST /api/trade-journals/:id/ai-review
 Main files:
 
 - `yujidi-server/src/controllers/ai-explanation.controller.ts`
-- `yujidi-server/src/services/ai-trade-review.service.ts`
-- `yujidi-server/src/services/ai-trade-review-context.service.ts`
-- `yujidi-server/src/services/llm.service.ts`
+- `yujidi-server/src/services/ai-runtime/ai-trade-review.service.ts`
+- `yujidi-server/src/services/ai-runtime/ai-trade-review-context.service.ts`
+- `yujidi-server/src/services/ai-runtime/llm.service.ts`
 - `yujidi-server/src/ports/llm-provider.port.ts`
 - `yujidi-server/src/integrations/llm/groq/groq-llm.provider.ts`
 - `yujidi-server/src/models/ai-explanation.model.ts`

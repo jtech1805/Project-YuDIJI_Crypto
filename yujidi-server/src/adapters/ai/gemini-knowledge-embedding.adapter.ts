@@ -6,8 +6,8 @@ import {
 } from "@google/genai";
 import type { GeminiEmbeddingAdapterConfig } from "../../config/gemini-embedding.config.js";
 import type { KnowledgeEmbeddingPort } from "../../ports/knowledge-embedding.port.js";
-import { freezeClone } from "../../services/knowledge-document-admission.service.js";
-import { projectAiProviderFailure } from "../../services/ai-provider-outcome-projection.service.js";
+import { freezeClone } from "../../services/knowledge/knowledge-document-admission.service.js";
+import { projectAiProviderFailure } from "../../services/ai-runtime/ai-provider-outcome-projection.service.js";
 import type {
   KnowledgeEmbeddingProviderRequest,
   KnowledgeEmbeddingProviderResult,

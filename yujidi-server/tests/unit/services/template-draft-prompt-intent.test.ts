@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import test from "node:test";
 import { createTemplateDraftPromptController } from "../../../src/controllers/internal-template-draft-rag.controller.js";
-import { TemplateDraftIntentExtractionService } from "../../../src/services/template-draft-intent-extraction.service.js";
-import { TemplateDraftPromptApplicationService } from "../../../src/services/template-draft-prompt-application.service.js";
+import { TemplateDraftIntentExtractionService } from "../../../src/services/copilot/template-draft-intent-extraction.service.js";
+import { TemplateDraftPromptApplicationService } from "../../../src/services/copilot/template-draft-prompt-application.service.js";
 
 const output = (change: Record<string, unknown> = {}) => ({
   subject: { type: "ASSET", key: "BTC", displayName: "Bitcoin" },

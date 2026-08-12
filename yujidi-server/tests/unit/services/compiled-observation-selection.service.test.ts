@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CompiledObservationSelectionService } from "../../../src/services/compiled-observation-selection.service.js";
+import { CompiledObservationSelectionService } from "../../../src/services/compiled-rulebook/compiled-observation-selection.service.js";
 
 const service = new CompiledObservationSelectionService();
 const subject = { type: "ASSET", key: "BTC" };

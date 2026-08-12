@@ -1,5 +1,5 @@
 import { CopilotDraftReviewModel } from "../models/copilot-draft-review.model.js";
-import { freezeClone } from "../services/knowledge-document-admission.service.js";
+import { freezeClone } from "../services/knowledge/knowledge-document-admission.service.js";
 import type {
   CopilotDraftReviewReadResult,
   CopilotDraftReviewRecord,

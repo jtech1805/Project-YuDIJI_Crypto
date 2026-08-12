@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { AiRuntimeDeadlineContextService } from "../../../src/services/ai-runtime-deadline-context.service.js";
+import { AiRuntimeDeadlineContextService } from "../../../src/services/ai-runtime/ai-runtime-deadline-context.service.js";
 import { AiRuntimeDeadlineExceededError } from "../../../src/types/ai-runtime-deadline.types.js";
 import { AiRuntimeCallerCancelledError } from "../../../src/types/ai-runtime-deadline.types.js";
 

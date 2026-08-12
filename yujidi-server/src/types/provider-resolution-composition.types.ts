@@ -1,5 +1,5 @@
 import type { EvidenceProviderAdapter } from "../ports/evidence-provider-adapter.port.js";
-import type { EvidenceProviderRunnerService } from "../services/evidence-provider-runner.service.js";
+import type { EvidenceProviderRunnerService } from "../services/evidence/evidence-provider-runner.service.js";
 import type { EvidenceIngestionStatus } from "./evidence-ingestion.types.js";
 import type { EvidenceProviderRunStatus } from "./evidence-provider-run.types.js";
 import type { InsertEvidenceProviderResolutionAttestationResult } from "./evidence-provider-resolution-attestation.types.js";

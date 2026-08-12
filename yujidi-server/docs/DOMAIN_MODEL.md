@@ -230,7 +230,7 @@ Implementation:
 
 ```txt
 src/types/market-data.types.ts
-src/services/market-quote.service.ts
+src/services/market-data/market-quote.service.ts
 src/integrations/market-data/angel/angel-quote.service.ts
 src/integrations/market-data/angel/angel-quote.mapper.ts
 ```
@@ -278,10 +278,10 @@ Business rules:
 Implementation:
 
 ```txt
-src/services/market-subscription-resolver.service.ts
-src/services/market-subscription-router.service.ts
-src/services/websocket.service.ts
-src/services/angel-user-market-data-session.service.ts
+src/services/market-data/market-subscription-resolver.service.ts
+src/services/market-data/market-subscription-router.service.ts
+src/services/trading/websocket.service.ts
+src/services/market-data/angel-user-market-data-session.service.ts
 src/integrations/market-data/angel/angel-market-data.provider.ts
 src/integrations/market-data/angel/angel-ltp-packet.parser.ts
 src/utils/market-subscription-key.ts
@@ -515,7 +515,7 @@ ChatSession = symbol-specific memory for the AI copilot.
 Implementation:
 
 ```txt
-src/services/analyzer.service.ts
+src/services/trading/analyzer.service.ts
 ```
 
 Purpose:
@@ -542,7 +542,7 @@ PriceTick = one point in live market history.
 Implementation:
 
 ```txt
-src/services/analyzer.service.ts
+src/services/trading/analyzer.service.ts
 ```
 
 Purpose:
@@ -569,7 +569,7 @@ CvdTrade = one trade's contribution to recent buy/sell pressure.
 Implementation:
 
 ```txt
-src/services/analyzer.service.ts
+src/services/trading/analyzer.service.ts
 ```
 
 Purpose:
@@ -852,22 +852,22 @@ Implemented foundation files:
 - `src/models/score-check.model.ts`
 - `src/models/trade-score-snapshot.model.ts`
 - `src/models/trade-setup.model.ts`
-- `src/services/audit-sanitizer.service.ts`
-- `src/services/audit-log.service.ts`
-- `src/services/symbol-resolver.service.ts`
-- `src/services/trade-plan.service.ts`
-- `src/services/scoring-engine.service.ts`
-- `src/services/score-check.service.ts`
-- `src/services/risk-governor.service.ts`
-- `src/services/trade-setup.service.ts`
+- `src/services/access/audit-sanitizer.service.ts`
+- `src/services/access/audit-log.service.ts`
+- `src/services/market-data/symbol-resolver.service.ts`
+- `src/services/trading/trade-plan.service.ts`
+- `src/services/scoring/scoring-engine.service.ts`
+- `src/services/scoring/score-check.service.ts`
+- `src/services/trading/risk-governor.service.ts`
+- `src/services/trading/trade-setup.service.ts`
 - `src/models/active-trade.model.ts`
-- `src/services/active-trade.service.ts`
+- `src/services/trading/active-trade.service.ts`
 - `src/models/trade-event.model.ts`
-- `src/services/trade-event.service.ts`
-- `src/services/trade-monitoring.service.ts`
+- `src/services/trading/trade-event.service.ts`
+- `src/services/trading/trade-monitoring.service.ts`
 - `src/models/trade-result.model.ts`
-- `src/services/trade-result.service.ts`
-- `src/services/risk-state-projection.service.ts`
+- `src/services/trading/trade-result.service.ts`
+- `src/services/trading/risk-state-projection.service.ts`
 - `src/controllers/trade-plan.controller.ts`
 - `src/controllers/score-check.controller.ts`
 - `src/controllers/trade-setup.controller.ts`

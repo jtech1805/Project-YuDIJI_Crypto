@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { KnowledgeChunkSetManifestService } from "../../../src/services/knowledge-chunk-set-manifest.service.js";
+import { KnowledgeChunkSetManifestService } from "../../../src/services/knowledge/knowledge-chunk-set-manifest.service.js";
 import { FactorDocumentationStrategy } from "../../../src/strategies/platform-knowledge/factor-documentation.strategy.js";
 import { persistedDocument } from "../../fixtures/platform-knowledge.fixture.js";
 import type { KnowledgeChunkCandidate } from "../../../src/types/knowledge-chunk.types.js";

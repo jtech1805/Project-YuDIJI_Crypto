@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Types } from "mongoose";
 
-import { TradeJournalService } from "../../../src/services/trade-journal.service.js";
+import { TradeJournalService } from "../../../src/services/trading/trade-journal.service.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 const otherUserId = "69e64c5f9042aac89c8c83f9";

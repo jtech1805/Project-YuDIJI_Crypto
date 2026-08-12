@@ -1,4 +1,4 @@
-import { freezeClone } from "../services/knowledge-document-admission.service.js";
+import { freezeClone } from "../services/knowledge/knowledge-document-admission.service.js";
 import {
   GEMINI_GENERATION_MODEL,
   GEMINI_GENERATION_PROVIDER,

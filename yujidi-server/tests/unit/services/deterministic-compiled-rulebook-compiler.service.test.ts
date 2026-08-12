@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DeterministicCompiledRulebookCompilerService } from "../../../src/services/deterministic-compiled-rulebook-compiler.service.js";
+import { DeterministicCompiledRulebookCompilerService } from "../../../src/services/compiled-rulebook/deterministic-compiled-rulebook-compiler.service.js";
 
 const fixedDate = () => new Date("2026-08-03T00:00:00.000Z");
 const resolvedBinding = (change: any = {}) => ({

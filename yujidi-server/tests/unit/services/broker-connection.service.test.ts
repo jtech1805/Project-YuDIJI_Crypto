@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   BrokerConnectionService,
   toBrokerConnectionSafeResponse,
-} from "../../../src/services/broker-connection.service.js";
+} from "../../../src/services/market-data/broker-connection.service.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 

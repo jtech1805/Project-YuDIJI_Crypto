@@ -5,8 +5,8 @@ import { Types } from "mongoose";
 import {
   ActiveTradeSubscriptionService,
   buildActiveTradeSubscriptionKey,
-} from "../../../src/services/active-trade-subscription.service.js";
-import { TradeMonitoringHealthService } from "../../../src/services/trade-monitoring-health.service.js";
+} from "../../../src/services/trading/active-trade-subscription.service.js";
+import { TradeMonitoringHealthService } from "../../../src/services/trading/trade-monitoring-health.service.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 const otherUserId = "69e64c5f9042aac89c8c83f9";

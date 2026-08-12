@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { KnowledgeChunkSetVerificationService } from "../../../src/services/knowledge-chunk-set-verification.service.js";
-import { KnowledgeChunkSetManifestService, calculateChunkSetDigest } from "../../../src/services/knowledge-chunk-set-manifest.service.js";
+import { KnowledgeChunkSetVerificationService } from "../../../src/services/knowledge/knowledge-chunk-set-verification.service.js";
+import { KnowledgeChunkSetManifestService, calculateChunkSetDigest } from "../../../src/services/knowledge/knowledge-chunk-set-manifest.service.js";
 import { FactorDocumentationStrategy } from "../../../src/strategies/platform-knowledge/factor-documentation.strategy.js";
 import { persistedDocument } from "../../fixtures/platform-knowledge.fixture.js";
 import type { PersistedKnowledgeChunkSetManifest } from "../../../src/types/knowledge-chunk-set-manifest.types.js";

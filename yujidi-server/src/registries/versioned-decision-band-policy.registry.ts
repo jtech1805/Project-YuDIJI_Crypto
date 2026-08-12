@@ -1,4 +1,4 @@
-import type { FactorDecisionBandPolicyService } from "../services/factor-decision-band-policy.service.js";
+import type { FactorDecisionBandPolicyService } from "../services/scoring/factor-decision-band-policy.service.js";
 import { VersionedDecisionBandPolicyRegistryError, type DecisionBandPolicyRegistration, type VersionedDecisionBandPolicy, type VersionedDecisionBandPolicyRegistry } from "../types/versioned-decision-band-policy.types.js";
 import { ImmutableHistoricalAuthority } from "./historical-authority.internal.js";
 const ID = /^[A-Z0-9_]{1,120}$/;

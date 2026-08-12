@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CompiledRulebookReadService } from "../../../src/services/compiled-rulebook-read.service.js";
+import { CompiledRulebookReadService } from "../../../src/services/compiled-rulebook/compiled-rulebook-read.service.js";
 
 const harness = () => { const calls: any[] = []; const repository: any = { findExact: async (...a: any[]) => { calls.push(["exact", ...a]); return { found: false, code: "NOT_FOUND" }; }, findByTemplateVersion: async (p: any) => { calls.push(["list", p]); return { listed: true, items: Object.freeze([]), ...p, hasMore: false }; }, findMostRecentlyCompiledForTemplateVersion: async (...a: any[]) => { calls.push(["recent", ...a]); return { found: false, code: "NOT_FOUND" }; } }; return { calls, service: new CompiledRulebookReadService(repository) }; };
 test("read service delegates valid exact and convenience reads without substitution", async () => { const h = harness(); await h.service.getExact("RULEBOOK", 1); await h.service.getMostRecentlyCompiledForTemplateVersion("TEMPLATE", 1); assert.deepEqual(h.calls, [["exact", "RULEBOOK", 1], ["recent", "TEMPLATE", 1]]); });

@@ -7,7 +7,7 @@ import {
   retryTradeSetupRiskCheckSchema,
   TradeSetupService,
   updateTradeSetupSchema,
-} from "../services/trade-setup.service.js";
+} from "../services/trading/trade-setup.service.js";
 
 const getUserId = (req: Request): string => {
   const userId = req.user?.id;

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { MarketSubscriptionRouter } from "../../../src/services/market-subscription-router.service.js";
-import type { ResolvedMarketSubscription } from "../../../src/services/market-subscription-resolver.service.js";
+import { MarketSubscriptionRouter } from "../../../src/services/market-data/market-subscription-router.service.js";
+import type { ResolvedMarketSubscription } from "../../../src/services/market-data/market-subscription-resolver.service.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 

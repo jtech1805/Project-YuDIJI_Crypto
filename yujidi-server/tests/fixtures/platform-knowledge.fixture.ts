@@ -1,4 +1,4 @@
-import { KnowledgeDocumentAdmissionService } from "../../src/services/knowledge-document-admission.service.js";
+import { KnowledgeDocumentAdmissionService } from "../../src/services/knowledge/knowledge-document-admission.service.js";
 import type { KnowledgeDocumentMaterial, PersistedKnowledgeDocument, PlatformKnowledgeDocumentType, NormalizedKnowledgeBlock } from "../../src/types/knowledge-document.types.js";
 
 const block = (blockId: string, ordinal: number, blockType: NormalizedKnowledgeBlock["blockType"], text: string, labels: readonly string[] = [], refs: NormalizedKnowledgeBlock["authorityReferences"] = []): NormalizedKnowledgeBlock => ({ blockId, ordinal, blockType, text, sectionPath: ["YUDIJI"], sourceSpan: { sectionPath: ["YUDIJI"], paragraphStart: ordinal, paragraphEnd: ordinal }, semanticLabels: labels, authorityReferences: refs });

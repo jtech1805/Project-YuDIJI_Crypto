@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { ProviderResolutionPolicyService } from "../../../src/services/provider-resolution-policy.service.js";
+import { ProviderResolutionPolicyService } from "../../../src/services/providers/provider-resolution-policy.service.js";
 import {
   PROVIDER_RESOLUTION_POLICY_FAILURE_CODES,
   PROVIDER_RESOLUTION_STATUSES,

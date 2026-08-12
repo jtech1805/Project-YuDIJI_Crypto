@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
-import { freezeClone } from "../services/knowledge-document-admission.service.js";
+import { freezeClone } from "../services/knowledge/knowledge-document-admission.service.js";
 import type { KnowledgeRetrievalPolicy } from "../types/knowledge-retrieval.types.js";
 export class KnowledgeRetrievalPolicyRegistry {
   private readonly values = new Map<string, KnowledgeRetrievalPolicy>();

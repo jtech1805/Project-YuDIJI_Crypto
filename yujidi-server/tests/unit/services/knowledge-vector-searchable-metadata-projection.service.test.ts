@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { KnowledgeVectorSearchableMetadataProjectionService } from "../../../src/services/knowledge-vector-searchable-metadata-projection.service.js";
+import { KnowledgeVectorSearchableMetadataProjectionService } from "../../../src/services/knowledge/knowledge-vector-searchable-metadata-projection.service.js";
 import { verifiedEmbeddingFixture } from "../../fixtures/knowledge-embedding.fixture.js";
 
 test("searchable metadata projection is bounded, canonical, detached and excludes content/source data", () => {

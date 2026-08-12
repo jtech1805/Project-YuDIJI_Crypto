@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { KnowledgeRetrievalPolicyRegistry } from "../../../src/registries/knowledge-retrieval-policy.registry.js";
-import { KnowledgeQueryTextService } from "../../../src/services/knowledge-query-text.service.js";
-import { KnowledgeRetrievalRerankingService } from "../../../src/services/knowledge-retrieval-reranking.service.js";
-import { KnowledgeCitationHandleService } from "../../../src/services/knowledge-citation-handle.service.js";
-import { KnowledgeCitationValidationService } from "../../../src/services/knowledge-citation-validation.service.js";
-import { KnowledgeContextAssemblyService } from "../../../src/services/knowledge-context-assembly.service.js";
+import { KnowledgeQueryTextService } from "../../../src/services/knowledge/knowledge-query-text.service.js";
+import { KnowledgeRetrievalRerankingService } from "../../../src/services/knowledge/knowledge-retrieval-reranking.service.js";
+import { KnowledgeCitationHandleService } from "../../../src/services/knowledge/knowledge-citation-handle.service.js";
+import { KnowledgeCitationValidationService } from "../../../src/services/knowledge/knowledge-citation-validation.service.js";
+import { KnowledgeContextAssemblyService } from "../../../src/services/knowledge/knowledge-context-assembly.service.js";
 import type { KnowledgeRetrievalPolicy, KnowledgeRetrievalRequest, ValidatedKnowledgeRetrievalCandidate } from "../../../src/types/knowledge-retrieval.types.js";
 import type { KnowledgeEmbeddingSchemaDefinition } from "../../../src/types/knowledge-embedding.types.js";
 

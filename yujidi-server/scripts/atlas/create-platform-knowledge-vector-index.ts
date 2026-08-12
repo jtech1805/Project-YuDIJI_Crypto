@@ -3,8 +3,8 @@ import mongoose from "mongoose";
 import { pathToFileURL } from "node:url";
 import { createMongoAtlasVectorAdapterConfig, MONGO_ATLAS_DEV_DETERMINISTIC_VECTOR_INDEX_NAME, MONGO_ATLAS_VECTOR_INDEX_NAME } from "../../src/config/mongo-atlas-vector.config.js";
 import { MONGO_ATLAS_DEV_DETERMINISTIC_VECTOR_INDEX_DEFINITION, MONGO_ATLAS_PLATFORM_KNOWLEDGE_VECTOR_INDEX_DEFINITION } from "../../src/registries/knowledge-vector-index-definition.registry.js";
-import { MongoAtlasVectorIndexSpecificationService } from "../../src/services/mongo-atlas-vector-index-specification.service.js";
-import { MongoAtlasVectorIndexAdministrationService } from "../../src/services/mongo-atlas-vector-index-administration.service.js";
+import { MongoAtlasVectorIndexSpecificationService } from "../../src/services/knowledge/mongo-atlas-vector-index-specification.service.js";
+import { MongoAtlasVectorIndexAdministrationService } from "../../src/services/knowledge/mongo-atlas-vector-index-administration.service.js";
 
 export const validateAtlasIndexCreationGuard=(env:NodeJS.ProcessEnv)=>{
   if(env.YUDIJI_ATLAS_VECTOR_INDEX_CREATION_CONFIRMED!=="true")throw new Error("ATLAS_VECTOR_INDEX_CREATION_NOT_CONFIRMED");

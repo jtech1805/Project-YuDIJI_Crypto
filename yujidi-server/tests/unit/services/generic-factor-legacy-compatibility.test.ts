@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { DEFAULT_FACTOR_DEFINITIONS } from "../../../src/registries/default-factor-definitions.js";
 import { StaticFactorRegistry } from "../../../src/registries/factor.registry.js";
-import { GenericRelationshipFactorEvaluator } from "../../../src/services/generic-relationship-factor-evaluator.js";
-import { GenericFactorCompatibilityDispatcher, GenericFactorLegacyResultAdapter, parseGenericFactorEvaluatorKey } from "../../../src/services/generic-factor-legacy-compatibility.service.js";
+import { GenericRelationshipFactorEvaluator } from "../../../src/services/scoring/generic-relationship-factor-evaluator.js";
+import { GenericFactorCompatibilityDispatcher, GenericFactorLegacyResultAdapter, parseGenericFactorEvaluatorKey } from "../../../src/services/scoring/generic-factor-legacy-compatibility.service.js";
 import type { AssembledFactorInput } from "../../../src/types/factor-input-assembly.types.js";
 
 const key = "GENERIC_FACTOR:CRYPTO.ETF_NET_FLOW";

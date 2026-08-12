@@ -4,14 +4,14 @@ This document explains active-trade monitoring from actual trade confirmation th
 
 Primary files:
 
-- `yujidi-server/src/services/active-trade.service.ts`
-- `yujidi-server/src/services/active-trade-subscription.service.ts`
-- `yujidi-server/src/services/active-trade-live-monitor.service.ts`
-- `yujidi-server/src/services/trade-monitoring.service.ts`
-- `yujidi-server/src/services/trade-event.service.ts`
-- `yujidi-server/src/services/trade-event-delivery.service.ts`
-- `yujidi-server/src/services/trade-monitoring-health.service.ts`
-- `yujidi-server/src/services/websocket.service.ts`
+- `yujidi-server/src/services/trading/active-trade.service.ts`
+- `yujidi-server/src/services/trading/active-trade-subscription.service.ts`
+- `yujidi-server/src/services/trading/active-trade-live-monitor.service.ts`
+- `yujidi-server/src/services/trading/trade-monitoring.service.ts`
+- `yujidi-server/src/services/trading/trade-event.service.ts`
+- `yujidi-server/src/services/trading/trade-event-delivery.service.ts`
+- `yujidi-server/src/services/trading/trade-monitoring-health.service.ts`
+- `yujidi-server/src/services/trading/websocket.service.ts`
 - `yujidi-server/src/utils/market-subscription-key.ts`
 
 ## Purpose

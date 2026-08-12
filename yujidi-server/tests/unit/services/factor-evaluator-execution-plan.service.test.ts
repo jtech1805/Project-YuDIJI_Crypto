@@ -5,7 +5,7 @@ import test from "node:test";
 import type { DeterministicFactorEvaluator } from "../../../src/ports/deterministic-factor-evaluator.port.js";
 import {
   FactorEvaluatorExecutionPlanService,
-} from "../../../src/services/factor-evaluator-execution-plan.service.js";
+} from "../../../src/services/scoring/factor-evaluator-execution-plan.service.js";
 import {
   MAX_EVALUATORS_PER_EXECUTION_PLAN,
 } from "../../../src/types/factor-evaluator-execution-plan.types.js";
@@ -310,7 +310,7 @@ test("is deterministic and returns the frozen first failure", () => {
 
 test("service remains isolated from execution, scoring, Evidence, and I/O", () => {
   const source = readFileSync(
-    new URL("../../../src/services/factor-evaluator-execution-plan.service.ts", import.meta.url),
+    new URL("../../../src/services/scoring/factor-evaluator-execution-plan.service.ts", import.meta.url),
     "utf8",
   );
   for (const forbidden of [

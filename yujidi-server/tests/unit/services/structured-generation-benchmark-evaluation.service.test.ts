@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"; import test from "node:test";
-import { StructuredGenerationBenchmarkEvaluationService } from "../../../src/services/structured-generation-benchmark-evaluation.service.js";
+import { StructuredGenerationBenchmarkEvaluationService } from "../../../src/services/copilot/structured-generation-benchmark-evaluation.service.js";
 import { BENCHMARK_DATASET, RECORDED_PROVIDER_CONTRACT_FIXTURES, candidate, observation, policy, subject } from "../../fixtures/structured-generation-benchmark.fixture.js";
 const service = new StructuredGenerationBenchmarkEvaluationService();
 

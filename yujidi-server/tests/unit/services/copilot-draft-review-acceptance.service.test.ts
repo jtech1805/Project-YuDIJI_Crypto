@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { CopilotDraftAcceptanceService } from "../../../src/services/copilot-draft-acceptance.service.js";
-import { CopilotDraftReviewService } from "../../../src/services/copilot-draft-review.service.js";
-import { TemplateDraftAcceptanceValidatorService } from "../../../src/services/template-draft-acceptance-validator.service.js";
-import { TemplateDraftCandidateValidatorService } from "../../../src/services/template-draft-candidate-validator.service.js";
-import { TemplateDraftProjectionService } from "../../../src/services/template-draft-projection.service.js";
-import { TemplateDraftRegistryProjectionService } from "../../../src/services/template-draft-registry-projection.service.js";
-import { TemplateDraftingWorkflowService } from "../../../src/services/template-drafting-workflow.service.js";
+import { CopilotDraftAcceptanceService } from "../../../src/services/copilot/copilot-draft-acceptance.service.js";
+import { CopilotDraftReviewService } from "../../../src/services/copilot/copilot-draft-review.service.js";
+import { TemplateDraftAcceptanceValidatorService } from "../../../src/services/copilot/template-draft-acceptance-validator.service.js";
+import { TemplateDraftCandidateValidatorService } from "../../../src/services/copilot/template-draft-candidate-validator.service.js";
+import { TemplateDraftProjectionService } from "../../../src/services/copilot/template-draft-projection.service.js";
+import { TemplateDraftRegistryProjectionService } from "../../../src/services/copilot/template-draft-registry-projection.service.js";
+import { TemplateDraftingWorkflowService } from "../../../src/services/copilot/template-drafting-workflow.service.js";
 import { copilotDraftReviewSchema } from "../../../src/models/copilot-draft-review.model.js";
 import type { CopilotDraftReviewRecord } from "../../../src/types/copilot-draft-review.types.js";
 import {

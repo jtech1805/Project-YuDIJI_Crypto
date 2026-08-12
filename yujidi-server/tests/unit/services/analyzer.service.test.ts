@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   ALERT_REPORT_PROMPT_VERSION,
   AnalyzerEngine,
-} from "../../../src/services/analyzer.service.js";
+} from "../../../src/services/trading/analyzer.service.js";
 import type { CreateLlmTraceInput } from "../../../src/types/llm-trace.types.js";
 
 const SYMBOL = "SOLUSDT";

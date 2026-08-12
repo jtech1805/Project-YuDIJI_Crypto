@@ -2,7 +2,7 @@ import { DEFAULT_VERSIONED_FACTOR_DEFINITIONS } from "../../src/registries/versi
 import { DEFAULT_VERSIONED_EVALUATOR_DECLARATIONS } from "../../src/registries/versioned-evaluator-declaration.registry.js";
 import { BTC_ETF_FLOW_CHARACTERIZATION_PROVIDER } from "../../src/registries/provider-authority.registry.js";
 import { BTC_ETF_FLOW_TEMPLATE_RULE_MAPPING } from "../../src/registries/btc-etf-flow-characterization.authorities.js";
-import { TemplateDraftRegistryProjectionService } from "../../src/services/template-draft-registry-projection.service.js";
+import { TemplateDraftRegistryProjectionService } from "../../src/services/copilot/template-draft-registry-projection.service.js";
 import { DEFAULT_TEMPLATE_DRAFT_VALIDATION_POLICY } from "../../src/types/template-draft-candidate.types.js";
 export const ragAuthorities:any={projectionId:"DRAFT_REGISTRY",projectionVersion:1,factors:DEFAULT_VERSIONED_FACTOR_DEFINITIONS,evaluatorDeclarations:DEFAULT_VERSIONED_EVALUATOR_DECLARATIONS,providerAuthorities:[BTC_ETF_FLOW_CHARACTERIZATION_PROVIDER],compilationMappings:[BTC_ETF_FLOW_TEMPLATE_RULE_MAPPING],validationPolicy:DEFAULT_TEMPLATE_DRAFT_VALIDATION_POLICY,capabilities:{weightProposalsEnabled:false,ragEnabled:false}};
 export const ragProjection=new TemplateDraftRegistryProjectionService().create(ragAuthorities);

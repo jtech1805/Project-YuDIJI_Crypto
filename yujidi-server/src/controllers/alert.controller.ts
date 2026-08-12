@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { AlertModel } from "../models/Alert.js";
-import { getSymbolLtp } from "../services/binance.service.js";
-import { sharedWebsocketManager } from "../services/websocket.service.js";
+import { getSymbolLtp } from "../services/market-data/binance.service.js";
+import { sharedWebsocketManager } from "../services/trading/websocket.service.js";
 
 // Get all alerts for the logged-in user, sorted by newest first
 export const getUserAlerts = async (req: Request, res: Response, next: NextFunction) => {

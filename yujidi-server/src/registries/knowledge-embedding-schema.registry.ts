@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
-import { freezeClone } from "../services/knowledge-document-admission.service.js";
+import { freezeClone } from "../services/knowledge/knowledge-document-admission.service.js";
 import { KNOWLEDGE_CORPORA, KNOWLEDGE_TRUST_LEVELS } from "../types/knowledge-document.types.js";
 import { KNOWLEDGE_SIMILARITY_METRICS, type KnowledgeEmbeddingSchemaDefinition } from "../types/knowledge-embedding.types.js";
 import { KNOWLEDGE_EMBEDDING_PURPOSES } from "../types/knowledge-embedding.types.js";

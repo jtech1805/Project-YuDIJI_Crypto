@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { AuditSanitizerService } from "../../../src/services/audit-sanitizer.service.js";
-import { AuditLogService } from "../../../src/services/audit-log.service.js";
+import { AuditSanitizerService } from "../../../src/services/access/audit-sanitizer.service.js";
+import { AuditLogService } from "../../../src/services/access/audit-log.service.js";
 
 test("AuditSanitizerService redacts sensitive root keys", () => {
   const sanitizer = new AuditSanitizerService();

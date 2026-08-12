@@ -1,4 +1,4 @@
-import { freezeClone } from "../services/knowledge-document-admission.service.js";
+import { freezeClone } from "../services/knowledge/knowledge-document-admission.service.js";
 import type { AiRuntimeExecutionPolicy } from "../types/ai-runtime-execution-policy.types.js";
 import type { AiProviderCircuitPolicy } from "../types/ai-runtime-circuit.types.js";
 export const TEMPLATE_DRAFT_RAG_EXECUTION_POLICY: AiRuntimeExecutionPolicy =

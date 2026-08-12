@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Types } from "mongoose";
 
-import { AiTradeReviewContextService } from "../../../src/services/ai-trade-review-context.service.js";
+import { AiTradeReviewContextService } from "../../../src/services/ai-runtime/ai-trade-review-context.service.js";
 import {
   AiTradeReviewService,
   POST_TRADE_REVIEW_PROMPT_VERSION,
   POST_TRADE_REVIEW_SCHEMA_VERSION,
   validatePostTradeReviewOutput,
-} from "../../../src/services/ai-trade-review.service.js";
+} from "../../../src/services/ai-runtime/ai-trade-review.service.js";
 import type { CreateLlmTraceInput } from "../../../src/types/llm-trace.types.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";

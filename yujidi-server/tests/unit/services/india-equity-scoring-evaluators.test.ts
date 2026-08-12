@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { CandleSnapshot, MarketSnapshot } from "../../../src/types/market-snapshot.types.js";
-import { ScoringEngineService } from "../../../src/services/scoring-engine.service.js";
-import { ScoringRuleEvaluatorRegistryService } from "../../../src/services/scoring-rule-evaluator-registry.service.js";
+import { ScoringEngineService } from "../../../src/services/scoring/scoring-engine.service.js";
+import { ScoringRuleEvaluatorRegistryService } from "../../../src/services/scoring/scoring-rule-evaluator-registry.service.js";
 
 const candle = (
   timeframe: "1m" | "5m" | "15m",

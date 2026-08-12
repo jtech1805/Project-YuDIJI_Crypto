@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { GenericRelationshipFactorEvaluator } from "../../../src/services/generic-relationship-factor-evaluator.js";
-import { calculateGenericRelationship } from "../../../src/services/generic-relationship-calculation-core.js";
+import { GenericRelationshipFactorEvaluator } from "../../../src/services/scoring/generic-relationship-factor-evaluator.js";
+import { calculateGenericRelationship } from "../../../src/services/scoring/generic-relationship-calculation-core.js";
 import type { AssembledFactorInput } from "../../../src/types/factor-input-assembly.types.js";
 
 const configuration = (relationshipType: "DIRECT" | "INVERSE") => ({ relationshipType, expectedUnit: "USD", thresholds: { strongNegativeMax: -300, negativeMax: -100, positiveMin: 100, strongPositiveMin: 300 }, contributions: { strongNegative: -2, negative: -1, neutral: 0, positive: 1, strongPositive: 2 }, minimumPoints: -2, maximumPoints: 2 });

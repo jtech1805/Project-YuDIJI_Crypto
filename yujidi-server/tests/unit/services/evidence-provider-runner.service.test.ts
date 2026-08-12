@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { EvidenceProviderAdapter } from "../../../src/ports/evidence-provider-adapter.port.js";
-import { EvidenceProviderRunnerService } from "../../../src/services/evidence-provider-runner.service.js";
+import { EvidenceProviderRunnerService } from "../../../src/services/evidence/evidence-provider-runner.service.js";
 import type {
   EvidenceCandidate,
   EvidenceIngestionResult,

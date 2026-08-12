@@ -1,11 +1,11 @@
 import type { Request, Response } from "express";
 import { createCopilotTemplateDraftApplicationService } from "../composition/internal-template-draft-rag.composition.js";
 import { AppError } from "../errors/AppError.js";
-import type { CopilotTemplateDraftApplicationService } from "../services/copilot-template-draft-application.service.js";
+import type { CopilotTemplateDraftApplicationService } from "../services/copilot/copilot-template-draft-application.service.js";
 import type { CopilotTemplateDraftRequest } from "../types/copilot-template-draft.types.js";
 import { z } from "zod";
 import { createCopilotDraftAcceptanceService } from "../composition/internal-template-draft-rag.composition.js";
-import type { CopilotDraftAcceptanceService } from "../services/copilot-draft-acceptance.service.js";
+import type { CopilotDraftAcceptanceService } from "../services/copilot/copilot-draft-acceptance.service.js";
 import { INSTRUMENT_TYPES, MARKET_TYPES } from "../types/market-data.types.js";
 import { SCORING_TEMPLATE_KEYS } from "../types/scoring.types.js";
 

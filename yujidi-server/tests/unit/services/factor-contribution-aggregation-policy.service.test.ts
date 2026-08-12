@@ -4,7 +4,7 @@ import test from "node:test";
 
 import {
   FactorContributionAggregationPolicyService,
-} from "../../../src/services/factor-contribution-aggregation-policy.service.js";
+} from "../../../src/services/scoring/factor-contribution-aggregation-policy.service.js";
 import {
   MAX_AGGREGATION_POLICY_ENTRIES,
   MAX_AGGREGATION_WEIGHT,
@@ -401,7 +401,7 @@ test("is deterministic and preserves frozen first-failure ordering", () => {
 test("service contains policy validation only and no runner, aggregation, scoring, or I/O", () => {
   const source = readFileSync(
     new URL(
-      "../../../src/services/factor-contribution-aggregation-policy.service.ts",
+      "../../../src/services/scoring/factor-contribution-aggregation-policy.service.ts",
       import.meta.url,
     ),
     "utf8",

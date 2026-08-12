@@ -1,5 +1,5 @@
-import { freezeClone } from "../../services/knowledge-document-admission.service.js";
-import { projectAiProviderFailure } from "../../services/ai-provider-outcome-projection.service.js";
+import { freezeClone } from "../../services/knowledge/knowledge-document-admission.service.js";
+import { projectAiProviderFailure } from "../../services/ai-runtime/ai-provider-outcome-projection.service.js";
 import type { KnowledgeVectorSearchPort } from "../../ports/knowledge-vector-search.port.js";
 import type {
   KnowledgeVectorSearchRequest,

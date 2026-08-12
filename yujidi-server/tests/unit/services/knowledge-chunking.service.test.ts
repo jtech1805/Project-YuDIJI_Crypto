@@ -1,11 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { KnowledgeChunkingService } from "../../../src/services/knowledge-chunking.service.js";
-import { KnowledgeChunkCitationSourceService } from "../../../src/services/knowledge-chunk-citation-source.service.js";
+import { KnowledgeChunkingService } from "../../../src/services/knowledge/knowledge-chunking.service.js";
+import { KnowledgeChunkCitationSourceService } from "../../../src/services/knowledge/knowledge-chunk-citation-source.service.js";
 import { KnowledgeChunkingStrategyRegistry } from "../../../src/registries/knowledge-chunking-strategy.registry.js";
 import { FactorDocumentationStrategy } from "../../../src/strategies/platform-knowledge/factor-documentation.strategy.js";
 import { persistedDocument } from "../../fixtures/platform-knowledge.fixture.js";
-import { KnowledgeChunkSetManifestService } from "../../../src/services/knowledge-chunk-set-manifest.service.js";
+import { KnowledgeChunkSetManifestService } from "../../../src/services/knowledge/knowledge-chunk-set-manifest.service.js";
 
 const request = {
   strategyId: FactorDocumentationStrategy.strategyId,

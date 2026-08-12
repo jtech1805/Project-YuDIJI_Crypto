@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { FactorAggregateNormalizationExecutionService } from "../../../src/services/factor-aggregate-normalization-execution.service.js";
+import { FactorAggregateNormalizationExecutionService } from "../../../src/services/scoring/factor-aggregate-normalization-execution.service.js";
 
 const policy = (source = { minimumPoints: -10, neutralPoints: 0 as const, maximumPoints: 20 },
   target = { minimumScore: 0, neutralScore: 40, maximumScore: 100 }) => ({
@@ -74,6 +74,6 @@ test("returns minimized deeply immutable deterministic results", () => {
   for (const forbidden of ["steps", "summary", "band", "decision", "BUY", "SELL", "HOLD", "timestamp"]) assert.equal(json.includes(forbidden), false);
 });
 test("implementation contains no rounding, clamping, persistence, or decision integration", () => {
-  const source = readFileSync(new URL("../../../src/services/factor-aggregate-normalization-execution.service.ts", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../../../src/services/scoring/factor-aggregate-normalization-execution.service.ts", import.meta.url), "utf8");
   for (const forbidden of ["Math.round", "toFixed", "mongoose", "controller", "placeOrder", "positionSize", "stopLoss", "takeProfit"]) assert.equal(source.includes(forbidden), false);
 });

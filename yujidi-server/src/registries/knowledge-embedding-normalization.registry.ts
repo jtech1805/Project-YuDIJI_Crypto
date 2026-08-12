@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
-import { freezeClone } from "../services/knowledge-document-admission.service.js";
+import { freezeClone } from "../services/knowledge/knowledge-document-admission.service.js";
 import { KNOWLEDGE_EMBEDDING_NORMALIZATION_ALGORITHMS, L2_UNIT_VECTOR_V1_DEFINITION, TEST_NO_NORMALIZATION_DEFINITION, type KnowledgeEmbeddingNormalizationDefinition } from "../types/knowledge-embedding-normalization.types.js";
 
 export class KnowledgeEmbeddingNormalizationRegistry {

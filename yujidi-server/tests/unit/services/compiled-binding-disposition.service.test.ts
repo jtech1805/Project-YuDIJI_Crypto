@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"; import test from "node:test";
-import { CompiledBindingDispositionService } from "../../../src/services/compiled-binding-disposition.service.js";
+import { CompiledBindingDispositionService } from "../../../src/services/compiled-rulebook/compiled-binding-disposition.service.js";
 const service = new CompiledBindingDispositionService(); const binding = (requirementLevel: string, optionalBehavior: string | null) => ({ requirementLevel, optionalBehavior });
 test("derives mandatory dispositions", () => { assert.equal((service.derive(binding("MANDATORY", null), "AVAILABLE") as any).disposition, "INCLUDED"); assert.equal((service.derive(binding("MANDATORY", null), "MISSING") as any).disposition, "BLOCKING"); assert.equal((service.derive(binding("MANDATORY", null), "INVALID") as any).disposition, "BLOCKING"); });
 test("derives distinct optional dispositions without scores", () => { assert.equal((service.derive(binding("OPTIONAL", "PARTIAL"), "MISSING") as any).disposition, "PARTIAL"); assert.equal((service.derive(binding("OPTIONAL", "OMIT"), "INVALID") as any).disposition, "OMITTED"); assert.equal("score" in service.derive(binding("OPTIONAL", "PARTIAL"), "MISSING"), false); });

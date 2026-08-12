@@ -4,11 +4,11 @@ import {
   AI_PROVIDER_CIRCUIT_POLICY,
   TEMPLATE_DRAFT_RAG_EXECUTION_POLICY,
 } from "../../../src/registries/ai-runtime-execution-policy.registry.js";
-import { AiProviderCircuitAttributionService } from "../../../src/services/ai-provider-circuit-attribution.service.js";
-import { AiProviderUsageAggregationService } from "../../../src/services/ai-provider-usage-aggregation.service.js";
-import { InMemoryAiRuntimeBudgetService } from "../../../src/services/ai-runtime-budget.service.js";
-import { AiRuntimeCircuitBreakerService } from "../../../src/services/ai-runtime-circuit-breaker.service.js";
-import { projectAiProviderFailure } from "../../../src/services/ai-provider-outcome-projection.service.js";
+import { AiProviderCircuitAttributionService } from "../../../src/services/ai-runtime/ai-provider-circuit-attribution.service.js";
+import { AiProviderUsageAggregationService } from "../../../src/services/ai-runtime/ai-provider-usage-aggregation.service.js";
+import { InMemoryAiRuntimeBudgetService } from "../../../src/services/ai-runtime/ai-runtime-budget.service.js";
+import { AiRuntimeCircuitBreakerService } from "../../../src/services/ai-runtime/ai-runtime-circuit-breaker.service.js";
+import { projectAiProviderFailure } from "../../../src/services/ai-runtime/ai-provider-outcome-projection.service.js";
 
 test("provider failure projection is closed, metadata-only, and detached", () => {
   const failure = projectAiProviderFailure(

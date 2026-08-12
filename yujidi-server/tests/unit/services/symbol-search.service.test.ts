@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Types } from "mongoose";
 
-import { SymbolSearchService } from "../../../src/services/symbol-search.service.js";
+import { SymbolSearchService } from "../../../src/services/market-data/symbol-search.service.js";
 import { tokenizeSymbolSearch } from "../../../src/utils/symbol-search-tokenizer.js";
 
 const FIXED_EVALUATION_TIME = new Date("2026-07-01T00:00:00.000Z");

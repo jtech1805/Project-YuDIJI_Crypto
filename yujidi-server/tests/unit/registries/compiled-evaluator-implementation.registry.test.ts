@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CompiledGenericRelationshipEvaluator } from "../../../src/services/compiled-generic-relationship-evaluator.js";
+import { CompiledGenericRelationshipEvaluator } from "../../../src/services/compiled-rulebook/compiled-generic-relationship-evaluator.js";
 import { DEFAULT_COMPILED_EVALUATOR_IMPLEMENTATIONS, StaticCompiledEvaluatorImplementationRegistry } from "../../../src/registries/compiled-evaluator-implementation.registry.js";
 
 test("production defaults are empty and lookup is exact by implementation key and evaluator version", () => {

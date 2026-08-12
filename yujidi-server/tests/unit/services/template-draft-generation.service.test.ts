@@ -4,11 +4,11 @@ import { DEFAULT_VERSIONED_FACTOR_DEFINITIONS } from "../../../src/registries/ve
 import { DEFAULT_VERSIONED_EVALUATOR_DECLARATIONS } from "../../../src/registries/versioned-evaluator-declaration.registry.js";
 import { BTC_ETF_FLOW_CHARACTERIZATION_PROVIDER } from "../../../src/registries/provider-authority.registry.js";
 import { BTC_ETF_FLOW_TEMPLATE_RULE_MAPPING } from "../../../src/registries/btc-etf-flow-characterization.authorities.js";
-import { TemplateDraftRegistryProjectionService } from "../../../src/services/template-draft-registry-projection.service.js";
-import { TemplateDraftCandidateValidatorService } from "../../../src/services/template-draft-candidate-validator.service.js";
-import { TemplateDraftPromptContextService } from "../../../src/services/template-draft-prompt-context.service.js";
-import { TemplateDraftReviewReportService } from "../../../src/services/template-draft-review-report.service.js";
-import { TemplateDraftGenerationService } from "../../../src/services/template-draft-generation.service.js";
+import { TemplateDraftRegistryProjectionService } from "../../../src/services/copilot/template-draft-registry-projection.service.js";
+import { TemplateDraftCandidateValidatorService } from "../../../src/services/copilot/template-draft-candidate-validator.service.js";
+import { TemplateDraftPromptContextService } from "../../../src/services/copilot/template-draft-prompt-context.service.js";
+import { TemplateDraftReviewReportService } from "../../../src/services/copilot/template-draft-review-report.service.js";
+import { TemplateDraftGenerationService } from "../../../src/services/copilot/template-draft-generation.service.js";
 import { DEFAULT_TEMPLATE_DRAFT_VALIDATION_POLICY } from "../../../src/types/template-draft-candidate.types.js";
 const authorities: any = {
   projectionId: "DRAFT_REGISTRY",

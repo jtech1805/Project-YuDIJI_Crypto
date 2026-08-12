@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Types } from "mongoose";
 
-import { RiskGovernorService } from "../../../src/services/risk-governor.service.js";
-import { TradeSetupService } from "../../../src/services/trade-setup.service.js";
+import { RiskGovernorService } from "../../../src/services/trading/risk-governor.service.js";
+import { TradeSetupService } from "../../../src/services/trading/trade-setup.service.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 const otherUserId = "69e64c5f9042aac89c8c83f9";

@@ -1,5 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
-import { freezeClone } from "../services/knowledge-document-admission.service.js";
+import { freezeClone } from "../services/knowledge/knowledge-document-admission.service.js";
 import type { KnowledgeVectorIndexDefinition } from "../types/knowledge-vector-index-definition.types.js";
 import { KnowledgeEmbeddingSchemaRegistry } from "./knowledge-embedding-schema.registry.js";
 import { GEMINI_PLATFORM_KNOWLEDGE_EMBEDDING_SCHEMA } from "../types/gemini-embedding-adapter.types.js";

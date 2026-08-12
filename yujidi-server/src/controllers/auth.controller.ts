@@ -1,10 +1,10 @@
 import type { Request, Response, NextFunction } from "express";
 // Adjust the import path/extension if needed
 import { AppError } from "../errors/AppError.js";
-import { AuthService } from "../services/auth.service.js";
+import { AuthService } from "../services/access/auth.service.js";
 import { UserModel } from "../models/User.js";
 import { AlertModel } from "../models/Alert.js";
-import { MonitorService } from "../services/monitor.service.js";
+import { MonitorService } from "../services/trading/monitor.service.js";
 
 const authService = new AuthService();
 const monitorService = new MonitorService();

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Types } from "mongoose";
 
-import { AngelUserMarketDataSessionService } from "../../../src/services/angel-user-market-data-session.service.js";
+import { AngelUserMarketDataSessionService } from "../../../src/services/market-data/angel-user-market-data-session.service.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 const monitorId = "65abc0000000000000000001";

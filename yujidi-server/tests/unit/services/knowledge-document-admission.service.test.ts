@@ -1,5 +1,5 @@
 import test from "node:test"; import assert from "node:assert/strict";
-import { KnowledgeDocumentAdmissionService } from "../../../src/services/knowledge-document-admission.service.js";
+import { KnowledgeDocumentAdmissionService } from "../../../src/services/knowledge/knowledge-document-admission.service.js";
 import { documentMaterial } from "../../fixtures/platform-knowledge.fixture.js";
 const service = new KnowledgeDocumentAdmissionService();
 test("admits deterministic SYSTEM platform knowledge and freezes output", () => { const input = documentMaterial(); const a = service.admit({ document: input }); const b = service.admit({ document: structuredClone(input) }); assert.deepEqual(a, b); assert.equal(a.admitted, true); if (a.admitted) { assert.match(a.document.contentDigest, /^[a-f0-9]{64}$/); assert.ok(Object.isFrozen(a.document.blocks)); } assert.equal(Object.isFrozen(input), false); });

@@ -1,4 +1,4 @@
-import type { ScoringEngineResult } from "../services/scoring-engine.service.js";
+import type { ScoringEngineResult } from "../services/scoring/scoring-engine.service.js";
 import type { CompiledExecutionResult } from "./compiled-rulebook-execution.types.js";
 
 export type CompiledLegacyParityPolicyIdentity = Readonly<{ policyId: string; policyVersion: number }>;

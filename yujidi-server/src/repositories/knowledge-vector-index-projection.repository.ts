@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import { KnowledgeVectorIndexProjectionModel } from "../models/knowledge-vector-index-projection.model.js";
-import { freezeClone } from "../services/knowledge-document-admission.service.js";
+import { freezeClone } from "../services/knowledge/knowledge-document-admission.service.js";
 import type {
   KnowledgeVectorIndexProjectionCommand,
   KnowledgeVectorIndexProjectionInsertResult,

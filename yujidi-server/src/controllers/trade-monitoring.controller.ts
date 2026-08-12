@@ -4,7 +4,7 @@ import { AppError } from "../errors/AppError.js";
 import {
   evaluateActiveTradeSchema,
   TradeMonitoringService,
-} from "../services/trade-monitoring.service.js";
+} from "../services/trading/trade-monitoring.service.js";
 
 const getUserId = (req: Request): string => {
   const userId = req.user?.id;

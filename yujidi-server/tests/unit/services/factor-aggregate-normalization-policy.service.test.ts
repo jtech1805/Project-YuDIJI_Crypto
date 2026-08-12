@@ -4,7 +4,7 @@ import test from "node:test";
 
 import {
   FactorAggregateNormalizationPolicyService,
-} from "../../../src/services/factor-aggregate-normalization-policy.service.js";
+} from "../../../src/services/scoring/factor-aggregate-normalization-policy.service.js";
 import type {
   ValidatedFactorContributionAggregationPolicy,
 } from "../../../src/types/factor-contribution-aggregation.types.js";
@@ -313,7 +313,7 @@ test("is deterministic and preserves the frozen first-failure order", () => {
 test("service performs validation only with no Phase 2K, arithmetic, decisions, or I/O", () => {
   const source = readFileSync(
     new URL(
-      "../../../src/services/factor-aggregate-normalization-policy.service.ts",
+      "../../../src/services/scoring/factor-aggregate-normalization-policy.service.ts",
       import.meta.url,
     ),
     "utf8",

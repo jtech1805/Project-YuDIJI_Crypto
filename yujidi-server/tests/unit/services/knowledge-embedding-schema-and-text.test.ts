@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { KnowledgeEmbeddingSchemaRegistry } from "../../../src/registries/knowledge-embedding-schema.registry.js";
-import { KnowledgeEmbeddingTextService } from "../../../src/services/knowledge-embedding-text.service.js";
+import { KnowledgeEmbeddingTextService } from "../../../src/services/knowledge/knowledge-embedding-text.service.js";
 import { TEST_EMBEDDING_SCHEMA, verifiedEmbeddingFixture } from "../../fixtures/knowledge-embedding.fixture.js";
 
 test("embedding schema registry provides immutable exact-only versioned lookup", () => {

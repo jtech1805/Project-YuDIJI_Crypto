@@ -9,7 +9,7 @@ import {
   restartTradePlanSchema,
   TradePlanService,
   updateTradePlanSchema,
-} from "../services/trade-plan.service.js";
+} from "../services/trading/trade-plan.service.js";
 
 const getUserId = (req: Request): string => {
   const userId = req.user?.id;

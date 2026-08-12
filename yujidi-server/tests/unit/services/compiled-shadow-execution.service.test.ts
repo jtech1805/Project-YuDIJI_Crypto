@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CompiledShadowExecutionService } from "../../../src/services/compiled-shadow-execution.service.js";
+import { CompiledShadowExecutionService } from "../../../src/services/compiled-rulebook/compiled-shadow-execution.service.js";
 
 const AS_OF = new Date("2026-08-05T10:00:00.000Z");
 const REQUESTED_AT = new Date("2026-08-05T10:00:01.000Z");

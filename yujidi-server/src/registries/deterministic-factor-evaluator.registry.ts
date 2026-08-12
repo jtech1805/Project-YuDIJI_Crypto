@@ -1,5 +1,5 @@
 import type { DeterministicFactorEvaluator } from "../ports/deterministic-factor-evaluator.port.js";
-import type { FactorEvaluatorContractService } from "../services/factor-evaluator-contract.service.js";
+import type { FactorEvaluatorContractService } from "../services/scoring/factor-evaluator-contract.service.js";
 import {
   FactorEvaluatorRegistryError,
   type RegisteredFactorEvaluatorSummary,

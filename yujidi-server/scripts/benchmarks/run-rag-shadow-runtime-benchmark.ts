@@ -17,15 +17,15 @@ import {
   KnowledgeVectorIndexDefinitionRegistry,
   MONGO_ATLAS_PLATFORM_KNOWLEDGE_VECTOR_INDEX_DEFINITION as index,
 } from "../../src/registries/knowledge-vector-index-definition.registry.js";
-import { AiRuntimeCircuitBreakerService } from "../../src/services/ai-runtime-circuit-breaker.service.js";
-import { InMemoryAiRuntimeBudgetService } from "../../src/services/ai-runtime-budget.service.js";
-import { ProcessLocalAiRuntimeConcurrencyService } from "../../src/services/ai-runtime-concurrency.service.js";
-import { KnowledgeRetrievalService } from "../../src/services/knowledge-retrieval.service.js";
-import { TemplateDraftCandidateValidatorService } from "../../src/services/template-draft-candidate-validator.service.js";
-import { TemplateDraftRagGenerationService } from "../../src/services/template-draft-rag-generation.service.js";
-import { TemplateDraftRagRuntimeBindingService } from "../../src/services/template-draft-rag-runtime-binding.service.js";
-import { TemplateDraftRagRuntimeService } from "../../src/services/template-draft-rag-runtime.service.js";
-import { TemplateDraftReviewReportService } from "../../src/services/template-draft-review-report.service.js";
+import { AiRuntimeCircuitBreakerService } from "../../src/services/ai-runtime/ai-runtime-circuit-breaker.service.js";
+import { InMemoryAiRuntimeBudgetService } from "../../src/services/ai-runtime/ai-runtime-budget.service.js";
+import { ProcessLocalAiRuntimeConcurrencyService } from "../../src/services/ai-runtime/ai-runtime-concurrency.service.js";
+import { KnowledgeRetrievalService } from "../../src/services/knowledge/knowledge-retrieval.service.js";
+import { TemplateDraftCandidateValidatorService } from "../../src/services/copilot/template-draft-candidate-validator.service.js";
+import { TemplateDraftRagGenerationService } from "../../src/services/copilot/template-draft-rag-generation.service.js";
+import { TemplateDraftRagRuntimeBindingService } from "../../src/services/copilot/template-draft-rag-runtime-binding.service.js";
+import { TemplateDraftRagRuntimeService } from "../../src/services/copilot/template-draft-rag-runtime.service.js";
+import { TemplateDraftReviewReportService } from "../../src/services/copilot/template-draft-review-report.service.js";
 import { GEMINI_PLATFORM_KNOWLEDGE_EMBEDDING_SCHEMA as schema } from "../../src/types/gemini-embedding-adapter.types.js";
 import {
   cases,

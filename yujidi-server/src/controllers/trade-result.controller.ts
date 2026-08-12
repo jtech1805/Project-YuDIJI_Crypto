@@ -4,7 +4,7 @@ import { AppError } from "../errors/AppError.js";
 import {
   closeActiveTradeSchema,
   TradeResultService,
-} from "../services/trade-result.service.js";
+} from "../services/trading/trade-result.service.js";
 
 const getUserId = (req: Request): string => {
   const userId = req.user?.id;

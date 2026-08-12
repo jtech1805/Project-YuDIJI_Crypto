@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { EvidenceProviderAdapter } from "../../../src/ports/evidence-provider-adapter.port.js";
-import { EvidenceShadowExecutionService } from "../../../src/services/evidence-shadow-execution.service.js";
+import { EvidenceShadowExecutionService } from "../../../src/services/evidence/evidence-shadow-execution.service.js";
 import type { EvidenceAdapterHealthSnapshot } from "../../../src/types/evidence-observability.types.js";
 import type { EvidenceProviderRunResult } from "../../../src/types/evidence-provider-run.types.js";
 import { EvidenceShadowExecutionError } from "../../../src/types/evidence-shadow-execution.types.js";

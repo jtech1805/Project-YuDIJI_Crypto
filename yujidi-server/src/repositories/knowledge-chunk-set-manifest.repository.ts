@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import { KnowledgeChunkSetManifestModel } from "../models/knowledge-chunk-set-manifest.model.js";
-import { freezeClone } from "../services/knowledge-document-admission.service.js";
+import { freezeClone } from "../services/knowledge/knowledge-document-admission.service.js";
 import type {
   KnowledgeChunkSetManifestCommand,
   KnowledgeChunkSetManifestInsertResult,

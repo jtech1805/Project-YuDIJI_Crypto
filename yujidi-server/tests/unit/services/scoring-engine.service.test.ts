@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { ScoringEngineService } from "../../../src/services/scoring-engine.service.js";
-import { ScoringRuleEvaluatorRegistryService } from "../../../src/services/scoring-rule-evaluator-registry.service.js";
-import { ScoringTemplateRegistryService } from "../../../src/services/scoring-template-registry.service.js";
+import { ScoringEngineService } from "../../../src/services/scoring/scoring-engine.service.js";
+import { ScoringRuleEvaluatorRegistryService } from "../../../src/services/scoring/scoring-rule-evaluator-registry.service.js";
+import { ScoringTemplateRegistryService } from "../../../src/services/scoring/scoring-template-registry.service.js";
 
 const registry = new ScoringTemplateRegistryService();
 

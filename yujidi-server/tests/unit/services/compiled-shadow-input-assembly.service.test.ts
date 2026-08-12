@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CompiledObservationAttestationValidationService } from "../../../src/services/compiled-observation-attestation-validation.service.js";
-import { CompiledShadowInputAssemblyService } from "../../../src/services/compiled-shadow-input-assembly.service.js";
+import { CompiledObservationAttestationValidationService } from "../../../src/services/compiled-rulebook/compiled-observation-attestation-validation.service.js";
+import { CompiledShadowInputAssemblyService } from "../../../src/services/compiled-rulebook/compiled-shadow-input-assembly.service.js";
 
 const providerBinding = { providerBindingId: "ETF_PROVIDERS", providerBindingVersion: 1, factorKey: "CRYPTO.ETF_NET_FLOW", factorVersion: 1, orderedProviderKeys: ["PRIMARY", "BACKUP"], compileEligible: true };
 const resolutionPolicy = { definition: { policyId: "ETF_RESOLUTION", policyVersion: 1, factorKey: "CRYPTO.ETF_NET_FLOW" }, compileEligible: true };

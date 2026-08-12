@@ -1,6 +1,6 @@
 import type { KnowledgeVectorIndexWritePort } from "../../ports/knowledge-vector-index-write.port.js";
 import { KnowledgeVectorIndexProjectionWriteAdapter } from "./knowledge-vector-index-projection-write.adapter.js";
-import { freezeClone } from "../../services/knowledge-document-admission.service.js";
+import { freezeClone } from "../../services/knowledge/knowledge-document-admission.service.js";
 import type { MongoAtlasVectorAdapterConfig } from "../../config/mongo-atlas-vector.config.js";
 import type { KnowledgeVectorIndexWriteRequest, KnowledgeVectorIndexWriteResult } from "../../types/knowledge-vector-index-write.types.js";
 import type { KnowledgeVectorIndexDefinition } from "../../types/knowledge-vector-index-definition.types.js";

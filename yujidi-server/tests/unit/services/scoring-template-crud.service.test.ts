@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Types } from "mongoose";
 
-import { ScoringTemplateCrudService } from "../../../src/services/scoring-template-crud.service.js";
+import { ScoringTemplateCrudService } from "../../../src/services/scoring/scoring-template-crud.service.js";
 import { ScoringTemplateModel } from "../../../src/models/scoring-template.model.js";
 
 const userId = new Types.ObjectId().toString();

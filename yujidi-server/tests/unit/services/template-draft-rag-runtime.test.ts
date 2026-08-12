@@ -8,12 +8,12 @@ import {
   TEMPLATE_DRAFT_RAG_EXECUTION_POLICY,
   AI_PROVIDER_CIRCUIT_POLICY,
 } from "../../../src/registries/ai-runtime-execution-policy.registry.js";
-import { InMemoryAiRuntimeBudgetService } from "../../../src/services/ai-runtime-budget.service.js";
-import { ProcessLocalAiRuntimeConcurrencyService } from "../../../src/services/ai-runtime-concurrency.service.js";
-import { AiRuntimeCircuitBreakerService } from "../../../src/services/ai-runtime-circuit-breaker.service.js";
-import { TemplateDraftRagRuntimeService } from "../../../src/services/template-draft-rag-runtime.service.js";
-import { TemplateDraftRagShadowComparisonService } from "../../../src/services/template-draft-rag-shadow-comparison.service.js";
-import { TemplateDraftRagRuntimeBindingService } from "../../../src/services/template-draft-rag-runtime-binding.service.js";
+import { InMemoryAiRuntimeBudgetService } from "../../../src/services/ai-runtime/ai-runtime-budget.service.js";
+import { ProcessLocalAiRuntimeConcurrencyService } from "../../../src/services/ai-runtime/ai-runtime-concurrency.service.js";
+import { AiRuntimeCircuitBreakerService } from "../../../src/services/ai-runtime/ai-runtime-circuit-breaker.service.js";
+import { TemplateDraftRagRuntimeService } from "../../../src/services/copilot/template-draft-rag-runtime.service.js";
+import { TemplateDraftRagShadowComparisonService } from "../../../src/services/copilot/template-draft-rag-shadow-comparison.service.js";
+import { TemplateDraftRagRuntimeBindingService } from "../../../src/services/copilot/template-draft-rag-runtime-binding.service.js";
 test("binding is exact immutable shadow-only and has no latest selection", () => {
   const r = new TemplateDraftRagRuntimeBindingRegistry(),
     b = r.getExact("YUDIJI_TEMPLATE_DRAFT_RAG_RUNTIME", 1)!;

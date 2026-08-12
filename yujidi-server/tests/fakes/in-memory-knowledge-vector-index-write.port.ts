@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import type { KnowledgeVectorIndexWritePort } from "../../src/ports/knowledge-vector-index-write.port.js";
 import type { KnowledgeVectorIndexEntry, KnowledgeVectorIndexWriteRequest, KnowledgeVectorIndexWriteResult } from "../../src/types/knowledge-vector-index-write.types.js";
-import { freezeClone } from "../../src/services/knowledge-document-admission.service.js";
+import { freezeClone } from "../../src/services/knowledge/knowledge-document-admission.service.js";
 
 export class InMemoryKnowledgeVectorIndexWritePort implements KnowledgeVectorIndexWritePort {
   private readonly entries = new Map<string, KnowledgeVectorIndexEntry>();

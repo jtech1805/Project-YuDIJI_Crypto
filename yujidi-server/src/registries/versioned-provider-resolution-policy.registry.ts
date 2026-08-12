@@ -1,4 +1,4 @@
-import type { ProviderResolutionPolicyService } from "../services/provider-resolution-policy.service.js";
+import type { ProviderResolutionPolicyService } from "../services/providers/provider-resolution-policy.service.js";
 import { VersionedProviderResolutionPolicyRegistryError, type ProviderResolutionPolicyRegistration, type VersionedProviderResolutionPolicy, type VersionedProviderResolutionPolicyRegistry } from "../types/versioned-provider-resolution-policy.types.js";
 import { ImmutableHistoricalAuthority } from "./historical-authority.internal.js";
 const ID = /^[A-Z0-9_]{1,120}$/;

@@ -6,7 +6,7 @@ import {
   evaluateMonitorThreshold,
   MONITOR_CACHE_TTL_MS,
   normalizeMonitorTrigger,
-} from "../../../src/services/analyzer.rules.js";
+} from "../../../src/services/trading/analyzer.rules.js";
 
 test("drop monitor breaches when percent change is at or below negative threshold", () => {
   const result = evaluateMonitorThreshold(-2.5, 2.5, "drop");

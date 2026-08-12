@@ -5,15 +5,15 @@ This document explains the YuJiDi analyzer engine: what it does, what data it co
 Primary implementation file:
 
 ```txt
-src/services/analyzer.service.ts
+src/services/trading/analyzer.service.ts
 ```
 
 Related files:
 
 ```txt
-src/services/websocket.service.ts
-src/services/news.service.ts
-src/services/llm.service.ts
+src/services/trading/websocket.service.ts
+src/services/market-data/news.service.ts
+src/services/ai-runtime/llm.service.ts
 src/models/TripwireConfig.ts
 src/models/Alert.ts
 ```
@@ -82,7 +82,7 @@ Binance WebSocket stream: <symbol>@aggTrade
 Handled by:
 
 ```txt
-src/services/websocket.service.ts
+src/services/trading/websocket.service.ts
 ```
 
 Forwarded to:
@@ -116,7 +116,7 @@ Binance WebSocket stream: <symbol>@depth20@100ms
 Handled by:
 
 ```txt
-src/services/websocket.service.ts
+src/services/trading/websocket.service.ts
 ```
 
 Forwarded to:

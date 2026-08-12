@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { CompiledRulebookExecutionBindingService } from "../../../src/services/compiled-rulebook-execution-binding.service.js";
+import { CompiledRulebookExecutionBindingService } from "../../../src/services/compiled-rulebook/compiled-rulebook-execution-binding.service.js";
 
 const candidate = (change: Record<string, unknown> = {}) => ({
   bindingId: "BTC_INTRADAY_EXECUTION",

@@ -6,7 +6,7 @@ import type { DeterministicFactorEvaluator } from "../../../src/ports/determinis
 import {
   FactorEvaluatorContractService,
   supportsFactorInput,
-} from "../../../src/services/factor-evaluator-contract.service.js";
+} from "../../../src/services/scoring/factor-evaluator-contract.service.js";
 import type {
   FactorEvaluationResult,
   FactorEvaluatorExecutionResult,
@@ -381,7 +381,7 @@ test("the port is synchronous and new boundary has no I/O or legacy imports", ()
     "utf8",
   );
   const contract = readFileSync(
-    new URL("../../../src/services/factor-evaluator-contract.service.ts", import.meta.url),
+    new URL("../../../src/services/scoring/factor-evaluator-contract.service.ts", import.meta.url),
     "utf8",
   );
   assert.doesNotMatch(port, /Promise|async/);

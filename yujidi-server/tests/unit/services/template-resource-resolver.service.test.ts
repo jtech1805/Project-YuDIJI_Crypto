@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { TemplateResourceResolverService } from "../../../src/services/template-resource-resolver.service.js";
+import { TemplateResourceResolverService } from "../../../src/services/templates/template-resource-resolver.service.js";
 
 const leanResult = <T>(value: T) => ({
   lean: () => ({ exec: async () => value }),

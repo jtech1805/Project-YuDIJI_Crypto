@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 
 import { AppError } from "../errors/AppError.js";
-import { MarketQuoteService } from "../services/market-quote.service.js";
+import { MarketQuoteService } from "../services/market-data/market-quote.service.js";
 
 const quoteModeSchema = z.enum(["LTP", "OHLC", "FULL"]).default("LTP");
 

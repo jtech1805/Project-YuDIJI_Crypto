@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { KnowledgeVectorIndexProjectionWriteAdapter } from "../../../../src/adapters/vector/knowledge-vector-index-projection-write.adapter.js";
-import { KnowledgeVectorIndexingService } from "../../../../src/services/knowledge-vector-indexing.service.js";
+import { KnowledgeVectorIndexingService } from "../../../../src/services/knowledge/knowledge-vector-indexing.service.js";
 import { KnowledgeEmbeddingSchemaRegistry } from "../../../../src/registries/knowledge-embedding-schema.registry.js";
 import { KnowledgeVectorIndexDefinitionRegistry } from "../../../../src/registries/knowledge-vector-index-definition.registry.js";
 import { TEST_EMBEDDING_SCHEMA, TEST_INDEX_DEFINITION, persistedEmbedding, verifiedEmbeddingFixture } from "../../../fixtures/knowledge-embedding.fixture.js";

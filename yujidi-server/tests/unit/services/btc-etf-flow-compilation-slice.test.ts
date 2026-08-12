@@ -4,12 +4,12 @@ import { AppError } from "../../../src/errors/AppError.js";
 import { BTC_ETF_FLOW_AUTHORITY_IDS, BTC_ETF_FLOW_COMPILED_AGGREGATION_POLICY, BTC_ETF_FLOW_TEMPLATE_SNAPSHOT, createBtcEtfFlowCompilationAuthorities } from "../../../src/registries/btc-etf-flow-characterization.authorities.js";
 import { BTC_ETF_FLOW_CHARACTERIZATION_PROVIDER, BTC_ETF_FLOW_CHARACTERIZATION_PROVIDER_KEY, createDefaultProviderAuthorityRegistry } from "../../../src/registries/provider-authority.registry.js";
 import { ProviderResolutionRunnerRegistry } from "../../../src/registries/provider-resolution-runner.registry.js";
-import { CompiledRulebookCompatibilityValidationService } from "../../../src/services/compiled-rulebook-compatibility-validation.service.js";
-import { DeterministicCompiledRulebookCompilerService } from "../../../src/services/deterministic-compiled-rulebook-compiler.service.js";
-import { ProviderCatalogService } from "../../../src/services/provider-catalog.service.js";
-import { ProviderResolutionExecutionService } from "../../../src/services/provider-resolution-execution.service.js";
-import { ProviderResolutionCompositionService } from "../../../src/services/provider-resolution-composition.service.js";
-import { ScoringTemplateRegistryService } from "../../../src/services/scoring-template-registry.service.js";
+import { CompiledRulebookCompatibilityValidationService } from "../../../src/services/compiled-rulebook/compiled-rulebook-compatibility-validation.service.js";
+import { DeterministicCompiledRulebookCompilerService } from "../../../src/services/compiled-rulebook/deterministic-compiled-rulebook-compiler.service.js";
+import { ProviderCatalogService } from "../../../src/services/providers/provider-catalog.service.js";
+import { ProviderResolutionExecutionService } from "../../../src/services/providers/provider-resolution-execution.service.js";
+import { ProviderResolutionCompositionService } from "../../../src/services/providers/provider-resolution-composition.service.js";
+import { ScoringTemplateRegistryService } from "../../../src/services/scoring/scoring-template-registry.service.js";
 
 test("template capabilities preserve seven public templates and isolate exact internal compilation lookup", () => {
   const registry = new ScoringTemplateRegistryService();

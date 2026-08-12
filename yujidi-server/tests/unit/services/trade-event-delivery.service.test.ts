@@ -5,8 +5,8 @@ import { Types } from "mongoose";
 import {
   buildTradeEventCreatedPayload,
   TradeEventDeliveryService,
-} from "../../../src/services/trade-event-delivery.service.js";
-import { TradeEventService, type TradeEventRecord } from "../../../src/services/trade-event.service.js";
+} from "../../../src/services/trading/trade-event-delivery.service.js";
+import { TradeEventService, type TradeEventRecord } from "../../../src/services/trading/trade-event.service.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 const otherUserId = "69e64c5f9042aac89c8c83f9";
@@ -231,7 +231,7 @@ test("unexpected delivery error does not roll back TradeEvent creation", async (
 test("existing market alert websocket event name remains NEW_ALERT", async () => {
   const source = await import("node:fs/promises");
   const analyzerSource = await source.readFile(
-    new URL("../../../src/services/analyzer.service.ts", import.meta.url),
+    new URL("../../../src/services/trading/analyzer.service.ts", import.meta.url),
     "utf8",
   );
   assert.match(analyzerSource, /type:\s*"NEW_ALERT"/);

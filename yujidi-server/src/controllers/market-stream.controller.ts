@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 
 import { AppError } from "../errors/AppError.js";
-import { sharedAngelUserMarketDataSessionService } from "../services/angel-user-market-data-session.service.js";
+import { sharedAngelUserMarketDataSessionService } from "../services/market-data/angel-user-market-data-session.service.js";
 
 const getUserId = (req: Request): string => {
   const userId = req.user?.id;

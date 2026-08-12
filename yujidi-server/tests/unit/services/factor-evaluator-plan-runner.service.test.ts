@@ -4,7 +4,7 @@ import test from "node:test";
 
 import {
   FactorEvaluatorPlanRunnerService,
-} from "../../../src/services/factor-evaluator-plan-runner.service.js";
+} from "../../../src/services/scoring/factor-evaluator-plan-runner.service.js";
 import type {
   ExplicitFactorEvaluatorExecutionResult,
 } from "../../../src/types/factor-evaluator-execution.types.js";
@@ -468,7 +468,7 @@ test("is deterministic, adds no runtime metadata, and leaks no input envelope", 
 
 test("runner source has no direct evaluator, registry, plan validator, assembly, scoring, or I/O access", () => {
   const source = readFileSync(
-    new URL("../../../src/services/factor-evaluator-plan-runner.service.ts", import.meta.url),
+    new URL("../../../src/services/scoring/factor-evaluator-plan-runner.service.ts", import.meta.url),
     "utf8",
   ).toLowerCase();
   for (const forbidden of [

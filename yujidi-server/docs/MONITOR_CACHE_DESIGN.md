@@ -70,9 +70,9 @@ Backend models:
 
 Backend services:
 
-- `src/services/analyzer.service.ts`
-- `src/services/websocket.service.ts`
-- `src/services/monitor.service.ts`
+- `src/services/trading/analyzer.service.ts`
+- `src/services/trading/websocket.service.ts`
+- `src/services/trading/monitor.service.ts`
 
 Routes/controllers:
 

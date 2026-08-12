@@ -1,8 +1,8 @@
 import type { Request, Response } from "express";
 
 import { AppError } from "../errors/AppError.js";
-import { MonitorService } from "../services/monitor.service.js";
-import { sharedWebsocketManager } from "../services/websocket.service.js";
+import { MonitorService } from "../services/trading/monitor.service.js";
+import { sharedWebsocketManager } from "../services/trading/websocket.service.js";
 import {
   EXCHANGES,
   MARKET_PROVIDERS,

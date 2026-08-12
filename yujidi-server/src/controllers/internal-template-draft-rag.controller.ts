@@ -4,10 +4,10 @@ import { AppError } from "../errors/AppError.js";
 import {
   InternalTemplateDraftRagApplicationError,
   type InternalTemplateDraftRagApplicationService,
-} from "../services/internal-template-draft-rag-application.service.js";
+} from "../services/copilot/internal-template-draft-rag-application.service.js";
 import type { InternalTemplateDraftRequest } from "../types/internal-template-draft-rag.types.js";
 import { createTemplateDraftPromptApplicationService } from "../composition/internal-template-draft-rag.composition.js";
-import type { TemplateDraftPromptApplicationService } from "../services/template-draft-prompt-application.service.js";
+import type { TemplateDraftPromptApplicationService } from "../services/copilot/template-draft-prompt-application.service.js";
 import type { TemplateDraftPromptRequest } from "../types/template-draft-intent.types.js";
 
 export type InternalTemplateDraftRagServiceFactory = () => Pick<

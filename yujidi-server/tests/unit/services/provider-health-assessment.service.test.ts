@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { ProviderHealthAssessmentService } from "../../../src/services/provider-health-assessment.service.js";
+import { ProviderHealthAssessmentService } from "../../../src/services/providers/provider-health-assessment.service.js";
 import {
   PROVIDER_HEALTH_ASSESSMENT_FAILURE_CODES,
   PROVIDER_HEALTH_REASON_CODES,

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CompiledLegacyParityComparisonService } from "../../../src/services/compiled-legacy-parity-comparison.service.js";
-import { CompiledLegacyParityPolicyService } from "../../../src/services/compiled-legacy-parity-policy.service.js";
+import { CompiledLegacyParityComparisonService } from "../../../src/services/compiled-rulebook/compiled-legacy-parity-comparison.service.js";
+import { CompiledLegacyParityPolicyService } from "../../../src/services/compiled-rulebook/compiled-legacy-parity-policy.service.js";
 
 const policy = (change: Record<string, unknown> = {}): any => ({
   policyId: "LEGACY_COMPILED_PARITY", policyVersion: 1,

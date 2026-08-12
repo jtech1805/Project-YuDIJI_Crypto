@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { AppError } from "../errors/AppError.js";
-import { ApplicationAuthorizationService } from "../services/application-authorization.service.js";
+import { ApplicationAuthorizationService } from "../services/access/application-authorization.service.js";
 import type { ApplicationRole } from "../types/application-role.types.js";
 
 export const requireAnyApplicationRole =

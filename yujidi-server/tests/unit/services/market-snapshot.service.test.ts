@@ -5,8 +5,8 @@ import type { SnapshotMarketTick } from "../../../src/types/market-snapshot.type
 import {
   buildMarketResourceKey,
   MarketSnapshotService,
-} from "../../../src/services/market-snapshot.service.js";
-import { TemplateMonitoringOrchestratorService } from "../../../src/services/template-monitoring-orchestrator.service.js";
+} from "../../../src/services/market-data/market-snapshot.service.js";
+import { TemplateMonitoringOrchestratorService } from "../../../src/services/templates/template-monitoring-orchestrator.service.js";
 
 const binanceTick = (
   price: number,

@@ -4,7 +4,7 @@ import { AppError } from "../errors/AppError.js";
 import {
   TradeJournalService,
   updateTradeJournalSchema,
-} from "../services/trade-journal.service.js";
+} from "../services/trading/trade-journal.service.js";
 
 const userId = (req: Request): string => {
   if (!req.user?.id) throw new AppError("Authentication required", 401);

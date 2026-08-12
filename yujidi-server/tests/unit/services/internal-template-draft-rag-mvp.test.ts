@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import test from "node:test";
 import { createInternalTemplateDraftRagController } from "../../../src/controllers/internal-template-draft-rag.controller.js";
-import { InternalTemplateDraftRagApplicationService } from "../../../src/services/internal-template-draft-rag-application.service.js";
-import { InternalTemplateDraftRagRequestAssemblyService } from "../../../src/services/internal-template-draft-rag-request-assembly.service.js";
+import { InternalTemplateDraftRagApplicationService } from "../../../src/services/copilot/internal-template-draft-rag-application.service.js";
+import { InternalTemplateDraftRagRequestAssemblyService } from "../../../src/services/copilot/internal-template-draft-rag-request-assembly.service.js";
 
 const now = new Date("2026-08-11T10:00:00.000Z");
 const request = {

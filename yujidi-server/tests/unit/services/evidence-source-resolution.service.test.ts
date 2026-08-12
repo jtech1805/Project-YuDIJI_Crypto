@@ -4,8 +4,8 @@ import test from "node:test";
 
 import { StaticEvidenceSourceAuthorityRegistry } from "../../../src/registries/evidence-source-authority.registry.js";
 import { factorRegistry } from "../../../src/registries/factor.registry.js";
-import { EvidenceFactorCompatibilityService } from "../../../src/services/evidence-factor-compatibility.service.js";
-import { EvidenceSourceResolutionService } from "../../../src/services/evidence-source-resolution.service.js";
+import { EvidenceFactorCompatibilityService } from "../../../src/services/evidence/evidence-factor-compatibility.service.js";
+import { EvidenceSourceResolutionService } from "../../../src/services/evidence/evidence-source-resolution.service.js";
 import type { EvidenceSourceResolutionRequest } from "../../../src/types/evidence-source-resolution.types.js";
 
 const AS_OF = new Date("2026-07-30T14:00:10.000Z");
@@ -312,7 +312,7 @@ test("inputs and returned dates/arrays cannot mutate future results", () => {
 });
 
 test("resolver has no repository, lifecycle, provider, runtime, or scoring imports", () => {
-  const source = readFileSync("src/services/evidence-source-resolution.service.ts", "utf8");
+  const source = readFileSync("src/services/evidence/evidence-source-resolution.service.ts", "utf8");
   assert.doesNotMatch(
     source,
     /evidence\.repository|evidence-read|lifecycle-resolver|provider-runner|shadow-execution|observability|scoring-engine|evaluator-registry|controllers|schedulers|analyzer|frontend/i,

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { StaticFactorRegistry } from "../../../src/registries/factor.registry.js";
-import { EvidenceFactorCompatibilityService } from "../../../src/services/evidence-factor-compatibility.service.js";
+import { EvidenceFactorCompatibilityService } from "../../../src/services/evidence/evidence-factor-compatibility.service.js";
 import type { CreateEvidenceObservationInput } from "../../../src/types/evidence.types.js";
 import type {
   FactorDefinition,
@@ -447,7 +447,7 @@ test("fixed inputs produce deterministic results", () => {
 
 test("service has no repository, lifecycle, runtime, or scoring imports", () => {
   const source = readFileSync(
-    "src/services/evidence-factor-compatibility.service.ts",
+    "src/services/evidence/evidence-factor-compatibility.service.ts",
     "utf8",
   );
   assert.doesNotMatch(

@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import { KnowledgeDocumentModel } from "../models/knowledge-document.model.js";
 import type { AdmittedKnowledgeDocument, KnowledgeDocumentInsertResult, KnowledgeDocumentReadResult, PersistedKnowledgeDocument } from "../types/knowledge-document.types.js";
-import { freezeClone } from "../services/knowledge-document-admission.service.js";
+import { freezeClone } from "../services/knowledge/knowledge-document-admission.service.js";
 
 type Query<T> = { lean(): { exec(): Promise<T> } };
 export type KnowledgeDocumentModelPort = { create(value: unknown): Promise<unknown>; find(filter: Record<string, unknown>): { limit(n: number): Query<Record<string, unknown>[]> } };

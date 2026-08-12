@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { CompiledRulebookContractValidationService } from "../../../src/services/compiled-rulebook-contract-validation.service.js";
+import { CompiledRulebookContractValidationService } from "../../../src/services/compiled-rulebook/compiled-rulebook-contract-validation.service.js";
 import { MAX_COMPILED_RULEBOOK_FACTOR_BINDINGS } from "../../../src/types/compiled-rulebook.types.js";
 
 const HASH = "a".repeat(64);

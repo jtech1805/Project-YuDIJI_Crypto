@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Types } from "mongoose";
 
-import { RiskStateProjectionService } from "../../../src/services/risk-state-projection.service.js";
+import { RiskStateProjectionService } from "../../../src/services/trading/risk-state-projection.service.js";
 import {
   calculateTradeResult,
   TradeResultService,
-} from "../../../src/services/trade-result.service.js";
+} from "../../../src/services/trading/trade-result.service.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 const otherUserId = "69e64c5f9042aac89c8c83f9";

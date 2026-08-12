@@ -1,7 +1,7 @@
 // import type { Request, Response } from "express";
 // import { copilotRequestSchema } from '../routes/chat.routes.js';
-// import { sharedWebsocketManager } from '../services/websocket.service.js'; // Your engine singleton
-// import { sharedLlmService } from '../services/llm.service.js';
+// import { sharedWebsocketManager } from '../services/trading/websocket.service.js'; // Your engine singleton
+// import { sharedLlmService } from '../services/ai-runtime/llm.service.js';
 // import { z } from 'zod';
 // export const handleCopilotChat = async (req: Request, res: Response) => {
 //     try {
@@ -166,9 +166,9 @@
 // };
 import { createHash, randomUUID } from "node:crypto";
 import type { Request, Response } from "express";
-import { sharedWebsocketManager } from '../services/websocket.service.js';
-import { sharedLlmService } from '../services/llm.service.js';
-import { llmTraceService, type LlmTraceService } from "../services/llm-trace.service.js";
+import { sharedWebsocketManager } from '../services/trading/websocket.service.js';
+import { sharedLlmService } from '../services/ai-runtime/llm.service.js';
+import { llmTraceService, type LlmTraceService } from "../services/ai-runtime/llm-trace.service.js";
 import { z } from 'zod';
 import { ChatSessionModel, type IChatSession } from "../models/chatSession.js";
 

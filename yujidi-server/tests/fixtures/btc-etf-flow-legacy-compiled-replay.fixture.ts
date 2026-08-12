@@ -1,10 +1,10 @@
 import { factorRegistry } from "../../src/registries/factor.registry.js";
 import { BTC_ETF_FLOW_AUTHORITY_IDS, BTC_ETF_FLOW_EVALUATOR_CONFIGURATION } from "../../src/registries/btc-etf-flow-characterization.authorities.js";
-import { CompiledLegacyParityComparisonService } from "../../src/services/compiled-legacy-parity-comparison.service.js";
-import { GenericFactorCompatibilityDispatcher, GenericFactorLegacyResultAdapter } from "../../src/services/generic-factor-legacy-compatibility.service.js";
-import { GenericRelationshipFactorEvaluator } from "../../src/services/generic-relationship-factor-evaluator.js";
-import { ScoringEngineService, type ScoringEngineInput, type ScoringEngineResult } from "../../src/services/scoring-engine.service.js";
-import { ScoringTemplateRegistryService } from "../../src/services/scoring-template-registry.service.js";
+import { CompiledLegacyParityComparisonService } from "../../src/services/compiled-rulebook/compiled-legacy-parity-comparison.service.js";
+import { GenericFactorCompatibilityDispatcher, GenericFactorLegacyResultAdapter } from "../../src/services/scoring/generic-factor-legacy-compatibility.service.js";
+import { GenericRelationshipFactorEvaluator } from "../../src/services/scoring/generic-relationship-factor-evaluator.js";
+import { ScoringEngineService, type ScoringEngineInput, type ScoringEngineResult } from "../../src/services/scoring/scoring-engine.service.js";
+import { ScoringTemplateRegistryService } from "../../src/services/scoring/scoring-template-registry.service.js";
 import type { CompiledLegacyParityPolicy, CompiledLegacyParityResult } from "../../src/types/compiled-legacy-parity.types.js";
 import type { CompiledShadowExecutionOutcome } from "../../src/types/compiled-shadow-execution.types.js";
 import type { AssembledFactorInput } from "../../src/types/factor-input-assembly.types.js";

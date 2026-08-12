@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { KnowledgeEmbeddingPort } from "../../src/ports/knowledge-embedding.port.js";
 import type { KnowledgeEmbeddingProviderRequest, KnowledgeEmbeddingProviderResult } from "../../src/types/knowledge-embedding.types.js";
-import { freezeClone } from "../../src/services/knowledge-document-admission.service.js";
+import { freezeClone } from "../../src/services/knowledge/knowledge-document-admission.service.js";
 
 export type DeterministicEmbeddingFailureMode =
   | "NONE"

@@ -1,9 +1,9 @@
-import { KnowledgeChunkSetManifestService } from "../../src/services/knowledge-chunk-set-manifest.service.js";
+import { KnowledgeChunkSetManifestService } from "../../src/services/knowledge/knowledge-chunk-set-manifest.service.js";
 import { FactorDocumentationStrategy } from "../../src/strategies/platform-knowledge/factor-documentation.strategy.js";
 import type { KnowledgeEmbeddingCommand, KnowledgeEmbeddingGenerationRequest, KnowledgeEmbeddingSchemaDefinition, PersistedKnowledgeEmbedding } from "../../src/types/knowledge-embedding.types.js";
 import type { KnowledgeVectorIndexDefinition } from "../../src/types/knowledge-vector-index-definition.types.js";
 import { persistedDocument } from "./platform-knowledge.fixture.js";
-import { calculateKnowledgeEmbeddingVectorDigest } from "../../src/services/knowledge-embedding.service.js";
+import { calculateKnowledgeEmbeddingVectorDigest } from "../../src/services/knowledge/knowledge-embedding.service.js";
 
 export const TEST_EMBEDDING_SCHEMA: KnowledgeEmbeddingSchemaDefinition = Object.freeze({
   embeddingSchemaId: "YUDIJI_PLATFORM_KNOWLEDGE_EMBEDDING_SCHEMA",

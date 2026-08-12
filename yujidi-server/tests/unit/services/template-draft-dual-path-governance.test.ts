@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { AI_PROVIDER_CIRCUIT_POLICY } from "../../../src/registries/ai-runtime-execution-policy.registry.js";
-import { AiGovernedExecutionContextService } from "../../../src/services/ai-governed-execution-context.service.js";
-import { AiRuntimeCircuitBreakerService } from "../../../src/services/ai-runtime-circuit-breaker.service.js";
+import { AiGovernedExecutionContextService } from "../../../src/services/ai-runtime/ai-governed-execution-context.service.js";
+import { AiRuntimeCircuitBreakerService } from "../../../src/services/ai-runtime/ai-runtime-circuit-breaker.service.js";
 import {
   ApplicationRagRetrievalAuthorizationService,
   TEMPLATE_DRAFT_APPLICATION_RETRIEVAL_AUTHORIZATION as authority,
-} from "../../../src/services/application-rag-retrieval-authorization.service.js";
-import { TemplateDraftDualPathGovernedExecutionService } from "../../../src/services/template-draft-dual-path-governed-execution.service.js";
-import { TemplateDraftRegistryOnlyBaselineService } from "../../../src/services/template-draft-registry-only-baseline.service.js";
+} from "../../../src/services/access/application-rag-retrieval-authorization.service.js";
+import { TemplateDraftDualPathGovernedExecutionService } from "../../../src/services/copilot/template-draft-dual-path-governed-execution.service.js";
+import { TemplateDraftRegistryOnlyBaselineService } from "../../../src/services/copilot/template-draft-registry-only-baseline.service.js";
 
 const features = {
   aiTemplateGenerationEnabled: true,

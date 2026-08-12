@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { FactorDecisionBandPolicyService } from "../../../src/services/factor-decision-band-policy.service.js";
+import { FactorDecisionBandPolicyService } from "../../../src/services/scoring/factor-decision-band-policy.service.js";
 
 const normalization = (min = 0, neutral = 50, max = 100) => ({
   normalizationPolicyId: "TEST_NORMALIZATION_V1", normalizationPolicyVersion: 1,
@@ -69,6 +69,6 @@ test("returns a deeply immutable defensive deterministic snapshot", () => {
   const json = JSON.stringify(a); for (const forbidden of ["normalizedScore", "BUY", "SELL", "HOLD", "permission", "confidence"]) assert.equal(json.includes(forbidden), false);
 });
 test("implementation has no runtime, persistence, or trade integration", () => {
-  const source = readFileSync(new URL("../../../src/services/factor-decision-band-policy.service.ts", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../../../src/services/scoring/factor-decision-band-policy.service.ts", import.meta.url), "utf8");
   for (const forbidden of ["scoring-engine", "mongoose", "controller", "placeOrder", "positionSize", "normalizedScore"]) assert.equal(source.includes(forbidden), false);
 });

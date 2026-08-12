@@ -4,7 +4,7 @@ import test from "node:test";
 
 import {
   FactorContributionAggregationExecutionService,
-} from "../../../src/services/factor-contribution-aggregation-execution.service.js";
+} from "../../../src/services/scoring/factor-contribution-aggregation-execution.service.js";
 import type {
   ValidatedFactorContributionAggregationPolicy,
 } from "../../../src/types/factor-contribution-aggregation.types.js";
@@ -455,7 +455,7 @@ test("projects minimized deeply frozen deterministic results without source muta
 test("service remains dependency-free from runners, validators, evaluators, I/O, and scoring", () => {
   const source = readFileSync(
     new URL(
-      "../../../src/services/factor-contribution-aggregation-execution.service.ts",
+      "../../../src/services/scoring/factor-contribution-aggregation-execution.service.ts",
       import.meta.url,
     ),
     "utf8",

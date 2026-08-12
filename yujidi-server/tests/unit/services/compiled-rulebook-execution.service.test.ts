@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CompiledRulebookExecutionService } from "../../../src/services/compiled-rulebook-execution.service.js";
+import { CompiledRulebookExecutionService } from "../../../src/services/compiled-rulebook/compiled-rulebook-execution.service.js";
 
 const policies = { aggregationPolicyId:"COMPILED_MEAN",aggregationPolicyVersion:1,normalizationPolicyId:"NORMALIZE",normalizationPolicyVersion:1,decisionBandPolicyId:"BANDS",decisionBandPolicyVersion:1 };
 const binding = (order=0, requirementLevel:"MANDATORY"|"OPTIONAL"="MANDATORY", optionalBehavior:"PARTIAL"|"OMIT"|null=null):any => ({ bindingId:`ETF_${order}`,order,factor:{factorKey:"CRYPTO.ETF_NET_FLOW",factorVersion:1},subjectBinding:order===0?{type:"FIXED",subject:{type:"ASSET",key:"BTC"}}:{type:"TRADED_INSTRUMENT"},evaluator:{evaluatorId:"GENERIC_RELATIONSHIP_FACTOR_EVALUATOR",evaluatorVersion:1,configurationId:`ETF_${order}`,configurationVersion:1},relationshipType:"DIRECT",requirementLevel,optionalBehavior,weight:50,provider:{providerBindingId:`PROVIDER_${order}`,providerBindingVersion:1,resolutionPolicyId:"RESOLUTION",resolutionPolicyVersion:1},executionPolicies:{...policies} });

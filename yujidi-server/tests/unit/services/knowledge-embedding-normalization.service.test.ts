@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { KnowledgeEmbeddingNormalizationRegistry } from "../../../src/registries/knowledge-embedding-normalization.registry.js";
-import { KnowledgeEmbeddingNormalizationService } from "../../../src/services/knowledge-embedding-normalization.service.js";
+import { KnowledgeEmbeddingNormalizationService } from "../../../src/services/knowledge/knowledge-embedding-normalization.service.js";
 import { L2_UNIT_VECTOR_V1_DEFINITION, TEST_NO_NORMALIZATION_DEFINITION } from "../../../src/types/knowledge-embedding-normalization.types.js";
 
 const service = new KnowledgeEmbeddingNormalizationService(new KnowledgeEmbeddingNormalizationRegistry([TEST_NO_NORMALIZATION_DEFINITION, L2_UNIT_VECTOR_V1_DEFINITION]));

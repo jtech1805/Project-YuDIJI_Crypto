@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { MarketSnapshotService } from "../../../src/services/market-snapshot.service.js";
-import { ScoringContextService } from "../../../src/services/scoring-context.service.js";
-import { TemplateMonitoringOrchestratorService } from "../../../src/services/template-monitoring-orchestrator.service.js";
+import { MarketSnapshotService } from "../../../src/services/market-data/market-snapshot.service.js";
+import { ScoringContextService } from "../../../src/services/scoring/scoring-context.service.js";
+import { TemplateMonitoringOrchestratorService } from "../../../src/services/templates/template-monitoring-orchestrator.service.js";
 
 const symbol = {
   _id: "65abc0000000000000000001",

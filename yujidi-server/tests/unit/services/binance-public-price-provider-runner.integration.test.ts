@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { BinancePublicPriceEvidenceAdapter } from "../../../src/adapters/binance-public-price-evidence.adapter.js";
-import { EvidenceProviderRunnerService } from "../../../src/services/evidence-provider-runner.service.js";
+import { EvidenceProviderRunnerService } from "../../../src/services/evidence/evidence-provider-runner.service.js";
 import type { EvidenceIngestionResult } from "../../../src/types/evidence-ingestion.types.js";
 
 const FIXED_TIME = new Date("2026-07-30T14:00:00.000Z");

@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Types } from "mongoose";
 
-import { TradeEventService } from "../../../src/services/trade-event.service.js";
+import { TradeEventService } from "../../../src/services/trading/trade-event.service.js";
 import {
   calculateCurrentR,
   TradeMonitoringService,
-} from "../../../src/services/trade-monitoring.service.js";
+} from "../../../src/services/trading/trade-monitoring.service.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 const otherUserId = "69e64c5f9042aac89c8c83f9";

@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   EvidenceCandidateNormalizer,
   EvidenceCandidateValidationError,
-} from "../../../src/services/evidence-candidate-normalizer.service.js";
+} from "../../../src/services/evidence/evidence-candidate-normalizer.service.js";
 import type { EvidenceCandidate } from "../../../src/types/evidence-ingestion.types.js";
 
 const normalizer = new EvidenceCandidateNormalizer();

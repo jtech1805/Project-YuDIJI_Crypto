@@ -1,7 +1,7 @@
 import type { KnowledgeVectorIndexWritePort } from "../../ports/knowledge-vector-index-write.port.js";
 import { KnowledgeVectorIndexProjectionRepository } from "../../repositories/knowledge-vector-index-projection.repository.js";
-import { KnowledgeVectorIndexProjectionService } from "../../services/knowledge-vector-index-projection.service.js";
-import { freezeClone } from "../../services/knowledge-document-admission.service.js";
+import { KnowledgeVectorIndexProjectionService } from "../../services/knowledge/knowledge-vector-index-projection.service.js";
+import { freezeClone } from "../../services/knowledge/knowledge-document-admission.service.js";
 import type { KnowledgeVectorIndexWriteRequest, KnowledgeVectorIndexWriteResult } from "../../types/knowledge-vector-index-write.types.js";
 
 export class KnowledgeVectorIndexProjectionWriteAdapter implements KnowledgeVectorIndexWritePort {

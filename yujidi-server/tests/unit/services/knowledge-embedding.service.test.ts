@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { KnowledgeEmbeddingSchemaRegistry } from "../../../src/registries/knowledge-embedding-schema.registry.js";
-import { calculateKnowledgeEmbeddingVectorDigest, KnowledgeEmbeddingService } from "../../../src/services/knowledge-embedding.service.js";
+import { calculateKnowledgeEmbeddingVectorDigest, KnowledgeEmbeddingService } from "../../../src/services/knowledge/knowledge-embedding.service.js";
 import { TEST_EMBEDDING_SCHEMA, verifiedEmbeddingFixture } from "../../fixtures/knowledge-embedding.fixture.js";
 import { DeterministicKnowledgeEmbeddingPort, type DeterministicEmbeddingFailureMode } from "../../fakes/deterministic-knowledge-embedding.port.js";
 

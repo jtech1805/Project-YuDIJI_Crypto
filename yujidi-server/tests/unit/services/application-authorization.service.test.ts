@@ -6,7 +6,7 @@ import { requireInternalApplicationRole } from "../../../src/middlewares/require
 import {
   ApplicationAuthorizationService,
   type ApplicationRoleAuthorityReader,
-} from "../../../src/services/application-authorization.service.js";
+} from "../../../src/services/access/application-authorization.service.js";
 import {
   canonicalizeApplicationRoles,
   resolveStoredApplicationRoles,

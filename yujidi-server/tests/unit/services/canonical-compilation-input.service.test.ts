@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CanonicalCompilationInputService } from "../../../src/services/canonical-compilation-input.service.js";
+import { CanonicalCompilationInputService } from "../../../src/services/compiled-rulebook/canonical-compilation-input.service.js";
 
 const service = new CanonicalCompilationInputService();
 test("canonical compilation hashing is stable, sorted, lowercase SHA-256", () => {

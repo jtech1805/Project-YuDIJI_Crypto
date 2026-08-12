@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { FactorDecisionBandExecutionService } from "../../../src/services/factor-decision-band-execution.service.js";
+import { FactorDecisionBandExecutionService } from "../../../src/services/scoring/factor-decision-band-execution.service.js";
 
 const labels = ["STRONG_NEGATIVE", "NEGATIVE", "NEUTRAL", "POSITIVE", "STRONG_POSITIVE"] as const;
 const policy = (points = [0, 20, 40, 60, 80, 100]) => ({ decisionBandPolicyId: "TEST_BANDS_V1", decisionBandPolicyVersion: 1,
@@ -56,6 +56,6 @@ test("preserves identities and returns minimized immutable deterministic output"
   const json = JSON.stringify(a); for (const forbidden of ["steps", "summary", "timestamp", "confidence", "permission", "BUY", "SELL", "HOLD"]) assert.equal(json.includes(forbidden), false);
 });
 test("implementation adds no rounding, persistence, runtime, or trade action", () => {
-  const source = readFileSync(new URL("../../../src/services/factor-decision-band-execution.service.ts", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../../../src/services/scoring/factor-decision-band-execution.service.ts", import.meta.url), "utf8");
   for (const forbidden of ["Math.round", "toFixed", "mongoose", "controller", "placeOrder", "positionSize", "stopLoss", "takeProfit"]) assert.equal(source.includes(forbidden), false);
 });

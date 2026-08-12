@@ -2,7 +2,7 @@ import "dotenv/config";
 import { pathToFileURL } from "node:url";
 import { GeminiKnowledgeEmbeddingAdapter } from "../../src/adapters/ai/gemini-knowledge-embedding.adapter.js";
 import { createGeminiEmbeddingAdapterConfig } from "../../src/config/gemini-embedding.config.js";
-import { KnowledgeEmbeddingNormalizationService } from "../../src/services/knowledge-embedding-normalization.service.js";
+import { KnowledgeEmbeddingNormalizationService } from "../../src/services/knowledge/knowledge-embedding-normalization.service.js";
 import { GEMINI_EMBEDDING_DIMENSION, GEMINI_EMBEDDING_MODEL, GEMINI_PLATFORM_KNOWLEDGE_EMBEDDING_SCHEMA } from "../../src/types/gemini-embedding-adapter.types.js";
 import type { KnowledgeEmbeddingPurpose, KnowledgeEmbeddingProviderRequest } from "../../src/types/knowledge-embedding.types.js";
 

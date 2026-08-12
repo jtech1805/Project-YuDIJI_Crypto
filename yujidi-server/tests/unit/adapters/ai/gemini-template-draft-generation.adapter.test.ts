@@ -6,7 +6,7 @@ import {
   GeminiGenerationAdapterConfig,
   createGeminiGenerationAdapterConfig,
 } from "../../../../src/config/gemini-generation.config.js";
-import { templateDraftCandidateSchema } from "../../../../src/services/template-draft-generation.service.js";
+import { templateDraftCandidateSchema } from "../../../../src/services/copilot/template-draft-generation.service.js";
 import { GEMINI_GENERATION_MODEL } from "../../../../src/types/gemini-generation-adapter.types.js";
 import { candidate } from "../../../fixtures/template-draft-workflow.fixture.js";
 import {

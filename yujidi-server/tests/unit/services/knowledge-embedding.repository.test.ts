@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { KnowledgeEmbeddingRepository, type KnowledgeEmbeddingModelPort } from "../../../src/repositories/knowledge-embedding.repository.js";
 import { embeddingCommand } from "../../fixtures/knowledge-embedding.fixture.js";
-import { calculateKnowledgeEmbeddingVectorDigest } from "../../../src/services/knowledge-embedding.service.js";
+import { calculateKnowledgeEmbeddingVectorDigest } from "../../../src/services/knowledge/knowledge-embedding.service.js";
 
 const query = <T>(value: T) => ({ lean: () => ({ exec: async () => structuredClone(value) }) });
 

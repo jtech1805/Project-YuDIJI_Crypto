@@ -4,8 +4,8 @@ import { Types } from "mongoose";
 
 import type { SnapshotMarketTick } from "../../../src/types/market-snapshot.types.js";
 import type { ResolvedScoringTemplateDefinition } from "../../../src/types/scoring.types.js";
-import { MarketSnapshotService } from "../../../src/services/market-snapshot.service.js";
-import { ScoringContextBuilderService } from "../../../src/services/scoring-context-builder.service.js";
+import { MarketSnapshotService } from "../../../src/services/market-data/market-snapshot.service.js";
+import { ScoringContextBuilderService } from "../../../src/services/scoring/scoring-context-builder.service.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 const ids = {

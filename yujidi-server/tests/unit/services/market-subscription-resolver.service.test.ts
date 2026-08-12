@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Types } from "mongoose";
 
-import { MarketSubscriptionResolver } from "../../../src/services/market-subscription-resolver.service.js";
+import { MarketSubscriptionResolver } from "../../../src/services/market-data/market-subscription-resolver.service.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 const symbolId = new Types.ObjectId("65abc0000000000000000001");

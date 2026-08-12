@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CompiledBindingScoreProjectionService } from "../../../src/services/compiled-binding-score-projection.service.js";
+import { CompiledBindingScoreProjectionService } from "../../../src/services/compiled-rulebook/compiled-binding-score-projection.service.js";
 
 const service = new CompiledBindingScoreProjectionService();
 const result = (points: number, minimumPoints = -2, maximumPoints = 2) => ({ contribution: { points, minimumPoints, maximumPoints } });

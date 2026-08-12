@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 
 import { AppError } from "../errors/AppError.js";
-import { TradeEventService } from "../services/trade-event.service.js";
+import { TradeEventService } from "../services/trading/trade-event.service.js";
 
 const getUserId = (req: Request): string => {
   const userId = req.user?.id;

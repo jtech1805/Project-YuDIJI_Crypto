@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import { CompiledRulebookModel } from "../models/compiled-rulebook.model.js";
-import { CompiledRulebookContractValidationService } from "../services/compiled-rulebook-contract-validation.service.js";
+import { CompiledRulebookContractValidationService } from "../services/compiled-rulebook/compiled-rulebook-contract-validation.service.js";
 import type { CompiledRulebookDefinition } from "../types/compiled-rulebook.types.js";
 import type { CompiledRulebookListResult, CompiledRulebookReadResult, CompiledRulebookRepositoryPort, InsertCompiledRulebookResult } from "../types/compiled-rulebook-repository.types.js";
 

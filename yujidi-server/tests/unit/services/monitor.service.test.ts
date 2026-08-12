@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Types } from "mongoose";
 
-import { MonitorService } from "../../../src/services/monitor.service.js";
+import { MonitorService } from "../../../src/services/trading/monitor.service.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 const symbolId = new Types.ObjectId("65abc0000000000000000001");

@@ -1,5 +1,5 @@
-import { CanonicalCompilationInputService } from "../../services/canonical-compilation-input.service.js";
-import { freezeClone } from "../../services/knowledge-document-admission.service.js";
+import { CanonicalCompilationInputService } from "../../services/compiled-rulebook/canonical-compilation-input.service.js";
+import { freezeClone } from "../../services/knowledge/knowledge-document-admission.service.js";
 import type { NormalizedKnowledgeBlock, PersistedKnowledgeDocument } from "../../types/knowledge-document.types.js";
 import type { KnowledgeChunkCandidate, KnowledgeChunkMetadata, KnowledgeChunkType, KnowledgeExampleClassification } from "../../types/knowledge-chunk.types.js";
 

@@ -1,4 +1,4 @@
-import { freezeClone } from "../services/knowledge-document-admission.service.js";
+import { freezeClone } from "../services/knowledge/knowledge-document-admission.service.js";
 import type { MongoAtlasVectorAdapterConfigValue } from "../types/mongo-atlas-vector-adapter.types.js";
 
 export const MONGO_ATLAS_VECTOR_PROVIDER = "MONGODB_ATLAS_VECTOR_SEARCH" as const;

@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 
 import { AppError } from "../errors/AppError.js";
-import { AiTradeReviewService } from "../services/ai-trade-review.service.js";
+import { AiTradeReviewService } from "../services/ai-runtime/ai-trade-review.service.js";
 
 const userId = (req: Request): string => {
   if (!req.user?.id) throw new AppError("Authentication required", 401);

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { EvidenceObservabilityService } from "../../../src/services/evidence-observability.service.js";
+import { EvidenceObservabilityService } from "../../../src/services/evidence/evidence-observability.service.js";
 import {
   EvidenceObservabilityError,
   MAX_TRACKED_EVIDENCE_ADAPTERS,

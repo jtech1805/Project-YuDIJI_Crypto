@@ -6,7 +6,7 @@ import {
   ActiveTradeService,
   calculateActualTradeGeometry,
   type ConfirmActualTradeInput,
-} from "../../../src/services/active-trade.service.js";
+} from "../../../src/services/trading/active-trade.service.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 const otherUserId = "69e64c5f9042aac89c8c83f9";

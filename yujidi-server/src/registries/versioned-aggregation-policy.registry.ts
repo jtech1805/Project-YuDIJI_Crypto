@@ -1,4 +1,4 @@
-import type { FactorContributionAggregationPolicyService } from "../services/factor-contribution-aggregation-policy.service.js";
+import type { FactorContributionAggregationPolicyService } from "../services/scoring/factor-contribution-aggregation-policy.service.js";
 import { VersionedAggregationPolicyRegistryError, type AggregationPolicyRegistration, type VersionedAggregationPolicy, type VersionedAggregationPolicyRegistry } from "../types/versioned-aggregation-policy.types.js";
 import { ImmutableHistoricalAuthority } from "./historical-authority.internal.js";
 const ID = /^[A-Z0-9_]{1,120}$/;

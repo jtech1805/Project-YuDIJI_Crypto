@@ -6,14 +6,14 @@ Primary files:
 
 - `yujidi-server/src/routes/scoring-template.routes.ts`
 - `yujidi-server/src/controllers/scoring-template.controller.ts`
-- `yujidi-server/src/services/scoring-template-crud.service.ts`
-- `yujidi-server/src/services/scoring-template-registry.service.ts`
-- `yujidi-server/src/services/scoring-template-validation.service.ts`
+- `yujidi-server/src/services/scoring/scoring-template-crud.service.ts`
+- `yujidi-server/src/services/scoring/scoring-template-registry.service.ts`
+- `yujidi-server/src/services/scoring/scoring-template-validation.service.ts`
 - `yujidi-server/src/models/scoring-template.model.ts`
-- `yujidi-server/src/services/score-check.service.ts`
-- `yujidi-server/src/services/scoring-context-builder.service.ts`
-- `yujidi-server/src/services/template-resource-resolver.service.ts`
-- `yujidi-server/src/services/template-monitoring-orchestrator.service.ts`
+- `yujidi-server/src/services/scoring/score-check.service.ts`
+- `yujidi-server/src/services/scoring/scoring-context-builder.service.ts`
+- `yujidi-server/src/services/templates/template-resource-resolver.service.ts`
+- `yujidi-server/src/services/templates/template-monitoring-orchestrator.service.ts`
 
 ## Purpose
 

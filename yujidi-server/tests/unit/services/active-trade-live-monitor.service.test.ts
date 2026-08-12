@@ -2,11 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Types } from "mongoose";
 
-import { ActiveTradeLiveMonitorService } from "../../../src/services/active-trade-live-monitor.service.js";
-import { ActiveTradeSubscriptionService } from "../../../src/services/active-trade-subscription.service.js";
-import { TradeMonitoringHealthService } from "../../../src/services/trade-monitoring-health.service.js";
-import { TradeEventService } from "../../../src/services/trade-event.service.js";
-import { TradeMonitoringService } from "../../../src/services/trade-monitoring.service.js";
+import { ActiveTradeLiveMonitorService } from "../../../src/services/trading/active-trade-live-monitor.service.js";
+import { ActiveTradeSubscriptionService } from "../../../src/services/trading/active-trade-subscription.service.js";
+import { TradeMonitoringHealthService } from "../../../src/services/trading/trade-monitoring-health.service.js";
+import { TradeEventService } from "../../../src/services/trading/trade-event.service.js";
+import { TradeMonitoringService } from "../../../src/services/trading/trade-monitoring.service.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 const otherUserId = "69e64c5f9042aac89c8c83f9";

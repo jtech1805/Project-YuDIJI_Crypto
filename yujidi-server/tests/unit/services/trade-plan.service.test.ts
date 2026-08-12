@@ -6,7 +6,7 @@ import {
   buildRiskBucketKey,
   type CreateTradePlanInput,
   TradePlanService,
-} from "../../../src/services/trade-plan.service.js";
+} from "../../../src/services/trading/trade-plan.service.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 const fixedNow = new Date("2026-06-23T09:00:00.000Z");

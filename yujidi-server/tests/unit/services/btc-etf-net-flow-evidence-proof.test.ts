@@ -3,11 +3,11 @@ import test from "node:test";
 
 import { StaticEvidenceSourceAuthorityRegistry } from "../../../src/registries/evidence-source-authority.registry.js";
 import { factorRegistry } from "../../../src/registries/factor.registry.js";
-import { EvidenceFactorCompatibilityService } from "../../../src/services/evidence-factor-compatibility.service.js";
-import { EvidenceIngestionService } from "../../../src/services/evidence-ingestion.service.js";
-import { EvidenceReadService } from "../../../src/services/evidence-read.service.js";
-import { EvidenceSourceResolutionService } from "../../../src/services/evidence-source-resolution.service.js";
-import { FactorInputAssemblyService } from "../../../src/services/factor-input-assembly.service.js";
+import { EvidenceFactorCompatibilityService } from "../../../src/services/evidence/evidence-factor-compatibility.service.js";
+import { EvidenceIngestionService } from "../../../src/services/evidence/evidence-ingestion.service.js";
+import { EvidenceReadService } from "../../../src/services/evidence/evidence-read.service.js";
+import { EvidenceSourceResolutionService } from "../../../src/services/evidence/evidence-source-resolution.service.js";
+import { FactorInputAssemblyService } from "../../../src/services/scoring/factor-input-assembly.service.js";
 import type { EvidenceCandidate } from "../../../src/types/evidence-ingestion.types.js";
 import type { CreateEvidenceInput } from "../../../src/types/evidence.types.js";
 

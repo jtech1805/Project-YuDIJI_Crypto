@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { MarketQuoteService } from "../../../src/services/market-quote.service.js";
+import { MarketQuoteService } from "../../../src/services/market-data/market-quote.service.js";
 
 const userId = "69e64c5f9042aac89c8c83f8";
 const symbolId = "65abc0000000000000000001";

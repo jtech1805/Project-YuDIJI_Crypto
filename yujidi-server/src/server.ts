@@ -7,10 +7,10 @@ import { z } from "zod";
 
 import { app, logger } from "./app.js";
 import { syncAngelMcxSymbols } from "./integrations/market-data/angel/angel-symbol-sync.service.js";
-import { syncBinanceSymbols } from "./services/binance.service.js";
-import { sharedActiveTradeSubscriptionService } from "./services/active-trade-subscription.service.js";
-// import { WebSocketManager } from "./services/websocket.service.js";
-import { sharedWebsocketManager } from "./services/websocket.service.js";
+import { syncBinanceSymbols } from "./services/market-data/binance.service.js";
+import { sharedActiveTradeSubscriptionService } from "./services/trading/active-trade-subscription.service.js";
+// import { WebSocketManager } from "./services/trading/websocket.service.js";
+import { sharedWebsocketManager } from "./services/trading/websocket.service.js";
 const envSchema = z.object({
   MONGO_URI: z.string().min(1, "MONGO_URI is required"),
   PORT: z.coerce.number().int().positive("PORT must be a positive integer"),

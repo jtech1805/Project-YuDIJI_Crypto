@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { ProviderCatalogService } from "../../../src/services/provider-catalog.service.js";
+import { ProviderCatalogService } from "../../../src/services/providers/provider-catalog.service.js";
 import { FACTOR_KEYS } from "../../../src/types/factor-registry.types.js";
 import {
   PROVIDER_AUTHORITY_LEVELS,

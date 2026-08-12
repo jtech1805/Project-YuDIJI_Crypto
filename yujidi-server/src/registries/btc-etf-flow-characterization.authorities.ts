@@ -1,9 +1,9 @@
-import { CompiledGenericRelationshipEvaluator } from "../services/compiled-generic-relationship-evaluator.js";
-import { FactorAggregateNormalizationPolicyService } from "../services/factor-aggregate-normalization-policy.service.js";
-import { FactorContributionAggregationPolicyService } from "../services/factor-contribution-aggregation-policy.service.js";
-import { FactorDecisionBandPolicyService } from "../services/factor-decision-band-policy.service.js";
-import { ProviderCatalogService } from "../services/provider-catalog.service.js";
-import { ProviderResolutionPolicyService } from "../services/provider-resolution-policy.service.js";
+import { CompiledGenericRelationshipEvaluator } from "../services/compiled-rulebook/compiled-generic-relationship-evaluator.js";
+import { FactorAggregateNormalizationPolicyService } from "../services/scoring/factor-aggregate-normalization-policy.service.js";
+import { FactorContributionAggregationPolicyService } from "../services/scoring/factor-contribution-aggregation-policy.service.js";
+import { FactorDecisionBandPolicyService } from "../services/scoring/factor-decision-band-policy.service.js";
+import { ProviderCatalogService } from "../services/providers/provider-catalog.service.js";
+import { ProviderResolutionPolicyService } from "../services/providers/provider-resolution-policy.service.js";
 import type { TemplateCompilationSnapshotInput } from "../types/canonical-template-snapshot.types.js";
 import type { TemplateRuleCompilationMapping } from "../types/template-rule-compilation-mapping.types.js";
 import { BTC_ETF_FLOW_CHARACTERIZATION_PROVIDER, createDefaultProviderAuthorityRegistry } from "./provider-authority.registry.js";

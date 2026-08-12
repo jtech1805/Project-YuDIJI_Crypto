@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Types } from "mongoose";
 
-import { LlmTraceService } from "../../../src/services/llm-trace.service.js";
+import { LlmTraceService } from "../../../src/services/ai-runtime/llm-trace.service.js";
 import type { CreateLlmTraceInput } from "../../../src/types/llm-trace.types.js";
 
 const baseInput = (): CreateLlmTraceInput => ({

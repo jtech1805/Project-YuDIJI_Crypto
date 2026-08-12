@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import type { EvidenceRepositoryContract } from "../../../src/repositories/evidence.repository.js";
-import { EvidenceReadService } from "../../../src/services/evidence-read.service.js";
-import type { EvidenceLifecycleResolverService } from "../../../src/services/evidence-lifecycle-resolver.service.js";
+import { EvidenceReadService } from "../../../src/services/evidence/evidence-read.service.js";
+import type { EvidenceLifecycleResolverService } from "../../../src/services/evidence/evidence-lifecycle-resolver.service.js";
 import type { EvidenceReadRecord } from "../../../src/types/evidence-lifecycle.types.js";
 import type { CreateEvidenceObservationInput } from "../../../src/types/evidence.types.js";
 import {

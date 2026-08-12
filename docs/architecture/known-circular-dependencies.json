@@ -4,9 +4,9 @@
     {
       "id": "LEGACY-CYCLE-001",
       "paths": [
-        "src/services/active-trade-subscription.service.ts",
-        "src/services/active-trade-live-monitor.service.ts",
-        "src/services/active-trade-subscription.service.ts"
+        "src/services/trading/active-trade-subscription.service.ts",
+        "src/services/trading/active-trade-live-monitor.service.ts",
+        "src/services/trading/active-trade-subscription.service.ts"
       ],
       "reason": "Legacy shared service contracts create a type-only back-edge between subscription and live monitoring.",
       "owner": "architecture",
@@ -17,9 +17,9 @@
     {
       "id": "LEGACY-CYCLE-002",
       "paths": [
-        "src/services/trade-event.service.ts",
-        "src/services/trade-event-delivery.service.ts",
-        "src/services/trade-event.service.ts"
+        "src/services/trading/trade-event.service.ts",
+        "src/services/trading/trade-event-delivery.service.ts",
+        "src/services/trading/trade-event.service.ts"
       ],
       "reason": "Trade-event delivery depends on the event record contract owned by the service that constructs delivery.",
       "owner": "architecture",
@@ -30,12 +30,12 @@
     {
       "id": "LEGACY-CYCLE-003",
       "paths": [
-        "src/services/active-trade-live-monitor.service.ts",
-        "src/services/trade-monitoring.service.ts",
-        "src/services/trade-event.service.ts",
-        "src/services/trade-event-delivery.service.ts",
-        "src/services/websocket.service.ts",
-        "src/services/active-trade-live-monitor.service.ts"
+        "src/services/trading/active-trade-live-monitor.service.ts",
+        "src/services/trading/trade-monitoring.service.ts",
+        "src/services/trading/trade-event.service.ts",
+        "src/services/trading/trade-event-delivery.service.ts",
+        "src/services/trading/websocket.service.ts",
+        "src/services/trading/active-trade-live-monitor.service.ts"
       ],
       "reason": "Legacy live-monitoring, event-delivery, and WebSocket services construct and call one another at runtime.",
       "owner": "architecture",
@@ -46,13 +46,13 @@
     {
       "id": "LEGACY-CYCLE-004",
       "paths": [
-        "src/services/active-trade-subscription.service.ts",
-        "src/services/active-trade-live-monitor.service.ts",
-        "src/services/trade-monitoring.service.ts",
-        "src/services/trade-event.service.ts",
-        "src/services/trade-event-delivery.service.ts",
-        "src/services/websocket.service.ts",
-        "src/services/active-trade-subscription.service.ts"
+        "src/services/trading/active-trade-subscription.service.ts",
+        "src/services/trading/active-trade-live-monitor.service.ts",
+        "src/services/trading/trade-monitoring.service.ts",
+        "src/services/trading/trade-event.service.ts",
+        "src/services/trading/trade-event-delivery.service.ts",
+        "src/services/trading/websocket.service.ts",
+        "src/services/trading/active-trade-subscription.service.ts"
       ],
       "reason": "The legacy subscription path participates in the runtime live-monitoring, delivery, and WebSocket service cluster.",
       "owner": "architecture",
@@ -63,9 +63,9 @@
     {
       "id": "LEGACY-CYCLE-005",
       "paths": [
-        "src/services/active-trade.service.ts",
-        "src/services/active-trade-subscription.service.ts",
-        "src/services/active-trade.service.ts"
+        "src/services/trading/active-trade.service.ts",
+        "src/services/trading/active-trade-subscription.service.ts",
+        "src/services/trading/active-trade.service.ts"
       ],
       "reason": "The subscription service consumes an active-trade record type from the service that calls subscription behavior.",
       "owner": "architecture",
@@ -76,9 +76,9 @@
     {
       "id": "LEGACY-CYCLE-006",
       "paths": [
-        "src/services/scoring-rule-evaluator-registry.service.ts",
-        "src/services/india-equity-scoring-evaluators.ts",
-        "src/services/scoring-rule-evaluator-registry.service.ts"
+        "src/services/scoring/scoring-rule-evaluator-registry.service.ts",
+        "src/services/scoring/india-equity-scoring-evaluators.ts",
+        "src/services/scoring/scoring-rule-evaluator-registry.service.ts"
       ],
       "reason": "The evaluator implementation imports registry-owned evaluator contracts while the registry imports the evaluator collection.",
       "owner": "architecture",

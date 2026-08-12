@@ -7,7 +7,7 @@ import {
   StaticVersionedProviderBindingRegistry,
   createDefaultVersionedProviderBindingRegistry,
 } from "../../../src/registries/versioned-provider-binding.registry.js";
-import { ProviderCatalogService } from "../../../src/services/provider-catalog.service.js";
+import { ProviderCatalogService } from "../../../src/services/providers/provider-catalog.service.js";
 import {
   MAX_PROVIDERS_PER_VERSIONED_BINDING,
   VersionedProviderBindingRegistryError,

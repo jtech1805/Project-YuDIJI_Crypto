@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"; import test from "node:test";
-import { CompiledRulebookAggregationService } from "../../../src/services/compiled-rulebook-aggregation.service.js";
+import { CompiledRulebookAggregationService } from "../../../src/services/compiled-rulebook/compiled-rulebook-aggregation.service.js";
 const service = new CompiledRulebookAggregationService(); const policy = { policyId: "COMPILED_WEIGHTED_MEAN_V1", policyVersion: 1, strategy: "COMPILED_WEIGHTED_MEAN", partialWeightBehavior: "RETAIN_IN_DENOMINATOR", omittedWeightBehavior: "REMOVE_FROM_DENOMINATOR", compileEligible: true }; let order = 0;
 const lineage = { aggregationPolicyId: "COMPILED_WEIGHTED_MEAN_V1", aggregationPolicyVersion: 1, normalizationPolicyId: "N", normalizationPolicyVersion: 1, decisionBandPolicyId: "D", decisionBandPolicyVersion: 1 };
 const outcome = (requirementLevel: "MANDATORY" | "OPTIONAL", optionalBehavior: "PARTIAL" | "OMIT" | null, inputState: "AVAILABLE" | "MISSING" | "INVALID", weight: number, normalizedScore: number | null) => ({ binding: { bindingId: `B${order}`, order: order++, requirementLevel, optionalBehavior, weight, executionPolicies: lineage }, inputState, normalizedScore });

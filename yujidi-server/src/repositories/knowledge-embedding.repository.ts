@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import { KnowledgeEmbeddingModel } from "../models/knowledge-embedding.model.js";
-import { freezeClone } from "../services/knowledge-document-admission.service.js";
+import { freezeClone } from "../services/knowledge/knowledge-document-admission.service.js";
 import type {
   KnowledgeEmbeddingCommand,
   KnowledgeEmbeddingIdentity,
