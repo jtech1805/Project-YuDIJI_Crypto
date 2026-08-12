@@ -3596,6 +3596,82 @@ C-D — COMPLETE / SHADOW_RUNTIME_PROVEN
 C-E — NEXT
 ```
 
+### STEP 2 — Free-Form User Prompt to Structured Intent
+
+Status:
+COMPLETE
+
+Outcome:
+
+- Added the internal/admin-only `POST /internal/ai/rag/template-drafts/prompt` interpretation boundary.
+- Gemini structured output is treated as untrusted and validated against bounded server-owned concept and subject vocabularies.
+- ETF aliases canonicalize to the existing `ETF` request concept. Unknown concepts remain explicit and unresolved; they are never silently substituted with a factor.
+- Missing or invalid subjects return clarification without invoking the governed RAG pipeline.
+- The server owns request correlation and the exact `YUDIJI_TEMPLATE_DRAFT_RAG_RUNTIME` version 1 binding.
+- The original prompt is forwarded as `requestText`; routine lifecycle logs contain metadata only.
+
+Protected boundaries:
+
+- No template persistence, scoring, compiler, public production access, private-document RAG, market-research RAG, provider fallback, or runtime-governance redesign.
+
+### STEP 3 — Product-Facing Copilot API
+
+Status:
+COMPLETE
+
+Outcome:
+
+- Added authenticated `POST /api/copilot/template-drafts` access for ordinary USER, INTERNAL, and ADMIN identities.
+- Added the explicit default-OFF `COPILOT_TEMPLATE_DRAFT_ENABLED` product admission control; existing RAG flags, kill switch, budgets, concurrency, deadlines, and circuits remain authoritative.
+- Reused `TemplateDraftPromptApplicationService` and projected a small `NON_AUTHORITATIVE_PREVIEW`; no internal RAG response is returned directly.
+- Success, clarification, wholly unsupported intent, cancellation, and sanitized unavailable outcomes are product-level contracts.
+- Live ordinary-USER validation passed for BTC ETF success, Tata Steel unsupported intent, missing-subject clarification, and registry-injection safety.
+
+Protected boundaries:
+
+- No template persistence or activation, scoring, ScoreCheck, compiler execution, public flag activation, private/market RAG, chat history, streaming, agents, tools, memory, Redis, or frontend changes.
+
+### STEP 1 — Internal RAG MVP
+
+Status:
+COMPLETE
+
+Internal application flow:
+
+- `POST /internal/ai/rag/template-drafts/shadow` requires cookie authentication followed by current-role authorization for INTERNAL or ADMIN. USER remains denied.
+- The strict request accepts only caller-owned request identity, optional request text, structured concepts, a structured subject, and an exact runtime binding identity/version. Authority-bearing extra fields are rejected.
+- Server-side assembly resolves the exact runtime binding, immutable index and corpus publications, current registry projection, effective published PLATFORM_KNOWLEDGE membership, one request `asOf`, and all execution/retrieval identities without calling providers.
+- The application service delegates once to the C-E1A governed dual path. Registry-only output remains authoritative, RAG remains SHADOW_ONLY, and comparison remains diagnostic.
+
+Operational controls:
+
+- Feature states and the kill switch are server-owned. One budget admission, one concurrency permit, one overall deadline, caller cancellation, independent provider circuits, provider outcomes, and provider usage retain the C-E1A/C-E1A0 authorities.
+- Production composition lazily constructs provider adapters only when their governed stage is reached. Importing or registering the route performs no Gemini or Atlas work.
+- Application retrieval uses `YUDIJI_TEMPLATE_DRAFT_RAG_APPLICATION_RETRIEVAL` v1 rather than the development-validation authority.
+
+Safety proof:
+
+- ETF retains the exact registered ETF-flow factor and safe DIRECT behavior.
+- Tata Steel concepts remain present and unresolved without MARKET.PRICE substitution or fabricated provider/factor authority.
+- Prompt injection produces no secret factor, VETO relationship, AI weight acceptance, or registry override.
+- No template creation/activation, persistence, ScoreCheck, scoring, compiler execution, public endpoint, private/market corpus, deployment, or production activation exists.
+
+Verification:
+
+- Focused Internal RAG/C-E1A/C-E1A0/C-D/auth characterization passed.
+- Full backend: 1,211 passed, 0 failed.
+- Typecheck and circular-dependency audit passed with 0 new cycles.
+- Guarded live ETF, Tata, injection, and no-retrieval-needed shadow benchmark passed with zero persistence/scoring/compiler side effects.
+- The real Express endpoint was exercised over localhost and returned the expected 401 for an unauthenticated request.
+- Production formatting and `git diff --check` passed.
+
+Progress:
+
+```text
+STEP 1 — INTERNAL RAG MVP COMPLETE
+Production/public RAG — OFF
+```
+
 ### Track C-E1A — Governed Registry-Only Baseline and Dual-Path Execution Contract
 
 Status:
