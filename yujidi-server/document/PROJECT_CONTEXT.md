@@ -14,6 +14,8 @@ Detailed docs live separately:
 
 - `../docs/DOMAIN_MODEL.md`: detailed domain entities, relationships, workflows, state machines, and business rules.
 - `../docs/ANALYZER_ENGINE.md`: detailed analyzer inputs, state, trigger logic, cooldowns, failures, tests, and limitations.
+- `../docs/ANGEL_SMARTAPI_PHASE0.md`: Angel SmartAPI Phase 0 scaffold and safety boundaries.
+- `../docs/ANGEL_PHASE_2_SCRIP_MASTER_SYNC.md`: Angel Phase 2 MCX Scrip Master reference sync.
 - `../docs/TESTING_STRATEGY.md`: recommended backend test strategy and priority order.
 - `../docs/RISK_REGISTER.md`: known risks, impact, mitigation, and review cadence.
 
@@ -680,6 +682,18 @@ LLM service file:
 src/services/llm.service.ts
 ```
 
+LLM provider port:
+
+```txt
+src/ports/llm-provider.port.ts
+```
+
+Current LLM adapter:
+
+```txt
+src/integrations/llm/groq/groq-llm.provider.ts
+```
+
 News provider:
 
 ```txt
@@ -697,6 +711,13 @@ Current model:
 ```txt
 llama-3.3-70b-versatile
 ```
+
+Provider abstraction baseline:
+
+- Core alert/copilot logic depends on the app-owned `LLMProvider` port.
+- Groq SDK usage is isolated inside the Groq adapter.
+- Provider-specific response formats are parsed and validated inside adapters.
+- Future OpenAI/Gemini adapters should implement the same port without changing analyzer/chat domain logic.
 
 Alert report schema:
 
@@ -994,12 +1015,13 @@ High-priority edge cases:
 2. Secure cookies may fail in local HTTP development.
 3. Alert detail lookup may have a user-id mismatch.
 4. HTTP LTP ignition may create symbol subscriptions that never decrement.
-5. Analyzer queries MongoDB for active monitors on every aggTrade tick.
+5. Analyzer active-monitor cache is process-local and not multi-instance safe.
 6. Failed LLM pipeline still puts monitor into cooldown.
 7. Multiple backend instances would not share in-memory analyzer/WebSocket state.
 8. CVD whale threshold is not normalized per asset.
 9. Spike/drop analyzer behavior needs automated regression tests.
 10. The frontend `/engine` page describes future architecture elements not currently implemented.
+11. Symbol search must stay indexed and paginated as the universal registry grows.
 
 ## 21. Current Progress
 
@@ -1012,10 +1034,21 @@ High-priority edge cases:
 - JWT utility.
 - Cookie-based auth.
 - User model.
-- Symbol model.
+- Universal Symbol model.
+- Instrument model scaffold.
+- Provider-neutral market-data types.
+- MarketDataProvider and InstrumentProvider ports.
 - Binance symbol sync.
+- Binance universal symbol sync fields.
+- Angel Scrip Master MCX mapper.
+- Angel Scrip Master client.
+- Disabled-by-default Angel symbol sync service.
+- Manual Angel symbol sync job script with dry-run, exchange selection, and batched writes.
 - MongoDB startup retry/backoff.
 - Non-fatal Binance symbol sync retry loop.
+- Analyzer active-monitor TTL cache.
+- Analyzer monitor cache refresh on monitor create/update/delete.
+- Analyzer zero-monitor negative cache entries.
 - Monitor model and CRUD routes.
 - Alert model.
 - Alert list route.
@@ -1038,6 +1071,12 @@ High-priority edge cases:
 - Copilot chat endpoint.
 - Chat history persistence.
 - Deterministic trade math in copilot.
+- Risk-first lifecycle from TradePlan through finalized TradeJournal.
+- Post-trade AI review for finalized journals.
+- Explicit AI context allowlist with SHA-256 context hashing.
+- Strict AI output schema and semantic safety validation.
+- Deterministic fallback review for invalid or unavailable LLM output.
+- AiExplanation persistence and AI lifecycle audit events.
 - Frontend landing/auth flow.
 - Frontend protected dashboard.
 - Frontend add monitor modal.
@@ -1045,12 +1084,91 @@ High-priority edge cases:
 - Frontend alert feed.
 - Frontend full analysis modal.
 - Backend architecture documentation.
+- Angel Integration Phase 1 foundation:
+  - universal symbol search API
+  - frontend universal symbol picker support
+  - BrokerConnection scaffold without secrets
+  - optional universal monitor metadata
+  - guarded Angel auth/live-data scaffolds
+  - Angel tick normalizer
+  - analyzer normalized tick bridge
+- Angel Integration Phase 2 MCX Scrip Master sync:
+  - downloads Angel Scrip Master JSON
+  - filters MCX core commodity rows
+  - maps rows into universal `Symbol` records
+  - upserts by provider + exchange + instrument token
+  - supports manual script and optional non-fatal startup sync
+- Angel Integration Phase 3 BrokerConnection domain:
+  - encrypted Angel credential storage
+  - encrypted Angel session token storage
+  - Angel `loginByPassword` verification service
+  - broker connection status/reconnect/delete APIs
+  - order placement remains disabled
+- Angel Integration Phase 4 Angel Quote API:
+  - uses active user Angel BrokerConnection
+  - decrypts API key and JWT only inside backend service logic
+  - calls Angel read-only Quote API
+  - supports single-symbol `LTP`, `OHLC`, and `FULL` modes
+  - returns normalized `NormalizedMarketSnapshot`
+  - does not persist quote snapshots
+- Angel Integration Phase 5 Universal Symbol Monitor support:
+  - monitor creation accepts universal `symbolId`
+  - legacy Binance monitor creation by `symbol` remains supported
+  - monitor stores symbol snapshot fields for provider/exchange/instrument metadata
+  - Angel MCX monitor creation requires active user Angel BrokerConnection
+  - market subscription key helper exists for future provider-aware WebSocket phase
+- Angel Integration Phase 6 Angel WebSocket LTP streaming:
+  - user-specific Angel WebSocket session manager exists
+  - active Angel BrokerConnection is required
+  - Angel MCX monitor can be subscribed through protected debug route
+  - LTP mode uses Angel `mode=1`
+  - MCX uses Angel `exchangeType=5`
+  - heartbeat ping is implemented
+  - binary LTP packets are parsed and normalized into `NormalizedMarketTick`
+  - normalized ticks are logged safely and are not persisted
+- Angel Integration Phase 6B Provider-Aware WebSocket subscription routing:
+  - frontend keeps using the existing backend WebSocket connection
+  - frontend sends YuJiDi symbol strings only
+  - backend resolves symbols from the universal `Symbol` collection
+  - Binance symbols route to the shared Binance master socket
+  - Angel MCX symbols route to user-specific Angel WebSocket sessions
+  - per-symbol subscription results are returned through `SUBSCRIPTION_UPDATE_RESULT`
+  - Angel ticks are forwarded to subscribed frontend sockets as `MARKET_TICK`
+- Angel Integration Phase 7 Angel Analyzer Alerts:
+  - Angel `NormalizedMarketTick` reaches the analyzer
+  - Angel monitor lookup uses user + provider + exchange + instrument token
+  - Angel price buffers and monitor cache use user-specific provider-aware keys
+  - existing drop/spike analyzer rules are reused
+  - Angel threshold breaches create alerts with provider/exchange/instrument metadata
+  - Angel alerts emit through the existing `NEW_ALERT` flow
+- Angel Integration Phase 9 Scalable Symbol Search:
+  - `Symbol` records now include normalized search and autocomplete token fields
+  - Binance sync and Angel mapper populate search fields
+  - `GET /api/symbols/search` provides indexed, filtered, ranked symbol discovery
+  - search has minimum query length, result caps, LRU cache, and route rate limiting
+  - `npm run symbols:backfill-search` backfills search fields for existing records
+  - frontend add-monitor flows use debounced backend search with request cancellation
+  - frontend no longer loads the full symbol universe on monitor modal/page open
 
 ### Partially Implemented
 
 - Alert movement field migration.
   - New fields exist: `changePercentage`, `triggerType`, and `direction`.
   - Legacy `dropPercentage` is still kept for backward compatibility.
+
+- Angel SmartAPI integration.
+  - Phase 1 foundation exists.
+  - Phase 2 MCX Scrip Master sync exists.
+  - Phase 3 BrokerConnection login verification exists.
+  - Phase 4 read-only Angel Quote API exists.
+  - Phase 5 universal Symbol monitor creation exists.
+  - Phase 6 user-specific Angel WebSocket LTP debug streaming exists.
+  - Phase 6B provider-aware frontend WebSocket routing exists.
+  - Phase 7 Angel normalized tick analyzer alert generation exists.
+  - Broker credentials are encrypted at rest.
+  - Angel WebSocket is connected to the frontend subscription path for live `MARKET_TICK` delivery.
+  - No public/admin Angel sync HTTP endpoint exists.
+  - No order placement, portfolio sync, or auto trading exists.
 
 - Alert detail endpoint.
   - Route exists.
@@ -1070,7 +1188,7 @@ High-priority edge cases:
 
 ### Not Yet Implemented
 
-- Automated backend test suite.
+- Full automated backend test suite beyond analyzer rules and `processTick` tests.
 - Redis/shared state for scaling.
 - Queueing for LLM calls.
 - Persistent failed alert records.
@@ -1113,7 +1231,7 @@ Tradeoff:
 
 State is lost on restart and not shared across instances.
 
-### Decision: Use Groq Structured JSON
+### Decision: Use LLM Provider Structured JSON
 
 Reason:
 
@@ -1121,7 +1239,7 @@ The frontend and database expect structured alert/report fields.
 
 Tradeoff:
 
-Malformed JSON causes the pipeline to fail.
+Malformed provider JSON causes the pipeline to fail. Groq is currently the only implemented adapter.
 
 ### Decision: Backend Calculates Trade Math
 
@@ -1133,16 +1251,17 @@ Risk math should be deterministic and auditable. The LLM should explain or veto,
 
 Best next fixes:
 
-1. Add automated tests for drop and spike monitor threshold evaluation.
-2. Align max monitor window with analyzer buffer, either both 60 minutes or both 24 hours.
-3. Fix `getAlertById` user lookup.
-4. Add validation to monitor update payload.
-5. Add `.env.example` with variable names only.
-6. Complete the alert movement field migration and eventually remove legacy `dropPercentage`.
-7. Move cooldown setting after successful alert creation or track failed alert attempts.
-8. Normalize user id access as `req.user.id` everywhere.
-9. Add reconnect behavior on frontend WebSocket.
-10. Document frontend architecture in `yujidi-client/document/`.
+1. Harden Angel streaming/analyzer reliability: reconnect strategy, token refresh, session expiry handling, subscription cleanup, and production-safe observability.
+2. Expand analyzer edge-case tests for invalid ticks, CVD, order-book snapshots, and cooldown expiry.
+3. Align max monitor window with analyzer buffer, either both 60 minutes or both 24 hours.
+4. Fix `getAlertById` user lookup.
+5. Add validation to monitor update payload.
+6. Add `.env.example` with variable names only.
+7. Complete the alert movement field migration and eventually remove legacy `dropPercentage`.
+8. Move cooldown setting after successful alert creation or track failed alert attempts.
+9. Normalize user id access as `req.user.id` everywhere.
+10. Add reconnect behavior on frontend WebSocket.
+11. Document frontend architecture in `yujidi-client/document/`.
 
 ## 24. Working Notes For Future Development
 

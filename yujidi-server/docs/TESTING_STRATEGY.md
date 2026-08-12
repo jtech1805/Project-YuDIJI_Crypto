@@ -28,20 +28,63 @@ Current `package.json` scripts include:
 ```txt
 dev
 start
+test
+test:analyzer
 typecheck
 ```
 
-There is no visible automated test script yet.
+There is now a first analyzer unit-test foundation using Node's built-in test runner with `tsx`.
+
+Current automated tests:
+
+- `src/services/analyzer.rules.test.ts`
+- `src/services/analyzer.service.test.ts`
+- `src/services/audit-sanitizer.service.test.ts`
+- `src/services/symbol-resolver.service.test.ts`
+- `src/services/trade-plan.service.test.ts`
+- `src/services/score-check.service.test.ts`
+- `src/services/trade-setup.service.test.ts`
+- `src/integrations/market-data/angel/angel-symbol.mapper.test.ts`
+- `src/integrations/market-data/angel/angel-symbol-sync.service.test.ts`
+- `src/integrations/market-data/angel/angel-tick.normalizer.test.ts`
+- `src/services/security/credential-encryption.service.test.ts`
+- `src/services/broker-connection.service.test.ts`
+- `src/integrations/market-data/angel/angel-quote.mapper.test.ts`
+- `src/services/market-quote.service.test.ts`
+- `src/services/monitor.service.test.ts`
+- `src/utils/market-subscription-key.test.ts`
+- `src/integrations/market-data/angel/angel-ltp-packet.parser.test.ts`
+- `src/services/angel-user-market-data-session.service.test.ts`
+
+Current commands:
+
+```bash
+npm test
+npm run test:analyzer
+```
 
 Current recommendation:
 
-- Add a test framework.
-- Add domain/unit tests around analyzer logic first.
+- Continue domain/unit tests around analyzer logic first.
+- Keep provider mappers covered with pure unit tests before live sync.
+- Keep Angel symbol sync safety covered: disabled mode, dry-run mode, and batched write mode.
+- Keep Angel Phase 2 sync filters covered: MCX rows pass, non-MCX rows skip, unsupported commodity names skip, and upsert identity uses provider + exchange + instrument token.
+- Do not call the real Angel Scrip Master URL in automated tests.
+- Keep normalized tick bridge covered so provider-specific ticks reuse production analyzer behavior.
+- Keep broker connection tests focused on encryption/decryption, safe response mapping, mocked Angel login success/failure, and disabled order-placement permission.
+- Keep Angel quote tests focused on mapper behavior, mocked quote service behavior, broker-connection requirements, and no secret leakage.
+- Do not call the real Angel Quote API in automated tests.
+- Keep universal monitor tests focused on `symbolId` creation, legacy Binance compatibility, broker-login validation, and snapshot persistence.
+- Keep market subscription key tests focused on provider-aware key shape and Angel user scoping.
+- Keep Angel LTP parser tests focused on binary offset parsing, token extraction, timestamp parsing, and price scaling.
+- Keep Angel user market-data session tests mocked; automated tests must not open real Angel WebSocket connections.
+- Add route integration tests for unauthenticated broker connection rejection when route-test tooling is introduced.
 - Add integration tests for routes after core domain behavior is covered.
 
 Suggested tools:
 
-- Vitest or Jest for unit/integration tests.
+- Node's built-in test runner for low-dependency unit tests.
+- Vitest or Jest if richer mocking/snapshot tooling becomes necessary.
 - Supertest for Express route testing.
 - mongodb-memory-server for MongoDB integration tests.
 - Mock WebSocket/Groq/Binance dependencies for deterministic tests.
@@ -73,6 +116,32 @@ Primary file:
 src/services/analyzer.service.ts
 ```
 
+Current foundation files:
+
+```txt
+src/services/analyzer.rules.ts
+src/services/analyzer.rules.test.ts
+src/services/analyzer.service.test.ts
+```
+
+Currently covered:
+
+- drop monitor breaches only on negative threshold
+- drop monitor does not breach on upward spike
+- spike monitor breaches only on positive threshold
+- spike monitor does not breach on downward drop
+- invalid trigger never breaches
+- display movement values round to two decimals
+- zero-monitor cache snapshot is marked as negative cache
+- active cache snapshot is marked as non-negative cache
+- `processTick` creates drop alerts when threshold is breached
+- `processTick` creates spike alerts when threshold is breached
+- `processTick` does not create spike alerts on downward drops
+- `processTick` skips alerts when price history is insufficient
+- cooldown prevents duplicate `processTick` alerts
+- LLM/report failure prevents alert persistence and emission
+- negative active-monitor cache avoids repeated monitor fetch within TTL
+
 Must test:
 
 - valid tick updates price buffer
@@ -82,12 +151,6 @@ Must test:
 - CVD negative delta
 - CVD ignores small trades
 - CVD culls old trades
-- drop monitor triggers
-- drop monitor does not trigger
-- spike monitor triggers
-- spike monitor does not trigger
-- insufficient history skips monitor
-- cooldown prevents duplicate trigger
 - cooldown expires and allows retrigger
 - order-book snapshot updates
 - unknown support/resistance when no book exists
@@ -116,6 +179,12 @@ Must test:
 - invalid monitor id is rejected
 - unsupported symbol is rejected
 - monitor creation normalizes symbol
+- legacy Binance monitor creation by `symbol`
+- Binance monitor creation by `symbolId`
+- Angel monitor creation by `symbolId` with active BrokerConnection
+- Angel monitor rejection without active BrokerConnection
+- symbol snapshot fields are stored on monitor
+- broker credentials are not decrypted during monitor creation
 - update strips `_id` and `user`
 - delete requires ownership
 
@@ -175,6 +244,124 @@ Must test:
 - request failure returns fallback
 
 External CryptoCompare calls must be mocked.
+
+### 4.6 Angel Quote Tests
+
+Primary files:
+
+```txt
+src/integrations/market-data/angel/angel-quote.service.ts
+src/integrations/market-data/angel/angel-quote.mapper.ts
+src/services/market-quote.service.ts
+```
+
+Currently covered:
+
+- LTP quote mapping.
+- OHLC quote mapping.
+- FULL quote mapping with depth and open interest.
+- Missing symbol rejection.
+- Non-Angel provider rejection.
+- Missing broker connection rejection.
+- Successful normalized snapshot response.
+- Safe handling of Angel `unfetched` quote response.
+- No mocked API key/JWT/encrypted fields in normalized snapshot output.
+
+Must test later:
+
+- Auth-protected route integration for `GET /api/market-quotes/:symbolId`.
+- Expired BrokerConnection session behavior.
+- Invalid quote mode route validation.
+- Angel Quote API HTTP client with mocked Axios.
+
+External Angel Quote API calls must be mocked. Tests should never call the real Angel Quote endpoint.
+
+### 4.7 Angel WebSocket LTP Tests
+
+Primary files:
+
+```txt
+src/integrations/market-data/angel/angel-ltp-packet.parser.ts
+src/integrations/market-data/angel/angel-market-data.provider.ts
+src/services/angel-user-market-data-session.service.ts
+```
+
+Currently covered:
+
+- LTP packet parses mode and exchange type.
+- LTP packet parses null-terminated token.
+- LTP packet parses sequence number and exchange timestamp.
+- LTP packet scales MCX price by 100.
+- Short packets are rejected safely.
+- Session manager subscribes active Angel monitor with mocked provider.
+- Session manager rejects missing BrokerConnection.
+- Session manager rejects non-Angel monitors.
+- Session manager unsubscribes and disconnects when no subscriptions remain.
+
+Must test later:
+
+- Protected debug route integration for subscribe/unsubscribe/status.
+- Angel provider payload shape with mocked WebSocket client.
+- Heartbeat behavior with fake timers.
+- WebSocket close/error status transitions.
+
+Automated tests must not call the real Angel WebSocket endpoint.
+
+### 4.8 Provider-Aware Subscription Routing Tests
+
+Primary files:
+
+```txt
+src/services/market-subscription-resolver.service.ts
+src/services/market-subscription-router.service.ts
+src/services/websocket.service.ts
+```
+
+Currently covered:
+
+- Resolver maps Binance symbol to `BINANCE:BINANCE:<symbol>`.
+- Resolver maps Angel MCX symbol to `ANGEL_ONE:<userId>:MCX:<instrumentToken>`.
+- Resolver rejects unknown symbols.
+- Resolver rejects Angel symbols when the user has no active BrokerConnection.
+- Router sends Binance subscriptions to the Binance handler.
+- Router sends Angel subscriptions to the Angel user market-data session service.
+- Router rejects unsupported providers.
+
+Must test later:
+
+- WebSocket manager mixed subscription payload with Binance and Angel symbols.
+- `SUBSCRIPTION_UPDATE_RESULT` partial success/failure contract.
+- Angel `MARKET_TICK` delivery only to sockets subscribed to the exact user-specific key.
+- Two users subscribed to the same Angel instrument do not receive each other's ticks.
+- Cleanup on browser socket close routes provider unsubscribe correctly.
+
+### 4.9 Angel Analyzer Tests
+
+Primary files:
+
+```txt
+src/services/analyzer.service.ts
+src/services/analyzer.rules.ts
+src/types/market-data.types.ts
+src/utils/market-subscription-key.ts
+```
+
+Currently covered:
+
+- `processNormalizedTick` creates an Angel spike alert using existing analyzer rules.
+- `processNormalizedTick` creates an Angel drop alert using existing analyzer rules.
+- Angel alert payload includes provider/exchange/instrument metadata.
+- Angel alert payload includes current and previous price.
+- Angel tick for user A does not trigger user B's monitor.
+- Angel analyzer cache and price buffer use `ANGEL_ONE:<userId>:MCX:<instrumentToken>`.
+- Existing Binance `processTick` tests still pass.
+
+Must test later:
+
+- WebSocket manager live Angel tick invokes analyzer exactly once.
+- Analyzer failure does not block frontend `MARKET_TICK` delivery.
+- Duplicate tick de-duplication if provider repeats the same timestamp/sequence.
+- Production DB query shape for provider-aware monitor lookup.
 
 ## 5. Integration Tests
 
@@ -274,10 +461,14 @@ Must test:
 - duplicate subscription does not double count for same socket
 - close cleanup decrements counts
 - ticker update is sent only to subscribed clients
+- mixed Binance/Angel subscription routes each provider correctly
+- provider-aware subscription keys prevent Angel cross-user delivery
+- `SUBSCRIPTION_UPDATE_RESULT` reports failed symbols without breaking successful symbols
+- Angel `MARKET_TICK` is sent only to subscribed frontend sockets
 - alert is emitted only to owning user's sockets
 - Binance reconnect clears active symbols and resubscribes desired symbols
 
-Binance WebSocket should be mocked.
+Binance and Angel WebSocket providers should be mocked.
 
 ## 7. Contract Tests
 
@@ -340,6 +531,403 @@ When fixed, add regression tests for:
 3. Monitor windows cannot exceed analyzer buffer unless buffer is expanded.
 4. Failed alert pipeline does not create misleading successful state.
 5. HTTP LTP ignition does not create permanent unmanaged subscriptions.
+6. Symbol search does not call MongoDB for queries shorter than two characters.
+7. Symbol search ranks common futures/spot results ahead of noisy option matches for generic queries.
+8. Frontend add-monitor flows do not fetch the full symbol collection on open.
+
+## 10.1 Symbol Search Tests
+
+Phase 9 adds scalable symbol discovery through `GET /api/symbols/search`.
+
+Current and future test coverage should include:
+
+- tokenizer normalization for Binance symbols and Angel MCX symbols
+- autocomplete prefix token generation
+- search result ranking for exact, prefix, and generic queries
+- provider, market type, exchange, and instrument type filters
+- default expired-contract exclusion
+- query limit validation
+- short-query no-op behavior
+- search cache behavior
+- frontend debounce and request cancellation behavior
+
+Real provider APIs should not be called in symbol search tests. Tests should use fake repositories or local fixtures.
+
+## 10.2 Future Trade/Risk Lifecycle Tests
+
+The risk-first trade lifecycle must be tested before implementation is considered safe.
+
+Current Phase 1 foundation tests:
+
+- Audit sanitizer redacts sensitive root-level keys.
+- Audit sanitizer redacts nested sensitive keys.
+- Audit sanitizer handles arrays.
+- AuditLogService sanitizes metadata before persistence.
+- SymbolResolverService returns unresolved when no mapping exists.
+- SymbolResolverService resolves by provider/exchange/instrument token.
+- SymbolResolverService blocks ambiguous provider-symbol mappings.
+- SymbolResolverService detects requested instrument-type mismatch.
+
+Current Phase 2 foundation tests:
+
+- TradePlanService creates TradePlans in `DRAFT`.
+- Invalid starting capital is rejected.
+- `FIXED_TRADE_COUNT` plans require `maxTrades`.
+- `DATE_RANGE` plans require a valid `endDate`.
+- `DRAFT` plans can be activated.
+- Activation initializes `TradePlanRiskState`.
+- Activation is rejected from non-`DRAFT` statuses.
+- Core fields cannot be updated after activation because updates are currently DRAFT-only.
+- Active plans can be paused.
+- Active or paused plans can be stopped.
+- Active or paused plans can be completed.
+- Draft, stopped, or completed plans can be archived.
+- Capital adjustments create event records and update current capital.
+- AuditLogService is called for lifecycle changes.
+- Risk bucket key generation is deterministic.
+
+Current Phase 3 foundation tests:
+
+- LONG valid geometry passes.
+- LONG invalid geometry rejects.
+- SHORT valid geometry passes.
+- SHORT invalid geometry rejects.
+- Risk/reward/RR calculation works for LONG.
+- Risk/reward/RR calculation works for SHORT.
+- RR below 1 returns `REJECT`.
+- RR from 1 to below 1.5 returns `WAIT`.
+- RR from 1.5 to below 2 returns `TAKE_SMALL_RISK`.
+- RR 2 or above returns `TAKE_TRADE`.
+- ScoreCheck does not mutate risk state.
+- ScoreCheck creates `TradeScoreSnapshot`.
+- AuditLogService is called for `SCORE_CHECK_CREATED` and `SCORE_CALCULATED`.
+- Missing symbol rejects safely.
+- Inactive symbol rejects safely.
+
+Current Phase 4 foundation tests:
+
+- ScoreCheck cannot convert without an `ACTIVE` TradePlan.
+- ScoreCheck from another user cannot convert.
+- TradePlan from another user cannot receive conversion.
+- TradePlan/ScoreCheck market scope mismatch rejects.
+- Expired ScoreCheck rejects.
+- Already-converted ScoreCheck rejects.
+- Valid conversion creates TradeSetup.
+- Valid conversion updates `ScoreCheck.convertedToTradeSetupId`.
+- Valid conversion copies planned values.
+- Valid conversion copies symbol snapshot.
+- RiskGovernor returns `STOP_TRADING` when plan risk mode is `STOP_TRADING`.
+- RiskGovernor returns `REJECT` when score permission is `REJECT`.
+- RiskGovernor caps final permission to `TAKE_SMALL_RISK` in `REDUCED_RISK`.
+- RiskGovernor caps final permission to `TAKE_SMALL_RISK` in `MICRO_RISK`.
+- RiskGovernor rejects when `maxTrades` is reached.
+- RiskGovernor returns `STOP_TRADING` when consecutive-loss limit is reached.
+- AuditLogService is called for conversion, setup creation, and risk evaluation.
+- TradeSetup cancellation works if not executed.
+- TradeSetup cancellation rejects if already executed.
+
+Current Phase 5 foundation tests:
+
+- Non-`APPROVED` TradeSetup confirmation rejects.
+- `WAIT`, `REJECT`, and `STOP_TRADING` final permissions reject.
+- Already-executed TradeSetup rejects.
+- Expired score validity rejects.
+- Another user's TradeSetup cannot be confirmed.
+- Valid LONG and SHORT confirmations create ActiveTrade.
+- Invalid LONG and SHORT actual geometry rejects.
+- LONG and SHORT actual risk/reward/RR math is verified.
+- Actual RR below `1` rejects.
+- LONG and SHORT stoploss widening is detected.
+- Actual risk above planned risk is detected.
+- Successful confirmation marks TradeSetup `EXECUTED`.
+- Symbol snapshot is copied while planned values remain unchanged.
+- AuditLogService receives actual-confirmation, ActiveTrade-creation, and TradeSetup-execution events.
+- ACTIVE trade cancellation succeeds.
+- CLOSED trade cancellation rejects.
+
+Current Phase 6 foundation tests:
+
+- LONG and SHORT stoploss-hit detection.
+- LONG and SHORT target 1 detection.
+- LONG and SHORT target 2 detection.
+- LONG and SHORT current-R calculation.
+- +1R detection.
+- LONG and SHORT near-stop detection.
+- Repeated stoploss events are deduplicated.
+- Stoploss events do not mutate ActiveTrade status.
+- Monitoring does not create TradeResult or mutate risk state.
+- Closed/non-active trades reject evaluation.
+- Monitoring evaluation and event creation are audited.
+- TradeEvent listing is scoped by user ownership.
+- Manual evaluation returns created events and current R.
+
+Current Phase 7 foundation tests:
+
+- User ownership and ActiveTrade status gates.
+- Exit price and quantity validation.
+- LONG and SHORT gross P&L calculation.
+- Confirmed net, estimated net, and gross fallback behavior.
+- Gross fallback warning.
+- Realized-R calculation.
+- WIN, LOSS, and BREAKEVEN classification.
+- STOPLOSS produces `STOPPED_OUT`; other exits produce `CLOSED`.
+- TradeResult is finalized and projection becomes applied.
+- Plan and daily risk counts/P&L/R are projected.
+- Loss increments and win resets consecutive losses.
+- Duplicate projection does not double-count.
+- Consecutive-loss and daily-loss limits trigger STOP_TRADING.
+- Result finalization and risk projection are audited.
+- Result listing and ActiveTrade lookup are user-scoped.
+
+Current Phase 8 foundation tests:
+
+- Journal requires an owned finalized TradeResult.
+- Deterministic TradeResult, ActiveTrade, TradeSetup, ScoreCheck, score snapshot, and TradeEvent links are copied.
+- Duplicate creation returns the existing journal.
+- Only reflection fields can be updated.
+- System-owned fields are rejected by strict validation.
+- Finalization requires all minimum reflection fields.
+- Finalization and archive set lifecycle timestamps.
+- Journal does not mutate TradeResult or risk state.
+- List/read operations enforce ownership.
+- Create/update/finalize/archive are audited.
+- AI fields remain ungenerated.
+
+These tests cover the Phase 1/2/3/4/5/6/7/8 foundation. They do not yet prove live market-tick wiring, AI review, RAG, broker-fill linking, partial close, reversal, analytics, sharing, or order-flow behavior because those modules are intentionally not implemented yet.
+
+### Geometry And Direction Tests
+
+Must cover:
+
+- long setup where entry, stop, and target geometry is valid
+- long setup where stop is above entry and must be rejected
+- short setup where entry, stop, and target geometry is valid
+- short setup where stop is below entry and must be rejected
+- risk/reward calculation for long and short
+- planned values preserved in TradeSetup
+- actual/current values stored separately in ActiveTrade
+
+### RiskGovernor Tests
+
+Currently covered:
+
+- final permission values: `TAKE_TRADE`, `TAKE_SMALL_RISK`, `WAIT`, `REJECT`, `STOP_TRADING`
+- RiskGovernor can downgrade scoring output
+- RiskGovernor can reject a high-scoring trade
+- RiskGovernor can force `STOP_TRADING`
+- consecutive-loss limit
+
+Must cover in later phases:
+
+- AI cannot override RiskGovernor
+- daily loss limit breach with projected TradeResult updates
+- plan risk limit breach with projected open risk
+- max open trades breach after ActiveTrade exists
+- cooldown rule if added to plan/risk templates
+
+### ScoreCheck Tests
+
+Currently covered:
+
+- standalone ScoreCheck allowed without TradePlan
+- direction-aware scoring
+- provider raw data does not decide score directly
+- score snapshot is stored for audit/replay
+- geometry validation for LONG and SHORT
+- score-level permission bands for RR thresholds
+- MCX commodity template accepts active `COMMODITY` / `MCX` / `FUTURE` scope
+- commodity LONG and SHORT geometry
+- deterministic commodity RR permission bands
+- lot-size and tick-size availability or missing warnings
+- Angel live-monitoring broker-login warning
+- near-expiry warning within three calendar days
+- wrong commodity market, exchange, and instrument scope rejection
+- expired MCX contract rejection
+
+Must cover in later phases:
+
+- managed trade conversion requires TradePlan
+- richer scoring templates beyond current baseline evaluators
+- AI explanation after deterministic scoring without AI decision authority
+
+### TradeSetup And ActiveTrade Tests
+
+Currently covered:
+
+- TradeSetup stores planned entry, stop, target, size, and invalidation
+- planned values are not overwritten by actual values
+- activation requires RiskGovernor permission
+- ActiveTrade stores actual entry, actual quantity, current stop, and current state
+- actual execution geometry is direction-aware
+- actual risk, reward, risk amount, and RR are calculated deterministically
+- actual RR below the minimum is rejected
+- stoploss widening and excess actual risk are recorded
+- TradeSetup is marked `EXECUTED` after successful ActiveTrade creation
+- ActiveTrade cancellation is limited to `ACTIVE` status
+- order placement remains disabled
+
+Must cover in later phases:
+
+- broker-sync-assisted fill reconciliation
+- partial exits and remaining quantity changes
+- automatic monitoring-driven status transitions
+- TradeResult finalization and risk-state projection
+
+### TradeEvent And Monitoring Tests
+
+Currently covered:
+
+- monitoring uses actual/current ActiveTrade values
+- SL, target 1, target 2, +1R, and near-SL rules are direction-aware
+- one event type per ActiveTrade is enforced by idempotency
+- manual/synthetic evaluation is user-owned
+- events are append-oriented and auditable
+- evaluation does not close the trade
+- evaluation does not create TradeResult
+- evaluation does not mutate risk state
+- safe `TRADE_EVENT_CREATED` payload includes required frontend fields
+- secret-shaped snapshot fields, provider tokens, metadata, and raw payloads are excluded
+- delivery targets only the owning user
+- newly created events are delivered once
+- deduplicated events do not produce duplicate delivery
+- delivery failure does not roll back event creation
+- delivery attempt/success/failure audit behavior
+- existing analyzer market alert event remains `NEW_ALERT`
+
+Must cover in later phases:
+
+- repeating event windows and cooldown policy
+- previous-price crossing semantics
+- degraded/stale market-feed events
+- partial-exit and current-stop updates
+
+### Phase 11 Live ActiveTrade Monitoring Tests
+
+Currently covered:
+
+- Binance tick matching by canonical `symbolId`
+- canonical Symbol resolution when a tick has no `symbolId`
+- strict provider/exchange/symbol fallback matching
+- Angel tick rejection without a valid user id
+- Angel evaluation limited to the owning user's ActiveTrades
+- inactive trade statuses are excluded
+- stale ticks are skipped
+- per-ActiveTrade evaluation cooldown is enforced
+- deterministic workload cap limits evaluations
+- matching trades delegate to `TradeMonitoringService` with `MARKET_TICK`
+- the existing TradeEvent persistence and WebSocket delivery path is reused
+- live tick handling does not create TradeResult or mutate risk state
+- full analyzer and existing WebSocket alert regressions remain green
+
+### Phase 12 Subscription, Cache, And Health Tests
+
+Currently covered:
+
+- Binance and Angel provider-aware subscription key generation
+- Angel key rejection without user id
+- registration stores bounded projected monitoring data only
+- registration drives one provider subscription per shared key
+- cache hits avoid repeated MongoDB lookup
+- cache expiry refreshes from MongoDB
+- inactive trades are excluded from cache results
+- cache key count is bounded with deterministic eviction
+- unregister removes trade interest and provider subscription
+- bounded startup warm-up registers existing active trades
+- Angel cache lookup remains user-scoped
+- Binance public cache can route matching trades across owners
+- health counters track evaluated, stale, cooldown, and workload conditions
+- ActiveTrade creation survives registration failure
+- cancellation and close invalidate monitoring registration
+- full analyzer, NEW_ALERT, TradeEvent delivery, risk, journal, and AI regressions remain green
+
+Still required before multi-instance deployment:
+
+- distributed stream-interest ownership
+- shared cache/cooldown state
+- leader election or partition ownership
+- reconnect reconciliation across instances
+
+### TradeResult And Risk Projection Tests
+
+Currently covered:
+
+- TradeResult projection updates TradePlanRiskState
+- TradeResult projection updates UserDailyRiskState
+- duplicate projection is idempotent
+- net P&L is preferred over gross P&L where available
+- charges are handled in estimated net calculations
+- realized R and result type are deterministic
+- consecutive-loss and daily-loss STOP_TRADING behavior
+- TradeResult is the only implemented risk-state mutation source
+
+Must cover in later phases:
+
+- projection reversal and adjusted results
+- partial closes and multi-result aggregation
+- broker-confirmed fees and slippage reconciliation
+- Journal cannot update RiskState
+- AI cannot update RiskState
+
+### TradeJournal Tests
+
+Currently covered:
+
+- finalized TradeResult is the official journal outcome source
+- deterministic system facts are copied and remain non-editable
+- user reflection fields have a strict update allowlist
+- one journal per TradeResult is idempotently enforced
+- finalization requires minimum reflection completeness
+- journal lifecycle is user-owned and audited
+- journal cannot mutate TradeResult or risk state
+- Phase 8 journal creation does not generate AI fields
+
+Phase 9 AI review coverage:
+
+- non-owned and non-finalized journals are rejected
+- context projection excludes secret-shaped and raw provider fields
+- valid output creates `COMPLETED` AiExplanation
+- valid output updates only journal AI reference fields
+- malformed or schema-invalid output uses deterministic fallback
+- provider failure uses deterministic fallback
+- recommendation and order-placement language is rejected
+- risk-state mutation and AI P&L calculation claims are rejected
+- TradeResult and risk state remain unchanged
+- AI request, validation/rejection, fallback, and storage are audited
+- explanation reads enforce user ownership
+- provider receives only the backend-built context
+
+Must cover in later phases:
+
+- journal pattern analytics
+- screenshot storage ownership and malware/content controls
+- archive restoration policy if introduced
+
+### Symbol And Provider Guard Tests
+
+Must cover:
+
+- new trade lifecycle references canonical `Symbol` by `symbolId`
+- provider token is mapping only, not domain identity
+- wrong provider/exchange/token mapping is rejected
+- India equity live monitoring requires user-authorized broker/live data
+- provider credentials/tokens never appear in trade-domain records
+- raw provider payloads are not copied into domain docs
+
+### Audit, AI, And RAG Tests
+
+Currently covered for Phase 9:
+
+- audit entries are sanitized
+- provider credentials and session tokens are redacted
+- AI output schema validation
+- AI explanations cannot mutate trade/risk state
+- AI fallbacks are deterministic and audited
+
+Must cover in later phases:
+
+- audit log created for future RAG events
+- RAG ingestion rejects raw ticks, candles, order book, provider payloads, and secrets
+- RAG stores verified knowledge/summaries only
 
 ## 11. Suggested Test Script
 
@@ -386,3 +974,321 @@ Add tests in this order:
 5. WebSocket manager tests.
 6. Chat copilot tests.
 7. Contract tests for frontend API shapes.
+
+## 14. Template Scoring And Realtime Context Coverage
+
+- all initial templates resolve and weights total 100
+- incompatible template/market scope rejects
+- RR evaluator preserves deterministic permission bands
+- RR below one hard rejects
+- aggregation normalizes over executed sections
+- unavailable index, sector, VWAP, volume, order-flow, and funding data is partial/skipped
+- commodity metadata and Phase 14 warnings remain present
+- TradeScoreSnapshot contains section and evaluator breakdowns
+- analyzer snapshots summarize price, CVD, cooldown, and order-book state
+- buffers are omitted by default and capped at 100 when requested
+- output excludes secrets, provider tokens, and raw payloads
+- template context reports evaluator availability
+- ActiveTrade monitoring health is included when available
+- scoring context route uses existing authentication middleware
+
+## 15. Market Snapshot Engine Coverage
+
+Phase 16 tests cover:
+
+- creating and updating snapshots from normalized ticks
+- latest/previous price, day high/low, and change percentage
+- 1m and 5m candle creation
+- bounded candle history
+- VWAP calculation and above/below/near classification
+- honest unavailable VWAP/volume state without volume input
+- fresh-to-stale transitions
+- bounded resource eviction
+- public Binance keys and user-scoped Angel keys
+- defensive-copy behavior
+- scoring-context candle, VWAP, volume, freshness, and readiness summaries
+- bounded analyzer buffers remaining unchanged
+- no secret/raw payload projection
+- deterministic VWAP direction and distance evaluator bands
+- freshness evaluator behavior
+- RVOL missing-baseline behavior
+- index VWAP alignment and honest missing-index behavior
+
+Provider WebSockets and external APIs are not called by snapshot unit tests. Tests feed
+normalized ticks directly into `MarketSnapshotService`.
+
+Future coverage:
+
+- subscription reconciliation for template-only resource interest
+- restart and multi-instance snapshot behavior
+- longer historical RVOL baselines
+- index/sector/VIX resource resolution
+- out-of-order provider ticks and session-boundary reset policy
+
+## 16. India Equity Intraday Evaluator Coverage
+
+Phase 17 adds focused tests for:
+
+- index VWAP alignment for LONG/SHORT/opposed/missing contexts
+- index 5m/15m structure with full and one-timeframe alignment
+- index choppiness transitions
+- India VIX stable and unavailable states
+- sector relative strength for LONG and SHORT
+- missing sector snapshots
+- stock vs sector and stock vs index relative strength
+- stock intraday structure and missing key levels
+- RVOL, volume expansion, candle-volume confirmation, and dry-up warnings
+- spread readiness and unavailable depth
+- supported/missing setup types
+- geometry-only stoploss partial state
+- candle confirmation and nearby-level blocking
+- conservative India-equity weighted section aggregation
+- final score matching weighted section-score sum in the normal path
+- ScoreCheck and TradeScoreSnapshot evaluator persistence
+- realtime criteria readiness, resource keys, freshness, reason codes, and warnings
+- Angel index/VIX resource keys remaining scoped by user
+
+Tests do not call Angel APIs or broker WebSockets. Resource snapshots and canonical symbols
+are injected through service ports.
+
+## 17. Phase 17B Runtime Context Consistency Coverage
+
+Phase 17B adds tests for:
+
+- realtime context and ScoreCheck sharing `ScoringContextBuilderService`
+- ScoreCheck storing a safe bounded runtime summary in `TradeScoreSnapshot`
+- CVD evaluator scoring LONG/SHORT alignment from analyzer runtime
+- order-book evaluator scoring tight and wide spreads from analyzer runtime
+- partial liquidity sections keeping missing evaluators in the denominator
+- missing data producing `PARTIAL_DATA` instead of stale status
+- stale snapshot readiness producing `MARKET_SNAPSHOT_STALE`
+- stale runtime-backed criteria showing partial readiness in template context
+
+Tests still do not call provider WebSockets, Angel APIs, broker APIs, or AI services.
+Runtime snapshots are injected through service ports.
+
+## 18. Phase 18A Delete/Update Workflow Coverage
+
+Phase 18A requires backend-backed mutation coverage for trading dashboard records:
+
+- owner can soft-delete standalone ScoreCheck records
+- deleted ScoreChecks are excluded from list/detail APIs
+- linked TradeScoreSnapshot records are marked deleted
+- ScoreCheck delete/update is blocked after execution lifecycle starts
+- owner can update standalone ScoreCheck planned inputs and trigger a new score snapshot
+- owner can soft-delete pending TradeSetups
+- TradeSetup delete/update is blocked after execution or ActiveTrade creation
+- TradePlan delete is blocked by open ActiveTrades
+- TradePlan delete is blocked by finalized TradeResults or finalized Journals
+- TradePlan delete cascades only draft/planned child records through soft-delete markers
+- non-owner mutation attempts return not found/unauthorized behavior
+- destructive and update actions produce audit records
+
+Regression expectations:
+
+- RiskGovernor behavior remains unchanged.
+- AnalyzerEngine behavior remains unchanged.
+- ActiveTrade monitoring behavior remains unchanged.
+- TradeResult remains the only risk-state projection input.
+
+## 19. Phase 18A-2 Plan Context And Recovery Coverage
+
+Phase 18A-2 should be covered with tests for:
+
+- selected-plan setup, active-trade, event, result, and journal lists returning only that plan
+- global list APIs remaining backward compatible
+- owner can reset STOP_TRADING lock with a reason
+- reset requires a reason
+- reset is blocked for archived plans and open active trades
+- reset preserves TradeResults, Journals, realized P&L, trade counts, and starting capital
+- reset can optionally clear daily risk lock fields
+- reset creates `TRADE_PLAN_RISK_LOCK_RESET` audit log
+- owner can restart a plan with copied safe settings and new starting capital
+- restart creates a clean risk state for the new plan
+- restart optionally archives the old plan
+- restart preserves old TradeResults and Journals under the old plan
+- restart is blocked while open active trades exist
+- restart creates restart/archive audit logs
+- dashboard summary returns block reasons, stop reasons, reset/restart availability, and open-trade status
+
+Current regression suite still covers RiskGovernor, ScoreCheck, TradeSetup, ActiveTrade,
+TradeResult, TradeMonitoring, and analyzer behavior. Dedicated reset/restart tests should
+be added before these APIs are treated as production-risk controls.
+
+## 20. Phase 18A-3 Rejected TradeSetup Retry Coverage
+
+Phase 18A-3 should be covered with tests for:
+
+- owner can retry a rejected TradeSetup after risk reset
+- retry requires a non-empty reason
+- retry re-runs RiskGovernor using current TradePlanRiskState
+- ready plan changes a rejected setup to approved/governed status when RiskGovernor allows
+- still-blocked plan keeps the setup rejected
+- executed, cancelled, deleted, and ActiveTrade-linked setups cannot retry
+- conversion of an already converted rejected ScoreCheck returns retry guidance instead of creating a duplicate
+- retry creates `TRADE_SETUP_RISK_RETRY` and `RISK_GOVERNOR_EVALUATED` audit records
+- frontend shows retry action for rejected linked setup instead of dead-ending on "Already converted"
+
+Regression expectations:
+
+- Retry must not mutate ScoreCheck scoring output.
+- Retry must not delete TradeResults, Journals, or existing risk history.
+- Retry must not affect AnalyzerEngine, broker execution, or ActiveTrade monitoring behavior.
+
+## 21. Phase 18B User Editable Scoring Template Coverage
+
+Phase 18B should be covered with tests for:
+
+- authenticated user can list system and own user templates
+- system templates are readonly
+- user can duplicate a system template into a private user template
+- user can update an unused custom template in place
+- updating a used custom template creates a new latest version
+- archived templates are hidden from normal template lists and cannot be selected
+- section weights must total 100 across enabled sections
+- evaluator weights must total 100 within each enabled section
+- unknown evaluator keys are rejected
+- unsafe config strings such as `function`, `=>`, `eval(`, or `<script` are rejected
+- permission thresholds must be ordered and bounded from 0 to 100
+- ScoreCheck can resolve a system template by key
+- ScoreCheck can resolve a user template by id
+- ScoreCheck stores template key/id/version/scope/name in ScoreCheck and TradeScoreSnapshot
+- usedCount and lastUsedAt update only after successful scoring
+
+Regression expectations:
+
+- RiskGovernor remains final authority after ScoreCheck conversion.
+- AI cannot score or edit scoring output.
+- Historical ScoreChecks are not recalculated when templates are edited.
+- ScoringEngine executes only registered evaluator keys.
+
+## 22. Phase 18C-0 Angel NSE/NFO Symbol And Live Rate Coverage
+
+Phase 18C-0 should be covered with tests for:
+
+- Angel mapper maps NSE equity rows to `EQUITY/CASH`.
+- Angel mapper maps NFO `FUTSTK/FUTIDX` rows to `FNO/FUTURE`.
+- Angel mapper maps NFO `OPTSTK/OPTIDX` rows to `FNO/OPTION` with strike and CE/PE.
+- Angel sync can upsert NSE/NFO rows by provider + exchange + instrument token.
+- Expired NFO/BFO contracts are skipped by default.
+- Existing MCX mapping and sync behavior remains intact.
+- Symbol search finds RELIANCE cash, NIFTY futures, and NIFTY CE options.
+- Symbol search filters by exchange, instrument type, option type, strike, and underlying.
+- Angel quote mapping supports NSE and NFO without exposing raw credentials or provider payloads.
+- Angel tick normalization supports NSE/NFO and updates MarketSnapshotService through the existing path.
+- Angel subscription keys include user id for NSE/NFO.
+- Frontend symbol picker builds and can filter India Cash, India Futures, India Options, and MCX.
+
+Regression expectations:
+
+- Binance symbol search/live-rate behavior remains unchanged.
+- MCX live-rate behavior remains unchanged.
+- No order placement, option chain, Greeks, margin, or AI scoring is added.
+
+## 23. Phase 18C-1 Scoring Template Resource Configuration Coverage
+
+Phase 18C-1 should be covered with tests for:
+
+- duplicate `allowedTradableSymbols` are rejected
+- resource and allowed symbol ids must exist in the global `Symbol` registry
+- enabled `sectionOverrides` weights must total 100
+- system templates remain readonly and must be duplicated before editing
+- owning user can update only their own user template
+
+Regression expectations:
+
+- ScoreCheck snapshot capture is not implemented in this phase.
+- Scoring output and RiskGovernor behavior remain unchanged.
+- AI review does not consume template resource configuration yet.
+
+## 24. Phase 18C-2 ScoreCheck Template Symbol Validation Coverage
+
+Phase 18C-2 should be covered with tests for:
+
+- ScoreCheck with a user template and allowed symbol succeeds.
+- ScoreCheck with a user template and disallowed symbol rejects.
+- ScoreCheck with a disabled allowed-symbol shape rejects when present.
+- ScoreCheck with another user's private template still rejects through ownership lookup.
+- ScoreCheck with a user template that has no allowed symbols rejects with `TEMPLATE_HAS_NO_ALLOWED_SYMBOLS`.
+- Existing system-template ScoreCheck behavior remains broad and unchanged.
+
+Regression expectations:
+
+- Frontend filtering is only UX; backend remains the authority.
+- ScoreCheck resource snapshots are still not implemented.
+
+## 25. Phase 18C-3 Multi-Symbol Resource Snapshot Builder Coverage
+
+Phase 18C-3 should be covered with tests for:
+
+- user template resource config resolves `PRIMARY_SYMBOL` from the selected ScoreCheck symbol
+- configured `MARKET_INDEX`, `BANK_INDEX`, `VOLATILITY_INDEX`, and `SECTOR_INDEX` resolve from template symbol ids
+- configured related symbols resolve as `RELATED_SYMBOL`
+- missing optional related symbol references produce warnings but not blockers
+- missing required configured resources produce blockers and `BLOCKING_MISSING`
+- compact resource snapshot summaries exclude raw provider payloads, raw ticks, order books, and candle arrays
+- ScoreCheck response includes resource readiness summary for user templates
+- system template ScoreCheck behavior remains unchanged
+
+Regression expectations:
+
+- Persistent `ScoreCheckSnapshot` TTL storage is covered separately in Phase 18C-4.
+- RiskGovernor and scoring engine behavior are not rewritten.
+
+## 26. Phase 18C-4 Expirable ScoreCheckSnapshot Coverage
+
+Phase 18C-4 should be covered with tests for:
+
+- ScoreCheck creates one temporary `ScoreCheckSnapshot`.
+- Snapshot has an `expiresAt`.
+- `INTRADAY` snapshots default to 24 hours.
+- `SWING` snapshots default to 7 days.
+- template snapshot policy overrides are bounded between 1 hour and 7 days.
+- the MongoDB TTL index exists on `expiresAt`.
+- authenticated users can fetch their own snapshot.
+- another user cannot fetch the snapshot.
+- missing or expired snapshots return `SCORE_CHECK_SNAPSHOT_EXPIRED_OR_NOT_FOUND`.
+- snapshot payload excludes raw provider payloads, raw ticks, order books, candles, broker tokens, and secrets.
+
+Regression expectations:
+
+- `ScoreCheckSnapshot` is temporary explanation/debugging data.
+- `TradeScoreSnapshot` remains the permanent audit path.
+- RiskGovernor, scoring formulas, and template monitoring are unchanged.
+
+## 27. Phase 18C-5 Score Explanation Panel Coverage
+
+Phase 18C-5 should be covered with frontend build/type coverage for:
+
+- latest ScoreCheck renders score, permission, confidence, and status
+- snapshot metadata renders when `scoreCheckSnapshotId` and expiry fields exist
+- the UI can fetch `GET /api/score-checks/:id/snapshot`
+- resource readiness renders from fetched snapshot or inline resource summary fallback
+- section breakdown renders from fetched snapshot
+- warnings/blockers render without blocking conversion controls
+- expired or unavailable snapshots show a compact non-blocking message
+
+Regression expectations:
+
+- explanation panel is read-only
+- no scoring formulas or RiskGovernor behavior change
+- no analytics/calibration dashboard is added
+
+## 28. Phase 18C-6 Permanent TradeScoreSnapshot On Conversion Coverage
+
+Phase 18C-6 should be covered with tests for:
+
+- converting a ScoreCheck with a valid `ScoreCheckSnapshot` creates a permanent `TradeScoreSnapshot`
+- the permanent snapshot has no `expiresAt` TTL field
+- template identity, selected symbol, resolved resources, resource snapshots, readiness summary, section breakdown, final score, permission, status, confidence, warnings, blockers, and source snapshot metadata are copied
+- missing or expired `ScoreCheckSnapshot` blocks conversion with `SCORE_CHECK_SNAPSHOT_EXPIRED_RERUN_REQUIRED`
+- an existing permanent snapshot for the ScoreCheck is reused instead of duplicated
+- RiskGovernor behavior is unchanged
+- rejected governed TradeSetups still retain a linked permanent score snapshot
+- permanent snapshots exclude raw provider payloads, raw ticks, order books, candles, broker tokens, and secrets
+
+Regression expectations:
+
+- `ScoreCheckSnapshot` remains temporary explanation/debugging data
+- `TradeScoreSnapshot` is created only on conversion
+- RiskGovernor remains final authority

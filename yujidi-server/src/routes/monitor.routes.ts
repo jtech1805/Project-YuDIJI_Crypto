@@ -7,6 +7,7 @@ import {
   getSymbols,
   getUserMonitors,
   debugEngineState,
+  searchUniversalSymbols,
   updateMonitor
 } from "../controllers/monitor.controller.js";
 import { AppError } from "../errors/AppError.js";
@@ -16,10 +17,16 @@ import { requireAuth } from "../middlewares/requireAuth.js";
 const monitorRouter = Router();
 
 const createMonitorSchema = z.object({
-  symbol: z.string().min(1),
+  symbolId: z.string().min(1).optional(),
+  symbol: z.string().min(1).optional(),
   thresholdPercentage: z.number().positive().max(100),
   timeWindowMinutes: z.number().int().positive().max(24 * 60),
-  trigger: z.string().min(1).max(10)
+  trigger: z.string().min(1).max(10),
+  provider: z.string().optional(),
+  exchange: z.string().optional(),
+  instrumentToken: z.string().optional(),
+}).refine((value) => Boolean(value.symbolId || value.symbol), {
+  message: "symbolId or symbol is required",
 });
 
 const validateBody =
@@ -36,6 +43,7 @@ const validateBody =
     };
 
 monitorRouter.get("/symbols", asyncHandler(getSymbols));
+monitorRouter.get("/symbols/universal", asyncHandler(searchUniversalSymbols));
 monitorRouter.get("/", requireAuth, asyncHandler(getUserMonitors));
 monitorRouter.post("/", requireAuth, validateBody(createMonitorSchema), asyncHandler(createMonitor));
 monitorRouter.patch("/:id", requireAuth, asyncHandler(updateMonitor));

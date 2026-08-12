@@ -1,7 +1,7 @@
 // import type { Request, Response } from "express";
 // import { copilotRequestSchema } from '../routes/chat.routes.js';
-// import { sharedWebsocketManager } from '../services/websocket.service.js'; // Your engine singleton
-// import { sharedLlmService } from '../services/llm.service.js';
+// import { sharedWebsocketManager } from '../services/trading/websocket.service.js'; // Your engine singleton
+// import { sharedLlmService } from '../services/ai-runtime/llm.service.js';
 // import { z } from 'zod';
 // export const handleCopilotChat = async (req: Request, res: Response) => {
 //     try {
@@ -164,21 +164,62 @@
 //         });
 //     }
 // };
+import { createHash, randomUUID } from "node:crypto";
 import type { Request, Response } from "express";
-import { copilotRequestSchema } from '../routes/chat.routes.js';
-import { sharedWebsocketManager } from '../services/websocket.service.js';
-import { sharedLlmService } from '../services/llm.service.js';
+import { sharedWebsocketManager } from '../services/trading/websocket.service.js';
+import { sharedLlmService } from '../services/ai-runtime/llm.service.js';
+import { llmTraceService, type LlmTraceService } from "../services/ai-runtime/llm-trace.service.js";
 import { z } from 'zod';
-import { ChatSessionModel } from "../models/chatSession.js";
+import { ChatSessionModel, type IChatSession } from "../models/chatSession.js";
 
-export const handleCopilotChat = async (req: Request, res: Response) => {
+export const COPILOT_CHAT_PROMPT_VERSION = "COPILOT_CHAT_V1";
+const copilotRequestSchema = z.object({
+    symbol: z.string().min(3),
+    direction: z.enum(["LONG", "SHORT"]),
+    walletBalance: z.number().positive(),
+    riskPercentage: z.number().positive(),
+    leverage: z.number().positive(),
+    userPrompt: z.string().min(1),
+    chatHistory: z.array(z.object({
+        role: z.enum(["user", "assistant", "system"]),
+        content: z.string(),
+    })).max(10),
+});
+
+type CopilotChatDependencies = {
+    llmService: Pick<typeof sharedLlmService, "generateCopilotResponse" | "getProviderMetadata">;
+    llmTraceService: Pick<LlmTraceService, "record">;
+    getNow: () => Date;
+    generateId: () => string;
+    getSupportResistance: typeof sharedWebsocketManager.getSupportResistance;
+    findChatSession: (userId: string, symbol: string) => Promise<IChatSession | null>;
+    createChatSession: (userId: string, symbol: string) => IChatSession;
+};
+
+const defaultCopilotChatDependencies: CopilotChatDependencies = {
+    llmService: sharedLlmService,
+    llmTraceService,
+    getNow: () => new Date(),
+    generateId: randomUUID,
+    getSupportResistance: (symbol) => sharedWebsocketManager.getSupportResistance(symbol),
+    findChatSession: (userId, symbol) => ChatSessionModel.findOne({ user: userId, symbol }),
+    createChatSession: (userId, symbol) =>
+        new ChatSessionModel({ user: userId, symbol, messages: [] }),
+};
+
+export const createCopilotChatHandler = (
+    overrides: Partial<CopilotChatDependencies> = {},
+) => {
+    const dependencies = { ...defaultCopilotChatDependencies, ...overrides };
+
+    return async (req: Request, res: Response) => {
     try {
         // 1. Validate incoming React payload
         const validatedData = copilotRequestSchema.parse(req.body);
         const { symbol, direction, walletBalance, riskPercentage, leverage, userPrompt, chatHistory } = validatedData;
         const userId = req.user?.id || "";
         // 2. Fetch O(1) Live Math
-        const { orderBookData, currentCvd } = sharedWebsocketManager.getSupportResistance(symbol);
+        const { orderBookData, currentCvd } = dependencies.getSupportResistance(symbol);
         const { rawCurrentPrice, rawSupport, rawResistance } = orderBookData;
 
         let entry = rawCurrentPrice ?? 0;
@@ -285,9 +326,9 @@ export const handleCopilotChat = async (req: Request, res: Response) => {
         // ==========================================
 
         // A. Find existing session or create a new one for this specific Asset
-        let chatSession = await ChatSessionModel.findOne({ user: userId, symbol: symbol });
+        let chatSession = await dependencies.findChatSession(userId, symbol);
         if (!chatSession) {
-            chatSession = new ChatSessionModel({ user: userId, symbol: symbol, messages: [] });
+            chatSession = dependencies.createChatSession(userId, symbol);
         }
 
         // B. Extract the Sliding Window (Grab only the last 6 messages to save Groq tokens)
@@ -298,7 +339,91 @@ export const handleCopilotChat = async (req: Request, res: Response) => {
         }));
 
         // C. Execute LLM Call (Passing the DB history instead of frontend history)
-        const aiResponse = await sharedLlmService.generateCopilotResponse(systemInstruction, recentHistory, userPrompt);
+        const traceId = dependencies.generateId();
+        const correlationId = dependencies.generateId();
+        const startedAt = dependencies.getNow();
+        const providerMetadata = dependencies.llmService.getProviderMetadata();
+        const inputHash = createHash("sha256").update(JSON.stringify({
+            userId,
+            sessionId: chatSession._id.toString(),
+            symbol,
+            messageLength: userPrompt.length,
+            historyMessageCount: recentHistory.length,
+            hasWalletBalance: walletBalance !== undefined,
+            hasEntry: rawCurrentPrice !== undefined && rawCurrentPrice !== null,
+            hasStopLoss: stopLoss !== 0,
+            hasTarget: takeProfit !== 0,
+            deterministicIntentContextAvailable: true,
+        })).digest("hex");
+        const traceBase = {
+            traceId,
+            correlationId,
+            taskType: "COPILOT_CHAT" as const,
+            userId,
+            source: {
+                entityType: "CHAT_SESSION",
+                entityId: chatSession._id.toString(),
+            },
+            provider: providerMetadata.name,
+            ...(providerMetadata.modelName ? { model: providerMetadata.modelName } : {}),
+            promptVersion: COPILOT_CHAT_PROMPT_VERSION,
+            startedAt,
+            inputReference: {
+                hash: inputHash,
+                redactedSummary: {
+                    messageLength: userPrompt.length,
+                    historyMessageCount: recentHistory.length,
+                    hasWalletBalance: walletBalance !== undefined,
+                    hasEntry: rawCurrentPrice !== undefined && rawCurrentPrice !== null,
+                    hasStopLoss: stopLoss !== 0,
+                    hasTarget: takeProfit !== 0,
+                },
+            },
+            fallbackUsed: false,
+        };
+        let aiResponse;
+        try {
+            aiResponse = await dependencies.llmService.generateCopilotResponse(
+                systemInstruction,
+                recentHistory,
+                userPrompt,
+                symbol,
+            );
+        } catch (error: unknown) {
+            const completedAt = dependencies.getNow();
+            void dependencies.llmTraceService.record({
+                ...traceBase,
+                status: "PROVIDER_FAILED",
+                failureCode: "COPILOT_CHAT_GENERATION_FAILED",
+                completedAt,
+                latencyMs: Math.max(0, completedAt.getTime() - startedAt.getTime()),
+                validation: {
+                    parseSucceeded: false,
+                    schemaSucceeded: false,
+                    semanticSucceeded: false,
+                },
+            }).catch(() => undefined);
+            throw error;
+        }
+        const completedAt = dependencies.getNow();
+        void dependencies.llmTraceService.record({
+            ...traceBase,
+            status: "COMPLETED",
+            completedAt,
+            latencyMs: Math.max(0, completedAt.getTime() - startedAt.getTime()),
+            outputReference: {
+                fieldSummary: {
+                    intent: aiResponse.intent,
+                    isApproved: aiResponse.isApproved,
+                    replyLength: aiResponse.reply.length,
+                },
+            },
+            validation: {
+                parseSucceeded: true,
+                schemaSucceeded: true,
+                semanticSucceeded: true,
+            },
+        }).catch(() => undefined);
 
         // D. Save the new interaction to MongoDB permanently
         chatSession.messages.push({ role: 'user', content: userPrompt, timestamp: new Date() });
@@ -340,7 +465,10 @@ export const handleCopilotChat = async (req: Request, res: Response) => {
             error: "The YuJiDi quantitative engine is currently analyzing heavy data. Please try again in a few seconds."
         });
     }
+    };
 };
+
+export const handleCopilotChat = createCopilotChatHandler();
 export const getChatHistory = async (req: Request, res: Response) => {
     try {
         const userId = req.user?.id || "";

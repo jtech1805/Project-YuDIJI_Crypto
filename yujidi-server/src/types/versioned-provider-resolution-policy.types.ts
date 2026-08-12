@@ -1,0 +1,6 @@
+import type { ProviderResolutionPolicy, ValidatedProviderResolutionPolicy } from "./provider-resolution-policy.types.js";
+export type VersionedProviderResolutionPolicy = Readonly<{ definition: ValidatedProviderResolutionPolicy; compileEligible: boolean; liveExecutionEligible: boolean; replayFixtureEligible: boolean }>;
+export type ProviderResolutionPolicyRegistration = Readonly<{ definition: ProviderResolutionPolicy; compileEligible: boolean; liveExecutionEligible?: boolean; replayFixtureEligible?: boolean }>;
+export interface VersionedProviderResolutionPolicyRegistry { getExact(id: string, version: number): VersionedProviderResolutionPolicy | null; getLatest(id: string): VersionedProviderResolutionPolicy | null; listVersions(id: string): readonly VersionedProviderResolutionPolicy[]; }
+export type VersionedProviderResolutionPolicyRegistryErrorCode = "INVALID_COLLECTION" | "INVALID_POLICY" | "INVALID_COMPILE_ELIGIBILITY" | "DUPLICATE_VERSION";
+export class VersionedProviderResolutionPolicyRegistryError extends Error { public constructor(public readonly code: VersionedProviderResolutionPolicyRegistryErrorCode) { super(`Versioned provider-resolution-policy authority failed: ${code}`); this.name = "VersionedProviderResolutionPolicyRegistryError"; } }

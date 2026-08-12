@@ -1,0 +1,33 @@
+import "dotenv/config";
+import mongoose from "mongoose";
+import { pathToFileURL } from "node:url";
+import { createMongoAtlasVectorAdapterConfig, MONGO_ATLAS_DEV_DETERMINISTIC_VECTOR_INDEX_NAME, MONGO_ATLAS_VECTOR_INDEX_NAME } from "../../src/config/mongo-atlas-vector.config.js";
+import { MONGO_ATLAS_DEV_DETERMINISTIC_VECTOR_INDEX_DEFINITION, MONGO_ATLAS_PLATFORM_KNOWLEDGE_VECTOR_INDEX_DEFINITION } from "../../src/registries/knowledge-vector-index-definition.registry.js";
+import { MongoAtlasVectorIndexSpecificationService } from "../../src/services/knowledge/mongo-atlas-vector-index-specification.service.js";
+import { MongoAtlasVectorIndexAdministrationService } from "../../src/services/knowledge/mongo-atlas-vector-index-administration.service.js";
+
+export const validateAtlasIndexCreationGuard=(env:NodeJS.ProcessEnv)=>{
+  if(env.YUDIJI_ATLAS_VECTOR_INDEX_CREATION_CONFIRMED!=="true")throw new Error("ATLAS_VECTOR_INDEX_CREATION_NOT_CONFIRMED");
+  if(env.YUDIJI_ATLAS_VECTOR_LIVE_VALIDATION_CONFIRMED!=="true")throw new Error("ATLAS_VECTOR_LIVE_VALIDATION_NOT_CONFIRMED");
+  if(env.NODE_ENV!=="development")throw new Error("ATLAS_VECTOR_INDEX_CREATION_DEVELOPMENT_ONLY");
+  if(!env.MONGO_URI?.trim())throw new Error("MONGO_URI_REQUIRED");
+  if(!env.YUDIJI_ATLAS_VECTOR_DATABASE||!env.YUDIJI_ATLAS_VECTOR_COLLECTION||!env.YUDIJI_ATLAS_VECTOR_INDEX_NAME)throw new Error("ATLAS_VECTOR_EXPLICIT_TARGET_REQUIRED");
+  const config=createMongoAtlasVectorAdapterConfig(env);
+  if(/prod|production/i.test(config.databaseName)||!/dev|test|sandbox/i.test(config.databaseName))throw new Error("ATLAS_VECTOR_DEVELOPMENT_DATABASE_REQUIRED");
+  if(config.collectionName!=="knowledgevectorindexprojections"||![MONGO_ATLAS_DEV_DETERMINISTIC_VECTOR_INDEX_NAME,MONGO_ATLAS_VECTOR_INDEX_NAME].includes(config.vectorIndexName as any))throw new Error("ATLAS_VECTOR_TARGET_NOT_APPROVED");
+  const definition=config.vectorIndexName===MONGO_ATLAS_VECTOR_INDEX_NAME?MONGO_ATLAS_PLATFORM_KNOWLEDGE_VECTOR_INDEX_DEFINITION:MONGO_ATLAS_DEV_DETERMINISTIC_VECTOR_INDEX_DEFINITION;
+  return Object.freeze({config,definition});
+};
+
+export const run=async(env:NodeJS.ProcessEnv=process.env)=>{
+  const {config,definition}=validateAtlasIndexCreationGuard(env);
+  const specification=new MongoAtlasVectorIndexSpecificationService().create(definition,config);
+  await mongoose.connect(env.MONGO_URI!,{dbName:config.databaseName});
+  try{
+    const collection=mongoose.connection.db!.collection(config.collectionName);
+    const result=await new MongoAtlasVectorIndexAdministrationService(collection as any,config.requestTimeoutMs,config.totalDeadlineMs).ensure(specification,true,1000);
+    process.stdout.write(`${JSON.stringify({logicalIndex:{indexId:definition.indexId,indexVersion:definition.indexVersion},result,specification:{name:specification.name,digest:specification.digest,definition:specification.definition}},null,2)}\n`);
+    if(result.status!=="INDEX_QUERYABLE")process.exitCode=1;
+  }finally{await mongoose.disconnect();}
+};
+if(import.meta.url===pathToFileURL(process.argv[1]??"").href)run().catch(error=>{process.stderr.write(`${error instanceof Error?error.message:"ATLAS_VECTOR_INDEX_COMMAND_FAILED"}\n`);process.exitCode=1;});

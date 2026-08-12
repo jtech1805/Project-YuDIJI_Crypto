@@ -5,15 +5,15 @@ This document explains the YuJiDi analyzer engine: what it does, what data it co
 Primary implementation file:
 
 ```txt
-src/services/analyzer.service.ts
+src/services/trading/analyzer.service.ts
 ```
 
 Related files:
 
 ```txt
-src/services/websocket.service.ts
-src/services/news.service.ts
-src/services/llm.service.ts
+src/services/trading/websocket.service.ts
+src/services/market-data/news.service.ts
+src/services/ai-runtime/llm.service.ts
 src/models/TripwireConfig.ts
 src/models/Alert.ts
 ```
@@ -21,6 +21,10 @@ src/models/Alert.ts
 ## 1. What The Analyzer Does
 
 The analyzer engine converts live market data into user-facing AI alerts.
+
+Boundary:
+
+`AnalyzerEngine` is separate from the new trade lifecycle `ScoreCheck` and `ScoringEngine` foundation. Analyzer evaluates live Monitor/Tripwire threshold breaches and can create alerts. ScoreCheck is a standalone pre-trade scoring workflow that validates planned trade geometry and creates score snapshots; it does not start monitoring, update risk state, create alerts, or create ActiveTrade records.
 
 Its responsibility is to:
 
@@ -41,6 +45,28 @@ Its responsibility is to:
 
 The analyzer is the heart of YuJiDi's backend because it turns raw Binance data into explainable market intelligence.
 
+### 1.1 Two Real-Time Alert Lanes
+
+Phase 10 keeps two domain-separated WebSocket lanes:
+
+```txt
+Market monitoring lane:
+Monitor/Tripwire
+  -> AnalyzerEngine
+  -> Alert
+  -> NEW_ALERT
+
+Trade lifecycle lane:
+ActiveTrade
+  -> TradeMonitoringService
+  -> TradeEvent
+  -> TRADE_EVENT_CREATED
+```
+
+The second lane does not change AnalyzerEngine logic. It reuses the existing
+authenticated user socket registry only for delivery. TradeEvent payloads are
+sent to the owning user and are not broadcast by symbol subscription.
+
 ## 2. Inputs
 
 The analyzer receives three main categories of input.
@@ -56,7 +82,7 @@ Binance WebSocket stream: <symbol>@aggTrade
 Handled by:
 
 ```txt
-src/services/websocket.service.ts
+src/services/trading/websocket.service.ts
 ```
 
 Forwarded to:
@@ -90,7 +116,7 @@ Binance WebSocket stream: <symbol>@depth20@100ms
 Handled by:
 
 ```txt
-src/services/websocket.service.ts
+src/services/trading/websocket.service.ts
 ```
 
 Forwarded to:
@@ -135,13 +161,12 @@ Fields used by the analyzer:
 - `trigger`
 - `isActive`
 
-Current query:
+Current behavior:
 
-```ts
-TripwireConfigModel.find({
-  symbol: normalizedSymbol,
-  isActive: true,
-})
+```txt
+read active monitors from in-memory cache
+  -> refresh from MongoDB on cache miss or expiry
+  -> refresh cache on monitor create/update/delete
 ```
 
 Used for:
@@ -277,6 +302,63 @@ Used by:
 - alert report generation
 - support/resistance calculation
 - copilot trade math
+
+### 3.5 activeMonitorCache
+
+Type:
+
+```ts
+Map<string, { monitors: ActiveMonitorDocument[]; expiresAt: number; loadedAt: number }>
+```
+
+Purpose:
+
+Caches active monitors by symbol so the analyzer does not query MongoDB on every high-frequency `aggTrade` tick.
+
+Current TTL:
+
+```txt
+5 seconds
+```
+
+Refresh behavior:
+
+```txt
+cache miss or expiry
+  -> query MongoDB for active monitors
+  -> cache result for 5 seconds
+```
+
+Invalidation behavior:
+
+```txt
+monitor create/update/delete
+  -> refresh cache for that monitor symbol from MongoDB
+```
+
+Delete behavior:
+
+```txt
+delete last active monitor for a symbol
+  -> refresh cache
+  -> store activeMonitorCount = 0 as a negative cache entry
+```
+
+The zero-monitor cache entry prevents repeated MongoDB reads if ticks are still arriving for a symbol that no longer has active monitors.
+
+Verification logs:
+
+```txt
+ANALYZER_MONITOR_CACHE_REFRESH_REQUESTED
+ANALYZER_MONITOR_CACHE_REFRESH
+ANALYZER_MONITOR_CACHE_REFRESHED
+ANALYZER_MONITOR_CACHE_INVALIDATED
+ANALYZER_MONITOR_CACHE_HIT  // debug level
+```
+
+Debug endpoint:
+
+`GET /api/monitors/debug/engine-state` includes `activeMonitorCache` metadata with monitor count, negative-cache status, loaded time, expiry time, and TTL remaining.
 
 ## 4. Trigger Logic For Drop And Spike
 
@@ -866,16 +948,17 @@ Affected state:
 - cooldowns
 - order book
 
-### 8.5 MongoDB Query On Every Tick
+### 8.5 Active Monitor Cache Is In Memory
 
-The analyzer fetches active monitors from MongoDB on every relevant aggTrade tick.
+The analyzer now uses a short TTL in-memory cache for active monitors by symbol.
 
-This can become expensive under high-frequency market data.
+This reduces MongoDB read load on high-frequency market data.
 
-Possible improvement:
+Remaining limitations:
 
-- cache active monitors by symbol
-- invalidate cache on monitor create/update/delete
+- Cache is local to one backend process.
+- Multi-instance deployments still need shared cache refresh/invalidation.
+- Very recent monitor mutations rely on explicit cache refresh plus short TTL fallback.
 
 ### 8.6 Cooldown Starts Before Alert Success
 
@@ -912,3 +995,267 @@ This makes later debugging harder.
 Because analyzer state is local memory, multiple backend instances can produce inconsistent behavior.
 
 Scaling safely would require shared state or a separate ingestion/analyzer service.
+
+## 9. Trade Monitoring Boundary
+
+The existing AnalyzerEngine is a market-monitor alert engine. It detects threshold breaches for user-created Monitor/Tripwire records.
+
+Current responsibility:
+
+```txt
+Market data tick
+  -> AnalyzerEngine
+  -> drop/spike monitor evaluation
+  -> Alert
+  -> AI explanation
+```
+
+ActiveTrade monitoring is a separate lifecycle concern and is not folded directly into `analyzer.service.ts`.
+
+Current Phase 6 foundation:
+
+```txt
+Manual/synthetic price
+  -> MonitoringRuleEngine
+  -> ActiveTrade rule evaluation
+  -> TradeEvent
+```
+
+Future live flow may replace the manual price input with normalized market ticks. TradeResult, risk projection, journal, and AI explanation remain later concerns.
+
+### 9.1 AnalyzerEngine vs MonitoringRuleEngine
+
+AnalyzerEngine:
+
+- evaluates market monitors/tripwires
+- works with `TripwireConfig`
+- creates `Alert`
+- uses drop/spike threshold logic
+- may use CVD/order-book/news context for alert explanation
+
+MonitoringRuleEngine:
+
+- evaluates ActiveTrade lifecycle rules
+- works with actual/current `ActiveTrade` values
+- creates `TradeEvent`
+- currently supports manual/synthetic evaluation
+- currently detects stoploss, target 1, target 2, +1R, and near-stop conditions
+- does not close trades or create TradeResult
+- may become template-driven and market-specific later
+- must not use AI for final lifecycle decisions
+
+### 9.2 AI Boundary
+
+AI may explain both analyzer alerts and future trade lifecycle events.
+
+AI must not:
+
+- decide whether a monitor threshold breached
+- decide trade permission
+- override RiskGovernor
+- mutate ActiveTrade
+- mutate TradeResult
+- mutate RiskState
+- mutate Journal
+
+Deterministic services own decisions:
+
+- AnalyzerEngine owns market monitor threshold detection.
+- ScoringEngine owns ScoreCheck calculations.
+- RiskGovernor owns managed-trade permission.
+- MonitoringRuleEngine owns ActiveTrade lifecycle event detection.
+- RiskStateProjectionService owns risk-state updates.
+
+### 9.3 Shared Market Data
+
+Phase 11 wires existing Binance ticker events and normalized Angel ticks into
+`ActiveTradeLiveMonitorService`. The service resolves canonical symbol identity,
+finds eligible ActiveTrades, and delegates event detection to the existing
+deterministic `TradeMonitoringService`.
+
+Rules:
+
+- Do not duplicate provider WebSocket connections only for trade monitoring if existing normalized streams can be reused safely.
+- Preserve Angel user isolation when routing normalized ticks into future ActiveTrade evaluation.
+- Persist and deduplicate TradeEvent before attempting frontend delivery.
+- Delivery failure must not close a trade, create a result, or mutate risk state.
+- Skip ticks older than the configured freshness window.
+- Apply an in-memory per-trade evaluation interval.
+- Cap matching trades evaluated per tick.
+- Angel ticks require user id and can evaluate only that user's ActiveTrades.
+- Binance ticks are public but still require canonical provider/exchange/symbol matching.
+- Do not put provider credentials or raw provider tokens in trade-domain models.
+- Do not store raw ticks/candles/order book snapshots in RAG.
+- Keep AnalyzerEngine in-memory state untouched unless a future task explicitly changes analyzer architecture.
+
+Phase 11 does not send raw provider tick payloads into TradeMonitoringService.
+Only normalized identity, price, source, and timestamps cross into the trade
+lifecycle lane.
+
+### 9.4 Phase 12 Subscription And Cache Reliability
+
+Phase 12 keeps AnalyzerEngine untouched while making the trade lifecycle lane
+self-sufficient:
+
+```txt
+ActiveTrade created
+  -> ActiveTradeSubscriptionService
+  -> provider-aware stream interest
+  -> projected route cache
+
+Live tick
+  -> route cache hit
+  -> TradeMonitoringService
+
+Cache miss/expiry
+  -> bounded MongoDB projection query
+  -> refresh five-second cache
+```
+
+The WebSocket manager still owns provider stream mechanics. The subscription
+service calls it through a small orchestration port and shares existing global
+subscription reference counts, so frontend and ActiveTrade interests can coexist.
+
+Process restart behavior:
+
+- WebSocket/auth behavior is unchanged.
+- cache and interest maps start empty.
+- a bounded background warm-up re-registers existing active trades.
+- lazy tick lookup refreshes expired/missing route cache entries.
+
+This remains single-instance state. Redis or distributed coordination is not
+implemented in Phase 12.
+
+## Safe Runtime Snapshot
+
+`AnalyzerEngine.getRuntimeSnapshot` provides copied, bounded summaries for scoring
+transparency:
+
+- latest price and price-buffer summary
+- current CVD and CVD-buffer summary
+- aggregate cooldown status
+- order-book level counts and best bid/ask
+
+No buffer items are returned by default. Explicit buffer output is capped at the latest 100
+items. Raw provider payloads, credentials, monitor identifiers, and mutable internal arrays
+are not exposed.
+
+The authenticated diagnostic endpoint is:
+
+```txt
+GET /api/scoring/realtime-context
+```
+
+Runtime state remains process-local and is not a multi-instance source of truth.
+
+## Market Snapshot Sidecar
+
+`MarketSnapshotService` is an additive consumer of normalized live ticks. It does not
+replace or modify AnalyzerEngine price buffers, CVD buffers, cooldowns, monitor queries,
+threshold rules, alert generation, or `NEW_ALERT` delivery.
+
+Integration points:
+
+```txt
+Binance ticker
+  -> MarketSnapshotService.recordTick
+  -> existing TICKER_UPDATE and ActiveTrade paths continue
+
+Angel normalized user tick
+  -> MarketSnapshotService.recordTick with userId
+  -> existing MARKET_TICK, analyzer, and ActiveTrade paths continue
+```
+
+The sidecar maintains bounded rolling candles, basic VWAP/volume context, and freshness for
+scoring. Analyzer runtime summaries and market snapshots are both exposed by the protected
+scoring context endpoint, but they remain separate ownership lanes.
+
+Safety rules:
+
+- AnalyzerEngine behavior is unchanged.
+- Market snapshots do not trigger alerts.
+- Snapshot failures must not invent market context.
+- Angel snapshot keys must include user id.
+- Snapshot state is process-local and cleared on restart.
+
+## Phase 17 Scoring Consumers
+
+India-equity scoring consumes MarketSnapshotService output without changing AnalyzerEngine.
+
+Consumers may read:
+
+- primary stock snapshot
+- NIFTY/index snapshot
+- optional sector snapshot
+- optional INDIA_VIX snapshot
+- 1m, 5m, and 15m candle summaries
+- VWAP, RVOL, freshness, and bid/ask spread when available
+
+The analyzer and scoring lanes remain separate:
+
+```txt
+AnalyzerEngine
+  -> monitor threshold decisions and alerts
+
+MarketSnapshotService
+  -> derived context
+  -> deterministic ScoringEngine evaluators
+```
+
+Scoring cannot create Analyzer alerts, alter monitor cooldowns, mutate risk state, or place
+broker orders. Missing sector, breadth, VIX, or depth inputs remain visible as partial
+criteria.
+
+## Phase 17B Scoring Runtime Consumer
+
+AnalyzerEngine remains the owner of monitor threshold state, alert generation, CVD buffers,
+price buffers, cooldowns, and order-book snapshots.
+
+Scoring reads AnalyzerEngine only through `getRuntimeSnapshot` via
+`ScoringContextBuilderService`.
+
+Important boundary:
+
+- scoring receives copied summaries, not mutable buffers
+- buffer items are omitted by default and capped at 100 when explicitly requested
+- ScoreCheck stores only safe runtime summaries in `TradeScoreSnapshot.runtimeSnapshot`
+- scoring does not create alerts or mutate monitor cooldowns
+
+Runtime evaluator usage:
+
+- `CVD_CONTEXT` uses `currentCVD` or recent `netDelta` to score direction alignment
+- `ORDER_BOOK_CONTEXT` uses best bid/ask to score spread quality
+- unavailable runtime remains honest as skipped/partial
+
+Market snapshot freshness is still evaluated separately from AnalyzerEngine runtime. CVD or
+order-book data can be available while the market snapshot is stale; in that case template
+readiness is partial and emits `MARKET_SNAPSHOT_STALE`.
+
+## Phase 18C-0 Angel NSE/NFO Runtime Context
+
+AnalyzerEngine remains unchanged for Phase 18C-0.
+
+NSE/NFO live ticks flow through the market-snapshot lane:
+
+```txt
+Angel NSE/NFO tick
+  -> normalizeAngelTick
+  -> WebSocketManager.handleAngelMarketTick
+  -> MarketSnapshotService.recordTick
+  -> ScoringContextBuilderService
+  -> ScoringEngine evaluators
+```
+
+Angel market snapshot keys are user-scoped:
+
+```txt
+ANGEL_ONE:<userId>:NSE:<token>
+ANGEL_ONE:<userId>:NFO:<token>
+```
+
+This prevents one user's Angel session data from being visible to another user.
+
+Analyzer alert generation, monitor cooldowns, price buffers, CVD buffers, and order-book
+snapshots are not modified by NSE/NFO symbol support. If WebSocket ticks do not include
+volume, MarketSnapshotService still records price freshness while volume/VWAP criteria remain
+honestly partial or unavailable.

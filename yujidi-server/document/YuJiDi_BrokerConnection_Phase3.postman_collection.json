@@ -1,0 +1,1516 @@
+{
+  "info": {
+    "_postman_id": "7a8f2117-5ed0-4af9-8c57-5f3c9335f3d1",
+    "name": "YuJiDi - Angel Phase 3-5 API Tests",
+    "description": "Postman collection for testing YuJiDi auth, Angel BrokerConnection Phase 3 APIs, Angel Quote Phase 4 APIs, and Universal Symbol Monitor Phase 5 APIs. Import this file into Postman, update collection variables, run Login, connect Angel, discover Binance/Angel symbols, then run quote and monitor requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3006/api",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "your-email@example.com",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "your-password",
+      "type": "string"
+    },
+    {
+      "key": "name",
+      "value": "YuJiDi Tester",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "angelClientCode",
+      "value": "YOUR_ANGEL_CLIENT_CODE",
+      "type": "string"
+    },
+    {
+      "key": "angelApiKey",
+      "value": "YOUR_ANGEL_API_KEY",
+      "type": "string"
+    },
+    {
+      "key": "angelPin",
+      "value": "YOUR_ANGEL_PIN",
+      "type": "string"
+    },
+    {
+      "key": "angelTotp",
+      "value": "CURRENT_ANGEL_TOTP",
+      "type": "string"
+    },
+    {
+      "key": "angelTotpSecret",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "angelSymbolId",
+      "value": "PASTE_ANGEL_MCX_SYMBOL_OBJECT_ID",
+      "type": "string"
+    },
+    {
+      "key": "binanceSymbolId",
+      "value": "PASTE_BINANCE_SYMBOL_OBJECT_ID_OPTIONAL",
+      "type": "string"
+    },
+    {
+      "key": "quoteMode",
+      "value": "LTP",
+      "type": "string"
+    },
+    {
+      "key": "legacyBinanceMonitorId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "binanceSymbolIdMonitorId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "angelMonitorId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"name\": \"{{name}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Optional. Use this only if the test user does not already exist. Password must be at least 8 characters."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Register returns success or expected duplicate error', function () {",
+                  "  pm.expect([201, 400, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Run this before protected broker connection requests. The test script stores accessToken and refreshToken from Set-Cookie into collection variables."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const setCookieHeader = pm.response.headers.get('Set-Cookie') || '';",
+                  "const accessMatch = setCookieHeader.match(/accessToken=([^;]+)/);",
+                  "const refreshMatch = setCookieHeader.match(/refreshToken=([^;]+)/);",
+                  "",
+                  "if (accessMatch && accessMatch[1]) {",
+                  "  pm.collectionVariables.set('accessToken', accessMatch[1]);",
+                  "}",
+                  "if (refreshMatch && refreshMatch[1]) {",
+                  "  pm.collectionVariables.set('refreshToken', refreshMatch[1]);",
+                  "}",
+                  "",
+                  "pm.test('Auth cookies captured into collection variables', function () {",
+                  "  pm.expect(pm.collectionVariables.get('accessToken')).to.be.a('string').and.not.empty;",
+                  "  pm.expect(pm.collectionVariables.get('refreshToken')).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Verifies that the captured auth cookie variables work for protected routes."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Current user loaded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Refreshes the YuJiDi auth session and captures the new cookies."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Refresh succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const setCookieHeader = pm.response.headers.get('Set-Cookie') || '';",
+                  "const accessMatch = setCookieHeader.match(/accessToken=([^;]+)/);",
+                  "const refreshMatch = setCookieHeader.match(/refreshToken=([^;]+)/);",
+                  "if (accessMatch && accessMatch[1]) pm.collectionVariables.set('accessToken', accessMatch[1]);",
+                  "if (refreshMatch && refreshMatch[1]) pm.collectionVariables.set('refreshToken', refreshMatch[1]);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Logs out the YuJiDi user. Run this at the end if needed."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Logout succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.collectionVariables.set('accessToken', '');",
+                  "pm.collectionVariables.set('refreshToken', '');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Broker Connections - Angel One",
+      "item": [
+        {
+          "name": "Connect Angel Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientCode\": \"{{angelClientCode}}\",\n  \"apiKey\": \"{{angelApiKey}}\",\n  \"pin\": \"{{angelPin}}\",\n  \"totp\": \"{{angelTotp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/broker-connections/angel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "broker-connections",
+                "angel"
+              ]
+            },
+            "description": "Connects the logged-in YuJiDi user to Angel One. Requires backend env BROKER_CREDENTIAL_ENCRYPTION_KEY, ANGEL_CLIENT_LOCAL_IP, ANGEL_CLIENT_PUBLIC_IP, and ANGEL_MAC_ADDRESS. Use a fresh current TOTP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Angel connection created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.test('Response is safe and order placement disabled', function () {",
+                  "  pm.expect(body.status).to.eql('success');",
+                  "  pm.expect(body.data.broker).to.eql('ANGEL_ONE');",
+                  "  pm.expect(body.data.permissions.orderPlacement).to.eql(false);",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('encrypted');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include(pm.collectionVariables.get('angelApiKey'));",
+                  "  pm.expect(JSON.stringify(body)).to.not.include(pm.collectionVariables.get('angelPin'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Connect Angel Account With Optional TOTP Secret",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientCode\": \"{{angelClientCode}}\",\n  \"apiKey\": \"{{angelApiKey}}\",\n  \"pin\": \"{{angelPin}}\",\n  \"totp\": \"{{angelTotp}}\",\n  \"totpSecret\": \"{{angelTotpSecret}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/broker-connections/angel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "broker-connections",
+                "angel"
+              ]
+            },
+            "description": "Optional variant if you want to store an encrypted TOTP secret. Leave angelTotpSecret blank and use the normal Connect request if you do not want this."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Angel connection created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Broker Connections",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/broker-connections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "broker-connections"
+              ]
+            },
+            "description": "Lists all broker connections for the logged-in YuJiDi user. Response must not contain encrypted credential/session fields."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Connections loaded safely', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('success');",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('encrypted');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Angel Connection Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/broker-connections/angel/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "broker-connections",
+                "angel",
+                "status"
+              ]
+            },
+            "description": "Returns the current Angel connection status for the logged-in user. Returns data: null when not connected."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Angel status loaded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('success');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('encrypted');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reconnect Angel Using Stored Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientCode\": \"{{angelClientCode}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/broker-connections/angel/reconnect",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "broker-connections",
+                "angel",
+                "reconnect"
+              ]
+            },
+            "description": "Attempts reconnect using the encrypted stored refresh token. The controller requires a non-empty body, so clientCode is sent as a harmless field."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Angel reconnect completed', function () {",
+                  "  pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data.permissions.orderPlacement).to.eql(false);",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('encrypted');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reconnect Angel With Fresh TOTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientCode\": \"{{angelClientCode}}\",\n  \"apiKey\": \"{{angelApiKey}}\",\n  \"pin\": \"{{angelPin}}\",\n  \"totp\": \"{{angelTotp}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/broker-connections/angel/reconnect",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "broker-connections",
+                "angel",
+                "reconnect"
+              ]
+            },
+            "description": "Reconnects by performing a fresh Angel login using a current TOTP."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Angel reconnect with TOTP completed', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete / Disable Angel Connection",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/broker-connections/angel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "broker-connections",
+                "angel"
+              ]
+            },
+            "description": "Soft-disables the Angel connection locally and attempts Angel logout best-effort."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Angel connection disabled', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.data.status).to.eql('DISABLED');",
+                  "  pm.expect(body.data.permissions.marketData).to.eql(false);",
+                  "  pm.expect(body.data.permissions.orderPlacement).to.eql(false);",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('encrypted');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Market Quotes - Angel Phase 4",
+      "item": [
+        {
+          "name": "Find Angel MCX Symbols And Save First Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/monitors/symbols/universal?provider=ANGEL_ONE&exchange=MCX&marketType=COMMODITY&includeBrokerRequired=true&limit=10&q=CRUDEOIL",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors",
+                "symbols",
+                "universal"
+              ],
+              "query": [
+                {
+                  "key": "provider",
+                  "value": "ANGEL_ONE"
+                },
+                {
+                  "key": "exchange",
+                  "value": "MCX"
+                },
+                {
+                  "key": "marketType",
+                  "value": "COMMODITY"
+                },
+                {
+                  "key": "includeBrokerRequired",
+                  "value": "true"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "q",
+                  "value": "CRUDEOIL"
+                }
+              ]
+            },
+            "description": "Finds Angel MCX symbols from the universal symbol registry and saves the first result _id into angelSymbolId. Run Phase 2 sync first if this returns an empty array."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Angel symbol search succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "const symbols = body.data || [];",
+                  "pm.test('At least one Angel MCX symbol exists', function () {",
+                  "  pm.expect(symbols.length).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "if (symbols.length > 0) {",
+                  "  const first = symbols[0];",
+                  "  const id = first._id || first.id;",
+                  "  if (id) pm.collectionVariables.set('angelSymbolId', id);",
+                  "  console.log('Saved angelSymbolId:', id, first.symbol || first.displayName);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Angel Quote - LTP",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/market-quotes/{{angelSymbolId}}?mode=LTP",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "market-quotes",
+                "{{angelSymbolId}}"
+              ],
+              "query": [
+                {
+                  "key": "mode",
+                  "value": "LTP"
+                }
+              ]
+            },
+            "description": "Fetches a read-only Angel LTP quote using the logged-in user's active Angel BrokerConnection."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Angel LTP quote succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.test('Normalized LTP snapshot is safe', function () {",
+                  "  pm.expect(body.status).to.eql('success');",
+                  "  pm.expect(body.data.provider).to.eql('ANGEL_ONE');",
+                  "  pm.expect(body.data.exchange).to.eql('MCX');",
+                  "  pm.expect(body.data.mode).to.eql('LTP');",
+                  "  pm.expect(body.data.instrumentToken).to.be.a('string').and.not.empty;",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('jwtToken');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('refreshToken');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('feedToken');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('apiKey');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('encrypted');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Angel Quote - OHLC",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/market-quotes/{{angelSymbolId}}?mode=OHLC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "market-quotes",
+                "{{angelSymbolId}}"
+              ],
+              "query": [
+                {
+                  "key": "mode",
+                  "value": "OHLC"
+                }
+              ]
+            },
+            "description": "Fetches a read-only Angel OHLC quote using the active Angel BrokerConnection."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Angel OHLC quote succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.test('Normalized OHLC snapshot is safe', function () {",
+                  "  pm.expect(body.data.provider).to.eql('ANGEL_ONE');",
+                  "  pm.expect(body.data.mode).to.eql('OHLC');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('jwtToken');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('apiKey');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('encrypted');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Angel Quote - FULL",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/market-quotes/{{angelSymbolId}}?mode=FULL",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "market-quotes",
+                "{{angelSymbolId}}"
+              ],
+              "query": [
+                {
+                  "key": "mode",
+                  "value": "FULL"
+                }
+              ]
+            },
+            "description": "Fetches a read-only Angel FULL quote. If Angel returns depth/openInterest, the backend normalizes those fields."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Angel FULL quote succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.test('Normalized FULL snapshot is safe', function () {",
+                  "  pm.expect(body.data.provider).to.eql('ANGEL_ONE');",
+                  "  pm.expect(body.data.mode).to.eql('FULL');",
+                  "  pm.expect(body.data.symbolId).to.eql(pm.collectionVariables.get('angelSymbolId'));",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('jwtToken');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('refreshToken');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('feedToken');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('apiKey');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('encrypted');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Angel Quote - Variable Mode",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/market-quotes/{{angelSymbolId}}?mode={{quoteMode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "market-quotes",
+                "{{angelSymbolId}}"
+              ],
+              "query": [
+                {
+                  "key": "mode",
+                  "value": "{{quoteMode}}"
+                }
+              ]
+            },
+            "description": "Uses quoteMode collection variable. Valid values: LTP, OHLC, FULL."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Angel quote with variable mode succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Variable mode response is safe', function () {",
+                  "  pm.expect(body.data.mode).to.eql(pm.collectionVariables.get('quoteMode'));",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('encrypted');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Negative Test - Invalid Quote Mode",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/market-quotes/{{angelSymbolId}}?mode=BAD_MODE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "market-quotes",
+                "{{angelSymbolId}}"
+              ],
+              "query": [
+                {
+                  "key": "mode",
+                  "value": "BAD_MODE"
+                }
+              ]
+            },
+            "description": "Expected to fail with 400 because valid modes are LTP, OHLC, FULL."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invalid mode is rejected', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Negative Test - Binance Symbol Not Supported Here",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/market-quotes/{{binanceSymbolId}}?mode=LTP",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "market-quotes",
+                "{{binanceSymbolId}}"
+              ],
+              "query": [
+                {
+                  "key": "mode",
+                  "value": "LTP"
+                }
+              ]
+            },
+            "description": "Optional. Set binanceSymbolId first. Expected 400 PROVIDER_NOT_SUPPORTED_BY_QUOTE_API_YET because Phase 4 only supports Angel Quote API."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Binance symbol is not supported by Phase 4 quote API', function () {",
+                  "  pm.expect([400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Monitors - Universal Symbol Phase 5",
+      "item": [
+        {
+          "name": "Find Binance Symbol And Save Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/monitors/symbols/universal?provider=BINANCE&exchange=BINANCE&marketType=CRYPTO&includeBrokerRequired=true&limit=10&q=BTCUSDT",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors",
+                "symbols",
+                "universal"
+              ],
+              "query": [
+                {
+                  "key": "provider",
+                  "value": "BINANCE"
+                },
+                {
+                  "key": "exchange",
+                  "value": "BINANCE"
+                },
+                {
+                  "key": "marketType",
+                  "value": "CRYPTO"
+                },
+                {
+                  "key": "includeBrokerRequired",
+                  "value": "true"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "q",
+                  "value": "BTCUSDT"
+                }
+              ]
+            },
+            "description": "Finds BTCUSDT in the universal Symbol registry and saves the first result _id into binanceSymbolId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Binance symbol search succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "const symbols = body.data || [];",
+                  "pm.test('At least one Binance symbol exists', function () {",
+                  "  pm.expect(symbols.length).to.be.greaterThan(0);",
+                  "});",
+                  "if (symbols.length > 0) {",
+                  "  const first = symbols[0];",
+                  "  const id = first._id || first.id;",
+                  "  if (id) pm.collectionVariables.set('binanceSymbolId', id);",
+                  "  console.log('Saved binanceSymbolId:', id, first.symbol || first.displayName);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Find Angel MCX Symbol And Save Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/monitors/symbols/universal?provider=ANGEL_ONE&exchange=MCX&marketType=COMMODITY&includeBrokerRequired=true&limit=10&q=CRUDEOIL",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors",
+                "symbols",
+                "universal"
+              ],
+              "query": [
+                {
+                  "key": "provider",
+                  "value": "ANGEL_ONE"
+                },
+                {
+                  "key": "exchange",
+                  "value": "MCX"
+                },
+                {
+                  "key": "marketType",
+                  "value": "COMMODITY"
+                },
+                {
+                  "key": "includeBrokerRequired",
+                  "value": "true"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "q",
+                  "value": "CRUDEOIL"
+                }
+              ]
+            },
+            "description": "Finds an Angel MCX Symbol and saves the first result _id into angelSymbolId. Requires Phase 2 Angel symbol sync data."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Angel symbol search succeeded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "const symbols = body.data || [];",
+                  "pm.test('At least one Angel MCX symbol exists', function () {",
+                  "  pm.expect(symbols.length).to.be.greaterThan(0);",
+                  "});",
+                  "if (symbols.length > 0) {",
+                  "  const first = symbols[0];",
+                  "  const id = first._id || first.id;",
+                  "  if (id) pm.collectionVariables.set('angelSymbolId', id);",
+                  "  console.log('Saved angelSymbolId:', id, first.symbol || first.displayName);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Monitor - Legacy Binance Symbol",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbol\": \"BTCUSDT\",\n  \"thresholdPercentage\": 1,\n  \"timeWindowMinutes\": 5,\n  \"trigger\": \"drop\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/monitors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors"
+              ]
+            },
+            "description": "Verifies old Binance monitor creation still works without symbolId and without broker login."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Legacy Binance monitor created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (body.data && (body.data._id || body.data.id)) {",
+                  "  pm.collectionVariables.set('legacyBinanceMonitorId', body.data._id || body.data.id);",
+                  "}",
+                  "pm.test('Legacy Binance monitor has compatible snapshot fields', function () {",
+                  "  pm.expect(body.status).to.eql('success');",
+                  "  pm.expect(body.data.symbol).to.eql('BTCUSDT');",
+                  "  pm.expect(body.data.provider).to.eql('BINANCE');",
+                  "  pm.expect(body.data.exchange).to.eql('BINANCE');",
+                  "  pm.expect(body.data.requiresBrokerLogin).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Monitor - Binance symbolId",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbolId\": \"{{binanceSymbolId}}\",\n  \"thresholdPercentage\": 1,\n  \"timeWindowMinutes\": 5,\n  \"trigger\": \"spike\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/monitors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors"
+              ]
+            },
+            "description": "Creates a Binance monitor using the new universal symbolId contract. Should not require broker login."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Binance symbolId monitor created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (body.data && (body.data._id || body.data.id)) {",
+                  "  pm.collectionVariables.set('binanceSymbolIdMonitorId', body.data._id || body.data.id);",
+                  "}",
+                  "pm.test('Binance symbolId monitor stores snapshot fields', function () {",
+                  "  pm.expect(body.data.symbolId).to.eql(pm.collectionVariables.get('binanceSymbolId'));",
+                  "  pm.expect(body.data.provider).to.eql('BINANCE');",
+                  "  pm.expect(body.data.marketType).to.eql('CRYPTO');",
+                  "  pm.expect(body.data.exchange).to.eql('BINANCE');",
+                  "  pm.expect(body.data.instrumentToken).to.be.a('string').and.not.empty;",
+                  "  pm.expect(body.data.requiresBrokerLogin).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Monitor - Angel symbolId Requires Active Broker",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbolId\": \"{{angelSymbolId}}\",\n  \"thresholdPercentage\": 1,\n  \"timeWindowMinutes\": 5,\n  \"trigger\": \"spike\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/monitors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors"
+              ]
+            },
+            "description": "Creates an Angel MCX monitor using symbolId. Requires an ACTIVE Angel BrokerConnection for the logged-in user. Run Connect Angel Account first."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Angel monitor response is expected', function () {",
+                  "  pm.expect([201, 400]).to.include(pm.response.code);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "if (pm.response.code === 201) {",
+                  "  if (body.data && (body.data._id || body.data.id)) {",
+                  "    pm.collectionVariables.set('angelMonitorId', body.data._id || body.data.id);",
+                  "  }",
+                  "  pm.test('Angel monitor stores universal snapshot fields', function () {",
+                  "    pm.expect(body.data.symbolId).to.eql(pm.collectionVariables.get('angelSymbolId'));",
+                  "    pm.expect(body.data.provider).to.eql('ANGEL_ONE');",
+                  "    pm.expect(body.data.marketType).to.eql('COMMODITY');",
+                  "    pm.expect(body.data.exchange).to.eql('MCX');",
+                  "    pm.expect(body.data.instrumentToken).to.be.a('string').and.not.empty;",
+                  "    pm.expect(body.data.requiresBrokerLogin).to.eql(true);",
+                  "    pm.expect(body.data.supportedBroker).to.eql('ANGEL_ONE');",
+                  "    pm.expect(JSON.stringify(body)).to.not.include('encrypted');",
+                  "    pm.expect(JSON.stringify(body)).to.not.include('jwtToken');",
+                  "  });",
+                  "} else {",
+                  "  pm.test('Angel monitor is blocked without broker login', function () {",
+                  "    pm.expect(JSON.stringify(body)).to.include('BROKER_LOGIN_REQUIRED');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Monitors - Verify Snapshot Metadata",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/monitors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors"
+              ]
+            },
+            "description": "Lists user monitors and verifies Phase 5 snapshot fields are visible and no broker secrets are returned."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Monitor list loaded', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "const body = pm.response.json();",
+                  "pm.test('Monitor list is safe and includes metadata fields when available', function () {",
+                  "  pm.expect(body.status).to.eql('success');",
+                  "  pm.expect(body.data).to.be.an('array');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('encrypted');",
+                  "  pm.expect(JSON.stringify(body)).to.not.include('jwtToken');",
+                  "  if (body.data.length > 0) {",
+                  "    const monitor = body.data[0];",
+                  "    pm.expect(monitor).to.have.property('symbol');",
+                  "    pm.expect(monitor).to.have.property('thresholdPercentage');",
+                  "    pm.expect(monitor).to.have.property('trigger');",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Negative Test - Invalid symbolId",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbolId\": \"not-a-mongo-id\",\n  \"thresholdPercentage\": 1,\n  \"timeWindowMinutes\": 5,\n  \"trigger\": \"spike\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/monitors",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors"
+              ]
+            },
+            "description": "Expected to fail because symbolId must be a valid Mongo ObjectId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Invalid symbolId is rejected', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete Legacy Binance Monitor",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/monitors/{{legacyBinanceMonitorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors",
+                "{{legacyBinanceMonitorId}}"
+              ]
+            },
+            "description": "Optional cleanup for the monitor created by the legacy Binance request."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cleanup legacy Binance monitor completed', function () {",
+                  "  pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete Binance symbolId Monitor",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/monitors/{{binanceSymbolIdMonitorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors",
+                "{{binanceSymbolIdMonitorId}}"
+              ]
+            },
+            "description": "Optional cleanup for the Binance symbolId monitor."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cleanup Binance symbolId monitor completed', function () {",
+                  "  pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cleanup - Delete Angel Monitor",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{accessToken}}; refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/monitors/{{angelMonitorId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monitors",
+                "{{angelMonitorId}}"
+              ]
+            },
+            "description": "Optional cleanup for the Angel monitor, if it was created successfully."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Cleanup Angel monitor completed', function () {",
+                  "  pm.expect([200, 400, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

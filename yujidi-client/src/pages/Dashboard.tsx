@@ -18,8 +18,49 @@ interface Monitor {
   symbol: string;
   thresholdPercentage: number;
   trigger: TriggerType;
-  timeWindowMinutes: number
+  timeWindowMinutes: number;
+  displayName?: string;
+  instrumentType?: string;
+  marketType?: string;
+  provider?: string;
+  exchange?: string;
+  providerSymbol?: string;
+  instrumentToken?: string;
 }
+
+const normalizeLivePriceKey = (value: string | undefined): string | null => {
+  return value?.trim() ? value.trim().toUpperCase() : null;
+};
+
+const getMonitorLivePriceKeys = (monitor: Monitor): string[] => {
+  const provider = normalizeLivePriceKey(monitor.provider);
+  const exchange = normalizeLivePriceKey(monitor.exchange);
+  const instrumentToken = normalizeLivePriceKey(monitor.instrumentToken);
+  const providerAwareKey = provider && exchange && instrumentToken
+    ? `${provider}:${exchange}:${instrumentToken}`
+    : null;
+
+  return Array.from(new Set([
+    normalizeLivePriceKey(monitor.symbol),
+    normalizeLivePriceKey(monitor.displayName),
+    normalizeLivePriceKey(monitor.providerSymbol),
+    instrumentToken,
+    providerAwareKey,
+  ].filter((key): key is string => Boolean(key))));
+};
+
+const getMonitorLiveValue = (
+  values: Record<string, number>,
+  monitor: Monitor,
+): number | undefined => {
+  for (const key of getMonitorLivePriceKeys(monitor)) {
+    const value = values[key];
+    if (value !== undefined) {
+      return value;
+    }
+  }
+  return undefined;
+};
 const triggerMeta: Record<TriggerType, { icon: typeof Zap; label: string; color: string; bg: string; ring: string }> = {
   spike: {
     icon: Zap,
@@ -92,7 +133,7 @@ function MonitorItem({
   const positive = change ? change >= 0 : false;
   const trigger = monitor?.trigger ? monitor?.trigger : 'spike'
   const threshold = monitor.thresholdPercentage
-  const symbol = monitor.symbol
+  const symbol = monitor.displayName || monitor.symbol
   // const positive = change ? change >= 0 : 0;
   const meta = triggerMeta[trigger];
   const TriggerIcon = meta?.icon;
@@ -107,17 +148,46 @@ function MonitorItem({
       {/* Top row: identity + price */}
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-foreground flex-shrink-0">
-          {symbol.slice(0, 2)}
+          {(symbol ?? '').slice(0, 2)}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">{symbol}</span>
-            <span className="text-xs font-mono text-muted-foreground">{price != null
-              ? `$${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+            {/* <span className="text-sm font-medium text-foreground overflow-auto">{symbol}</span> */}
+            <>
+              <span className="relative block max-w-[120px] overflow-hidden whitespace-nowrap text-sm font-medium text-foreground">
+                <span className="inline-block symbol-auto-scroll">
+                  {symbol}
+                </span>
+              </span>
+
+              <style>{`
+    @keyframes symbolAutoScroll {
+      0%,
+      20% {
+        transform: translateX(0);
+      }
+
+      50%,
+      70% {
+        transform: translateX(calc(-100% + 120px));
+      }
+
+      100% {
+        transform: translateX(0);
+      }
+    }
+
+    .symbol-auto-scroll {
+      animation: symbolAutoScroll 8s ease-in-out infinite;
+    }
+  `}</style>
+            </>
+            <span className="text-xs font-mono text-muted-foreground ml-2">{price != null
+              ? `${monitor?.provider === 'ANGEL_ONE' ? "" : "$"}${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
               : '---'}</span>
           </div>
           <div className="flex items-center justify-between mt-1">
-            <MiniSparkline symbol={symbol} positive={positive} />
+            <MiniSparkline symbol={symbol ?? 'DEFAULT'} positive={positive} />
             <span className={`text-xs font-mono flex items-center gap-0.5 ${positive ? "text-bullish" : "text-bearish"}`}>
               {positive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
               {positive ? "+" : ""}{change}%
@@ -223,8 +293,8 @@ function DashboardSidebar({
               <MonitorItem
                 key={m._id}
                 monitor={m}
-                price={livePrices[m.symbol]}
-                change={livePriceschange[m.symbol]}
+                price={getMonitorLiveValue(livePrices, m)}
+                change={getMonitorLiveValue(livePriceschange, m) ?? 0}
                 onDelete={onDelete}
               />
             ))}
@@ -544,10 +614,16 @@ export function Dashboard() {
     fetchData();
   }, []);
 
-  const deleteMonitor = async (id: string) => {
+  const deleteMonitor = async (id: string, symbol: string) => {
     try {
       await apiClient.delete(`/monitors/${id}`);
-      setMonitors((prev) => prev.filter((m) => m._id !== id));
+      const remainingMonitors = monitors.filter((m) => m._id !== id);
+      const stillWatchingSymbol = remainingMonitors.some((m) => m.symbol === symbol);
+
+      setMonitors(remainingMonitors);
+      if (!stillWatchingSymbol) {
+        updateSubscriptions([], [symbol]);
+      }
     } catch (error) {
       console.error('Failed to delete monitor');
     }

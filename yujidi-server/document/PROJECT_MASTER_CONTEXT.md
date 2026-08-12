@@ -13,8 +13,12 @@ Related detailed docs:
 - `PROJECT_CONTEXT.md`: living project index and progress context.
 - `../docs/DOMAIN_MODEL.md`: detailed domain model.
 - `../docs/ANALYZER_ENGINE.md`: analyzer engine details.
+- `../docs/ANGEL_SMARTAPI_PHASE0.md`: Angel SmartAPI read-only integration scaffold.
+- `../docs/ANGEL_PHASE_2_SCRIP_MASTER_SYNC.md`: Angel Phase 2 Scrip Master sync.
+- `../docs/ANGEL_PHASE_4_TO_10_DESIGN.md`: Legacy design note for the foundation now treated as Angel Phase 1.
 - `../docs/TESTING_STRATEGY.md`: testing strategy.
 - `../docs/RISK_REGISTER.md`: risk register.
+- `../docs/YUJIDI_MVP_IMPLEMENTATION_BLUEPRINT.md`: future risk-first trade lifecycle implementation blueprint.
 - `BACKEND_ARCHITECTURE.md`: backend architecture reference.
 
 ## 0. Current Implementation Truth vs Future Direction
@@ -32,6 +36,8 @@ These are true in the current codebase:
 - Binance streams are managed through one shared backend WebSocket manager.
 - MongoDB startup connection uses bounded retry/backoff.
 - Binance symbol sync runs as a non-fatal background task with retry.
+- Analyzer uses a short TTL active-monitor cache and refreshes it on monitor create/update/delete.
+- Analyzer can store zero-monitor negative cache entries to prevent repeated MongoDB reads.
 - Analyzer state is stored in memory.
 - Analyzer supports both `drop` and `spike` trigger logic.
 - Alerts now include direction-neutral movement fields:
@@ -41,7 +47,9 @@ These are true in the current codebase:
 - Alerts still keep legacy `dropPercentage` for backward compatibility.
 - Groq is used for alert reports and copilot chat.
 - CryptoCompare is used for news context.
-- There is no visible automated test suite yet.
+- Angel BrokerConnection stores user broker credentials and session tokens encrypted at rest.
+- Angel read-only quote snapshots are available through authenticated user BrokerConnection.
+- A first analyzer rules unit-test foundation exists.
 - Documentation exists, but docs must be kept aligned with implementation.
 
 ### Future Direction / Not Yet Implemented
@@ -58,7 +66,7 @@ These are desired or discussed, but should not be described as implemented unles
 - Multi-instance-safe analyzer coordination.
 - Explicit alert pipeline status such as `detected`, `analyzing`, `failed`.
 - Full removal of legacy `dropPercentage`.
-- Automated test suite.
+- Full automated test suite beyond analyzer rules.
 
 Rule:
 
@@ -205,12 +213,33 @@ GROQ_API_KEY
 Optional or environment-specific:
 
 ```txt
+LLM_PROVIDER
+GROQ_MODEL
 CRYPTOCOMPARE_API_KEY
 FRONTEND_URL
 MEDO_URL
 COOKIE_ACCESS_EXPIRY_MS
 COOKIE_REFRESH_EXPIRY_MS
 NODE_ENV
+ANGEL_SMARTAPI_ENABLED
+ANGEL_SYMBOL_SYNC_ENABLED
+ANGEL_SYMBOL_SYNC_ON_STARTUP
+ANGEL_SYMBOL_SYNC_MARKET_TYPES
+ANGEL_SYMBOL_SYNC_EXCHANGES
+ANGEL_SYMBOL_SYNC_NAMES
+ANGEL_SCRIP_MASTER_URL
+ANGEL_SCRIP_MASTER_FILE
+BROKER_CREDENTIAL_ENCRYPTION_KEY
+ANGEL_CLIENT_LOCAL_IP
+ANGEL_CLIENT_PUBLIC_IP
+ANGEL_MAC_ADDRESS
+ANGEL_API_KEY
+ANGEL_CLIENT_CODE
+ANGEL_PIN
+ANGEL_TOTP_SECRET
+ANGEL_DEBUG_ENABLED
+ANGEL_DEBUG_EXCHANGE
+ANGEL_DEBUG_SYMBOL_TOKEN
 ```
 
 Meaning:
@@ -222,19 +251,40 @@ Meaning:
 - `JWT_ACCESS_EXPIRY`: access token lifetime.
 - `JWT_REFRESH_EXPIRY`: refresh token lifetime.
 - `GROQ_API_KEY`: Groq API key for LLM calls.
+- `LLM_PROVIDER`: selected LLM adapter, defaults to `groq`.
+- `GROQ_MODEL`: optional Groq model override.
 - `CRYPTOCOMPARE_API_KEY`: optional key for news lookup.
 - `FRONTEND_URL`: allowed frontend CORS origin.
 - `MEDO_URL`: additional allowed CORS origin.
 - `COOKIE_ACCESS_EXPIRY_MS`: cookie max age override.
 - `COOKIE_REFRESH_EXPIRY_MS`: cookie max age override.
 - `NODE_ENV`: runtime environment.
+- `ANGEL_SMARTAPI_ENABLED`: future read-only Angel integration flag, defaults should remain disabled.
+- `ANGEL_SYMBOL_SYNC_ENABLED`: must be `true` before running Angel symbol sync in apply mode; defaults should remain disabled.
+- `ANGEL_SYMBOL_SYNC_ON_STARTUP`: enables non-fatal startup Angel symbol sync when `true`; defaults should remain disabled.
+- `ANGEL_SYMBOL_SYNC_MARKET_TYPES`: future Angel sync market-type filter, currently `COMMODITY`.
+- `ANGEL_SYMBOL_SYNC_EXCHANGES`: Angel sync exchange filter, currently defaults to `MCX`.
+- `ANGEL_SYMBOL_SYNC_NAMES`: Angel sync commodity-name filter, defaults to `CRUDEOIL,GOLD,SILVER,NATURALGAS`.
+- `ANGEL_SCRIP_MASTER_URL`: optional override for Angel Scrip Master download URL.
+- `ANGEL_SCRIP_MASTER_FILE`: optional local JSON file path for importing Angel symbols when the hosted URL is unavailable.
+- `BROKER_CREDENTIAL_ENCRYPTION_KEY`: required for encrypting broker credentials and session tokens at rest.
+- `ANGEL_CLIENT_LOCAL_IP`: Angel SmartAPI request header value.
+- `ANGEL_CLIENT_PUBLIC_IP`: Angel SmartAPI request header value.
+- `ANGEL_MAC_ADDRESS`: Angel SmartAPI request header value.
+- `ANGEL_API_KEY`: future Angel SmartAPI key placeholder.
+- `ANGEL_CLIENT_CODE`: future Angel client code placeholder.
+- `ANGEL_PIN`: future Angel PIN placeholder.
+- `ANGEL_TOTP_SECRET`: future Angel TOTP secret placeholder.
+- `ANGEL_DEBUG_ENABLED`: future Angel debug flag.
+- `ANGEL_DEBUG_EXCHANGE`: future debug exchange, for example `MCX`.
+- `ANGEL_DEBUG_SYMBOL_TOKEN`: future debug symbol token placeholder.
 
 Security rules:
 
 - Do not commit `.env`.
 - Do not print `.env`.
 - Do not paste secrets into docs.
-- Do not log JWTs, cookies, passwords, or full connection strings.
+- Do not log JWTs, cookies, passwords, full connection strings, Angel API keys, Angel PINs, Angel TOTP secrets, Angel JWTs, or Angel feed tokens.
 - Use `.env.example` in the future with variable names only.
 
 ### Frontend Environment Variables
@@ -509,7 +559,8 @@ Binance aggTrade stream
   -> AnalyzerEngine.processTick
   -> update priceBuffer
   -> update CVD
-  -> fetch active monitors for symbol
+  -> read active monitors from analyzer cache
+  -> refresh cache from MongoDB on cache miss/expiry
   -> evaluate drop/spike threshold
   -> set cooldown
   -> fetch CryptoCompare headlines
@@ -1131,12 +1182,34 @@ Client subscription message:
 ```json
 {
   "action": "UPDATE_SUBSCRIPTIONS",
-  "subscribe": ["BTCUSDT"],
+  "subscribe": ["BTCUSDT", "MCX:GOLD:05APR2027:FUTURE"],
   "unsubscribe": []
 }
 ```
 
+The frontend sends YuJiDi symbol strings only. It does not send provider credentials, Angel tokens, Angel exchange types, or instrument-token internals.
+
 Server events:
+
+### SUBSCRIPTION_UPDATE_RESULT
+
+```json
+{
+  "type": "SUBSCRIPTION_UPDATE_RESULT",
+  "data": {
+    "subscribed": [
+      {
+        "symbol": "BTCUSDT",
+        "displayName": "BTC / USDT",
+        "provider": "BINANCE",
+        "subscriptionKey": "BINANCE:BINANCE:BTCUSDT"
+      }
+    ],
+    "unsubscribed": [],
+    "failed": []
+  }
+}
+```
 
 ### SUBSCRIPTION_ACK
 
@@ -1147,6 +1220,8 @@ Server events:
 }
 ```
 
+`SUBSCRIPTION_ACK` is kept for frontend backward compatibility. New logic should prefer `SUBSCRIPTION_UPDATE_RESULT` because it can report per-symbol failures.
+
 ### TICKER_UPDATE
 
 ```json
@@ -1156,6 +1231,26 @@ Server events:
   "currentPrice": "65000.00",
   "previousClose": "64000.00",
   "priceChangePercent": "1.56"
+}
+```
+
+### MARKET_TICK
+
+```json
+{
+  "type": "MARKET_TICK",
+  "provider": "ANGEL_ONE",
+  "marketType": "COMMODITY",
+  "exchange": "MCX",
+  "symbol": "MCX:GOLD:05APR2027:FUTURE",
+  "displayName": "MCX GOLD 05APR2027 FUTURE",
+  "instrumentToken": "570027",
+  "providerSymbol": "GOLD05APR27FUT",
+  "price": 98765.5,
+  "currentPrice": "98765.5",
+  "previousClose": "98760",
+  "priceChangePercent": "0.006",
+  "timestamp": 1781495884000
 }
 ```
 
@@ -1234,6 +1329,377 @@ Current model:
 llama-3.3-70b-versatile
 ```
 
+## Provider Abstraction Baseline
+
+YuJiDi now isolates LLM providers behind an application-owned `LLMProvider` port.
+
+Current provider:
+
+- Groq
+
+Future providers:
+
+- OpenAI
+- Gemini
+
+Rules:
+
+- Core alert/copilot logic should depend on `LLMProvider`, not Groq SDK.
+- Provider-specific response formats must be parsed and validated inside adapters.
+- LLM output remains schema-validated before use.
+
+Current implementation files:
+
+```txt
+src/ports/llm-provider.port.ts
+src/integrations/llm/llm-provider.factory.ts
+src/integrations/llm/groq/groq-llm.provider.ts
+src/services/llm.service.ts
+```
+
+## Universal Symbol Registry Baseline
+
+YuJiDi's `Symbol` collection is being evolved from a Binance-only crypto symbol list into a universal market symbol registry.
+
+A Symbol now represents any watchable market instrument, including:
+
+- Binance crypto spot symbols
+- Angel MCX commodity futures/options
+- future NSE/BSE cash symbols
+- future FNO contracts
+- future Kite instruments
+
+Universal symbol identity should include:
+
+- provider
+- marketType
+- exchange
+- symbol
+- name
+- displayName
+- providerSymbol
+- instrumentToken
+- instrumentType
+- expiry/strike/option metadata where applicable
+- lotSize/tickSize
+- requiresBrokerLogin
+- supportedBroker
+
+Important boundary:
+
+- Platform/global sync may populate symbols.
+- User-specific broker login is required later for live Angel monitoring.
+- Angel order placement is out of scope.
+- Existing Binance monitor flow still uses symbol strings such as `BTCUSDT`.
+- During transition, Binance symbols may use legacy `TRADING` or universal `ACTIVE` status.
+
+## Angel SmartAPI Integration Direction
+
+Angel SmartAPI integration is planned as read-only market data first.
+
+Phase 1 foundation status:
+
+- Provider-neutral market-data types added.
+- Instrument model scaffold added.
+- MarketDataProvider and InstrumentProvider ports added.
+- Angel integration folder scaffold added.
+- Universal `Symbol` registry fields added.
+- Binance symbol sync writes universal symbol fields.
+- Angel Scrip Master MCX mapper added.
+- Angel Scrip Master client and disabled-by-default sync service added.
+- Manual Angel symbol sync job added as `npm run sync:angel-symbols`.
+- Angel symbol sync supports dry-run, exchange selection, batched writes, and result logging.
+- Universal symbol search API added at `GET /api/monitors/symbols/universal`.
+- Dashboard monitor picker can display universal symbols.
+- `BrokerConnection` scaffold added without credential storage.
+- Monitors can store optional universal metadata.
+- Angel tick normalizer added.
+- Analyzer can process `NormalizedMarketTick` through `processNormalizedTick`.
+- No live Angel connection yet.
+- User-specific Angel login verification is available through BrokerConnection APIs.
+- Broker credentials and session tokens are encrypted at rest.
+- No public/admin Angel sync HTTP endpoint yet.
+- No order placement.
+- No portfolio sync.
+- No auto trading.
+
+## Angel Scrip Master Sync Baseline
+
+YuJiDi syncs Angel MCX reference symbols from the Angel Scrip Master into the universal `Symbol` collection.
+
+Source:
+
+```txt
+https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json
+```
+
+Current Phase 2 scope:
+
+- MCX reference-data sync only.
+- Commodity symbol normalization.
+- Global `Symbol` collection upsert.
+- Symbols marked `requiresBrokerLogin=true`.
+- Supported broker marked `ANGEL_ONE`.
+- Default synced commodity names:
+  - `CRUDEOIL`
+  - `GOLD`
+  - `SILVER`
+  - `NATURALGAS`
+
+Out of scope:
+
+- User Angel login.
+- Live WebSocket streaming.
+- Order placement.
+- Option chain runtime.
+- Broker credential storage.
+
+Business rule:
+
+Angel symbols may be visible to all users, but live monitoring requires user-specific Angel broker connection in a later phase.
+
+Angel manual sync commands:
+
+```bash
+npm run sync:angel-symbols
+npm run sync:angel-symbols -- --dry-run --exchanges=MCX --names=CRUDEOIL,GOLD
+ANGEL_SYMBOL_SYNC_ENABLED=true npm run sync:angel-symbols -- --apply --exchanges=MCX
+```
+
+Angel sync safety boundary:
+
+- The job is not called from server startup unless `ANGEL_SYMBOL_SYNC_ON_STARTUP=true`.
+- Dry-run is the default.
+- Apply mode requires `ANGEL_SYMBOL_SYNC_ENABLED=true`.
+- There is no Angel broker login, WebSocket connection, or order placement.
+- Broker-required instruments are visible but blocked from monitor creation until broker login/live data exists.
+
+## BrokerConnection Baseline
+
+YuJiDi supports user-specific broker connections for Angel One.
+
+Purpose:
+
+- Angel MCX symbols are global reference data.
+- Live Angel monitoring requires the user to connect their own Angel account.
+- Broker credentials are encrypted at rest.
+- Only market-data permission is enabled in this phase.
+- Order placement is explicitly disabled.
+
+Current scope:
+
+- Angel login verification using SmartAPI `loginByPassword`.
+- Encrypted credential storage.
+- Encrypted session token storage.
+- Broker connection status APIs.
+- Reconnect/delete connection APIs.
+
+Out of scope:
+
+- WebSocket streaming.
+- Quote API.
+- Order placement.
+- Portfolio sync.
+- Option chain.
+
+BrokerConnection API:
+
+```txt
+POST   /api/broker-connections/angel
+GET    /api/broker-connections
+GET    /api/broker-connections/angel/status
+POST   /api/broker-connections/angel/reconnect
+DELETE /api/broker-connections/angel
+```
+
+Future phases:
+
+- Analyzer-integrated Angel WebSocket processing.
+- Broker-aware monitor activation.
+- Provider-specific analyzer calibration.
+
+Safety:
+
+- Do not log Angel credentials, JWTs, feed tokens, TOTP secrets, PIN, or API keys.
+- Do not implement trading/order APIs without explicit approval.
+
+## Angel Quote API Baseline
+
+YuJiDi can fetch Angel quote snapshots using the logged-in user's Angel BrokerConnection.
+
+Current scope:
+
+- User-specific Angel BrokerConnection is required.
+- Read-only Angel Quote API access is supported.
+- Single-symbol `LTP`, `OHLC`, and `FULL` fetch is supported.
+- Response is normalized into YuJiDi's `NormalizedMarketSnapshot`.
+- Quote data is not persisted by default.
+- Quote endpoint is mounted at `GET /api/market-quotes/:symbolId`.
+
+Business rule:
+
+Angel quote access uses the user's own Angel session. Global `Symbol` records are reference data only.
+
+Out of scope:
+
+- Angel WebSocket streaming is covered separately by Phase 6 LTP debug streaming.
+- Order placement.
+- Monitor/analyzer integration.
+- Portfolio/RMS sync.
+- Option chain runtime.
+
+Safety boundary:
+
+The quote service decrypts the user's Angel API key and JWT token only inside backend service code. API responses must never return API keys, JWTs, refresh tokens, feed tokens, PINs, TOTP values, or encrypted fields.
+
+## Universal Symbol Monitor Baseline
+
+Monitors can be created from universal `Symbol` records via `symbolId`.
+
+Current behavior:
+
+- Binance legacy monitor creation by `symbol` remains supported.
+- New monitor creation by `symbolId` stores symbol snapshot fields.
+- Legacy Binance monitor creation is enriched from `Symbol` when possible.
+- Legacy Binance monitor creation falls back to safe Binance defaults if a symbol record is missing.
+- Angel MCX symbols require active user Angel BrokerConnection.
+- Broker credentials are not decrypted during monitor creation.
+- Monitor stores provider, exchange, instrument token, display name, and broker requirement metadata for future provider-aware WebSocket subscription.
+
+Snapshot fields stored on monitors:
+
+- `symbolId`
+- `provider`
+- `marketType`
+- `exchange`
+- `displayName`
+- `providerSymbol`
+- `instrumentToken`
+- `instrumentType`
+- `requiresBrokerLogin`
+- `supportedBroker`
+
+Out of scope:
+
+- Angel WebSocket.
+- Order placement.
+- Option chain.
+
+## Angel WebSocket LTP Streaming Baseline
+
+YuJiDi supports user-specific Angel WebSocket LTP streaming for Angel MCX monitors.
+
+Current scope:
+
+- User-specific Angel BrokerConnection is required.
+- Angel WebSocket 2.0 connection uses the user's encrypted session after internal decryption.
+- LTP mode only.
+- MCX uses Angel `exchangeType = 5`.
+- Heartbeat sends `ping` every 30 seconds.
+- Binary LTP packet parsing is implemented.
+- LTP ticks are normalized into `NormalizedMarketTick`.
+- Protected debug routes can subscribe, unsubscribe, and inspect session status.
+
+Debug routes:
+
+```txt
+POST /api/market-streams/angel/monitors/:monitorId/subscribe
+POST /api/market-streams/angel/monitors/:monitorId/unsubscribe
+GET  /api/market-streams/angel/status
+```
+
+Subscription key:
+
+```txt
+ANGEL_ONE:<userId>:MCX:<instrumentToken>
+```
+
+Out of scope:
+
+- WebSocket FULL/SnapQuote mode.
+- Option chain.
+- Order placement.
+- Portfolio sync.
+
+## Provider-Aware WebSocket Subscription Routing
+
+YuJiDi now routes normal frontend WebSocket subscriptions through a provider-aware backend path.
+
+Current behavior:
+
+- Frontend keeps using the existing backend WebSocket connection.
+- Frontend sends YuJiDi symbol strings in `UPDATE_SUBSCRIPTIONS`.
+- Backend resolves each symbol through the universal `Symbol` collection.
+- Binance symbols route to the existing shared Binance master stream.
+- Angel MCX symbols route to a user-specific Angel WebSocket session.
+- Angel subscriptions require an active user Angel BrokerConnection.
+- Backend tracks subscriptions by provider-aware subscription keys.
+- Backend sends `SUBSCRIPTION_UPDATE_RESULT` with per-symbol subscribed, unsubscribed, and failed entries.
+- Backend still sends legacy `SUBSCRIPTION_ACK` for compatibility.
+- Binance ticks still use `TICKER_UPDATE`.
+- Angel ticks use normalized `MARKET_TICK`.
+
+Implementation files:
+
+```txt
+src/services/market-subscription-resolver.service.ts
+src/services/market-subscription-router.service.ts
+src/services/websocket.service.ts
+src/services/angel-user-market-data-session.service.ts
+```
+
+Subscription keys:
+
+```txt
+BINANCE:BINANCE:<symbol>
+ANGEL_ONE:<userId>:MCX:<instrumentToken>
+```
+
+Important boundary:
+
+- Debug market-stream routes remain for backend verification.
+- Normal product flow should use the existing frontend WebSocket subscription message.
+- Frontend must not connect directly to Angel.
+- Frontend must not send Angel JWT, feed token, API key, client code, exchange type, or mode.
+
+## Angel Analyzer Integration Baseline
+
+YuJiDi can process Angel `NormalizedMarketTick` events through the analyzer.
+
+Angel analyzer behavior:
+
+- Angel ticks are user-session scoped.
+- Monitor lookup uses user + provider + exchange + instrument token.
+- Price buffer and monitor cache keys use provider-aware subscription keys.
+- Existing drop/spike analyzer rules are reused.
+- Angel alerts include provider, market type, exchange, instrument token, provider symbol, display name, current price, and previous price metadata.
+- Angel alerts emit through the existing `NEW_ALERT` flow.
+- Analyzer failures are logged and do not block live `MARKET_TICK` delivery.
+
+Angel analyzer key:
+
+```txt
+ANGEL_ONE:<userId>:MCX:<instrumentToken>
+```
+
+Out of scope:
+
+- Order placement.
+- Option chain.
+- WebSocket FULL/SnapQuote mode.
+- Portfolio sync.
+- Advisory or trade recommendation logic.
+
+Current Phase 0 files:
+
+```txt
+src/types/market-data.types.ts
+src/models/Instrument.ts
+src/ports/market-data-provider.port.ts
+src/ports/instrument-provider.port.ts
+src/integrations/market-data/angel/
+```
+
 ## 13. Analyzer Engine Architecture
 
 Analyzer file:
@@ -1289,7 +1755,7 @@ Known analyzer limitations:
 
 - In-memory state only.
 - No multi-instance coordination.
-- MongoDB query happens on every relevant aggTrade tick.
+- Active-monitor cache is process-local.
 - Monitor window allows up to 24h, but price buffer keeps around 60m.
 - Cooldown starts before alert pipeline fully succeeds.
 - CVD threshold is not asset-normalized.
@@ -1303,7 +1769,7 @@ threshold breach
   -> fetch news
   -> calculate support/resistance
   -> build movement-aware prompt
-  -> call Groq
+  -> call selected LLM provider
   -> parse JSON
   -> validate with Zod
   -> save alert
@@ -1333,7 +1799,7 @@ user prompt
   -> get live CVD and order book
   -> backend calculates deterministic trade math
   -> load recent chat history
-  -> call Groq
+  -> call selected LLM provider
   -> validate JSON
   -> save messages
   -> return response
@@ -1528,11 +1994,12 @@ Detailed strategy:
 Current status:
 
 - Backend has `typecheck`.
-- No visible automated test suite yet.
+- Backend has analyzer rules and `processTick` tests.
+- Full route/database/WebSocket test coverage is still pending.
 
 Recommended priority:
 
-1. Analyzer unit tests.
+1. Expand analyzer edge-case tests.
 2. Monitor service tests.
 3. Auth service/route tests.
 4. Alert route ownership tests.
@@ -1563,7 +2030,7 @@ Current major risks:
 - Monitor window can exceed analyzer price buffer.
 - Analyzer state is in memory.
 - Multi-instance deployment is not safe.
-- MongoDB query happens on every aggTrade tick.
+- Active-monitor cache is process-local and not multi-instance safe.
 - Cooldown starts before alert pipeline success.
 - Alert detail user lookup may need correction.
 - Refresh token is stored directly.
@@ -1582,6 +2049,8 @@ Implemented:
 - Binance symbol sync.
 - MongoDB startup retry/backoff.
 - Non-fatal Binance symbol sync retry loop.
+- Analyzer active-monitor TTL cache.
+- Analyzer monitor cache refresh on monitor create/update/delete.
 - Monitor CRUD.
 - WebSocket manager.
 - Binance master WebSocket.
@@ -1599,6 +2068,18 @@ Implemented:
 - Frontend add monitor modal.
 - Frontend alert feed and full analysis modal.
 - Backend documentation suite.
+- Angel universal symbol registry foundation.
+- Angel MCX Scrip Master sync.
+- Angel BrokerConnection login verification with encrypted credentials/session tokens.
+- Angel read-only quote snapshots through `GET /api/market-quotes/:symbolId`.
+- Universal Symbol monitor creation through `symbolId` with monitor snapshot metadata.
+- User-specific Angel WebSocket LTP debug streaming for Angel MCX monitors.
+- Provider-aware frontend WebSocket subscription routing for Binance and Angel MCX.
+- Angel normalized tick analyzer alert generation for Angel MCX monitors.
+- Risk-first lifecycle through finalized structured TradeJournal.
+- Schema-validated post-trade AI review with deterministic fallback.
+- User-owned AiExplanation persistence with context hash and prompt/schema versions.
+- AI review audit lifecycle and immutable TradeResult/risk-state boundary.
 
 Partially implemented:
 
@@ -1606,7 +2087,7 @@ Partially implemented:
   - New fields exist.
   - Legacy `dropPercentage` remains.
 - Testing strategy.
-  - Documented but not implemented.
+  - Automated backend coverage exists for the risk-first lifecycle and Phase 9 AI safety boundaries.
 - Risk register.
   - Documented and should be maintained.
 
@@ -1620,10 +2101,11 @@ High priority:
 4. Add monitor update validation.
 5. Add `.env.example`.
 6. Add broader runtime health handling for Groq, CryptoCompare, Binance REST, and DNS failures.
-7. Reduce MongoDB query-per-tick load.
+7. Add shared monitor-cache refresh/invalidation before multi-instance deployment.
 8. Add failed alert tracking or adjust cooldown placement.
 9. Normalize `req.user.id` usage everywhere.
 10. Complete alert movement migration later.
+11. Define Phase 10 verified-knowledge/RAG boundaries without ingesting raw market/provider data.
 
 Medium priority:
 
@@ -1848,6 +2330,54 @@ Also list any manual verification steps, such as:
 - confirm WebSocket payload
 - confirm frontend display
 
+## Phase 9: Scalable Symbol Search Baseline
+
+YuJiDi no longer expects frontend symbol pickers to load the full global `Symbol` collection and filter locally.
+
+Backend search:
+
+- Route: `GET /api/symbols/search`
+- Minimum query length: 2 characters.
+- Default limit: 20.
+- Maximum limit: 50.
+- Supported filters: `provider`, `marketType`, `exchange`, `instrumentType`, `includeExpired`, and `limit`.
+- Expired instruments are excluded by default.
+- Response excludes `raw` provider payloads.
+- Search uses normalized token fields instead of unbounded collection-wide regex scans.
+- A short in-memory LRU cache protects repeated searches.
+- Route-level rate limiting protects the search API from request bursts.
+
+Symbol search fields:
+
+- `searchName`
+- `searchSymbol`
+- `searchDisplayName`
+- `searchProviderSymbol`
+- `searchTokens`
+- `autocompleteTokens`
+- `searchRank`
+
+Search field population:
+
+- Binance sync writes search fields for crypto symbols.
+- Angel symbol mapper writes search fields for MCX symbols.
+- Existing records can be repaired with:
+
+```bash
+cd yujidi-server
+npm run symbols:backfill-search
+```
+
+Frontend behavior:
+
+- Add-monitor flows search symbols through the backend API with debounce and request cancellation.
+- Frontend should not call `/api/monitors/symbols` or `/api/monitors/symbols/universal` on modal/page open for symbol discovery.
+- Monitor creation should prefer `symbolId` from search results.
+
+Important boundary:
+
+Search is reference-data discovery only. It does not grant live market-data permission, broker login, or order capability.
+
 ## 25. Commit And Documentation Rules
 
 Commit rules:
@@ -1887,6 +2417,141 @@ docs/DOMAIN_MODEL.md
 docs/ANALYZER_ENGINE.md
 docs/TESTING_STRATEGY.md
 docs/RISK_REGISTER.md
+docs/YUJIDI_MVP_IMPLEMENTATION_BLUEPRINT.md
 ```
+
+## Trade/Risk MVP Lifecycle Baseline
+
+This section defines the accepted future direction for the risk-first trade lifecycle. It is a blueprint and ADR baseline, not implemented runtime code yet.
+
+Current YuJiDi flow remains operational:
+
+```txt
+User creates Monitor/Tripwire
+  -> backend watches live market data
+  -> Analyzer detects drop/spike threshold breach
+  -> AI explains event
+  -> user receives real-time alert/report
+```
+
+The new MVP trade/risk lifecycle will be added beside the existing monitor system:
+
+```txt
+TradePlan
+  -> ScoreCheck
+  -> TradeSetup
+  -> RiskGovernor
+  -> ActiveTrade
+  -> TradeEvent
+  -> TradeResult
+  -> RiskState update
+  -> Structured Journal
+  -> AI Review
+```
+
+Product positioning:
+
+- YuJiDi is risk-first trade management, not a signal-selling app.
+- AI is an explanation and coaching layer only.
+- Deterministic services decide scoring, permission, risk, monitoring events, and risk-state updates.
+- Order placement, modification, and cancellation are deferred in MVP.
+- Existing `Symbol` records are the canonical symbol identity.
+- Broker credentials and provider session tokens must never enter trade-domain models.
+
+Permission vocabulary:
+
+```txt
+TAKE_TRADE
+TAKE_SMALL_RISK
+WAIT
+REJECT
+STOP_TRADING
+```
+
+Do not use `BUY`, `SELL`, `STRONG_BUY`, or `STRONG_SELL` as final product permission language.
+
+### Accepted ADRs
+
+- ADR-001: Risk-first trade management, not signal generator.
+- ADR-002: Separate scoring models for intraday, swing, and crypto.
+- ADR-003: Direction-aware scoring and monitoring.
+- ADR-004: Providers give raw data; YuJiDi owns scoring logic.
+- ADR-005: Platform scoring data and user-authorized live monitoring are separate.
+- ADR-006: Global and symbol snapshots are precomputed.
+- ADR-007: Hybrid sync + async scoring flow.
+- ADR-008: Provider Capability Layer.
+- ADR-009: TradePlan is dynamic, not fixed to 10 trades.
+- ADR-010: Template-driven scoring, risk, and monitoring.
+- ADR-011: Standalone ScoreCheck allowed; managed trade requires TradePlan.
+- ADR-012: Planned trade and actual trade must be stored separately.
+- ADR-013: Risk Governor has final authority.
+- ADR-014: Active trade monitoring uses rule engine, not AI.
+- ADR-015: MonitoringRuleService is shared and template-driven.
+- ADR-016: Market-specific monitoring templates for India equity, crypto spot, and crypto perpetual.
+- ADR-017: AI is explanation and coaching layer only.
+- ADR-018: Single AI Orchestrator for V1.
+- ADR-019: RAG stores verified knowledge, not raw market ticks.
+- ADR-020: Trade Journal is structured first, AI-summarized second.
+- ADR-021: TradeResult updates RiskState and Journal, not the other way around.
+- ADR-022: Capital, P&L, and risk calculations use net values where available.
+- ADR-023: Broker/exchange sync is adapter-based and never leaks raw payloads into domain.
+- ADR-024: Provider account security.
+- ADR-025: Order placement deferred.
+- ADR-026: Existing Symbol Master is canonical symbol identity.
+- ADR-027: Audit Log.
+- ADR-028: MVP Scope Freeze.
+
+### MVP Included Scope
+
+- TradePlan creation and management.
+- Standalone ScoreCheck.
+- Managed ScoreCheck conversion into TradeSetup.
+- TradeSetup planned trade values.
+- RiskGovernor final permission.
+- ActiveTrade actual/current trade values.
+- Rule-engine-driven ActiveTrade monitoring.
+- TradeEvent capture.
+- TradeResult closeout/projection.
+- UserDailyRiskState and TradePlanRiskState updates.
+- Structured TradeJournal.
+- AI explanations and post-trade review summaries.
+- AuditLog for critical trade/risk/provider/symbol/AI/RAG events.
+- Provider Capability Layer for broker/live-data capability checks.
+
+### MVP Excluded Scope
+
+- Order placement.
+- Order modification.
+- Order cancellation.
+- AI-generated final permission.
+- AI mutation of trade, risk, journal, or audit records.
+- Raw tick/candle/order-book storage in RAG.
+- Provider credentials/tokens in trade-domain models.
+- Replacing the existing monitor/analyzer/WebSocket flow.
+- Rewriting existing Binance or Angel live-data integrations.
+
+### Relationship To Existing Monitor/Alert Flow
+
+Existing monitors remain market-condition alerts:
+
+```txt
+Monitor/Tripwire
+  -> AnalyzerEngine
+  -> Alert
+  -> AI explanation
+```
+
+New trade/risk flow will manage an intended or active trade:
+
+```txt
+TradePlan
+  -> ScoreCheck
+  -> RiskGovernor
+  -> ActiveTrade
+  -> MonitoringRuleEngine
+  -> TradeEvent/TradeResult/RiskState/Journal
+```
+
+The AnalyzerEngine should not become the trade lifecycle engine. Future ActiveTrade monitoring should use a separate `MonitoringRuleEngine` that can reuse market data but remains domain-separate from market alert tripwires.
 
 End of master context.

@@ -10,6 +10,8 @@ import { DetailedReport } from './pages/DetailedReport'
 import { SetupMonitor } from './pages/SetupMonitor'
 import LandingPage from './pages/LandingPage'
 import Engine from './pages/Engine'
+import { TradingWorkflow } from './pages/TradingWorkflow'
+import { Copilot } from './pages/Copilot'
 
 function AnimatedRoutes() {
   const location = useLocation()
@@ -52,6 +54,30 @@ function AnimatedRoutes() {
               <AppShell>
                 <PageTransition>
                   <DetailedReport />
+                </PageTransition>
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/copilot"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <PageTransition>
+                  <Copilot />
+                </PageTransition>
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/trading-workflow"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <PageTransition>
+                  <TradingWorkflow />
                 </PageTransition>
               </AppShell>
             </ProtectedRoute>

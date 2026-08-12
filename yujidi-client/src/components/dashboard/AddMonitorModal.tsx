@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { X, Search, Rocket, Loader2 } from 'lucide-react';
 import { apiClient } from '../../api/client';
+import { type SymbolSearchResult } from '../../api/symbols';
+import { useSymbolSearch } from '../../hooks/useSymbolSearch';
 
 const TRIGGER_TYPES = ['Price Spike', 'Price Drop'] as const;
 
@@ -13,43 +15,25 @@ interface AddMonitorModalProps {
 
 export function AddMonitorModal({ open, onClose, onSuccess }: AddMonitorModalProps) {
     // API States
-    const [symbols, setSymbols] = useState<{ symbol: string }[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Form States
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedSymbol, setSelectedSymbol] = useState('');
+    const [selectedSymbol, setSelectedSymbol] = useState<SymbolSearchResult | null>(null);
     const [selectedTrigger, setSelectedTrigger] = useState<string>('Price Drop');
     const [threshold, setThreshold] = useState('');
     const [timeWindow, setTimeWindow] = useState('');
-
-    // Fetch symbols when the modal opens
-    useEffect(() => {
-        if (!open) return;
-
-        const fetchSymbols = async () => {
-            try {
-                const { data } = await apiClient.get('/monitors/symbols');
-                const symbolArray = Array.isArray(data) ? data : data.data || [];
-                setSymbols(symbolArray);
-            } catch (error) {
-                console.error('Failed to fetch symbols:', error);
-            }
-        };
-
-        fetchSymbols();
-    }, [open]);
+    const {
+        results: symbolResults,
+        isLoading: isSearching,
+        error: searchError,
+    } = useSymbolSearch(open ? searchQuery : '', { limit: 20 });
 
     if (!open) return null;
 
-    // Filter dynamic symbols based on user input
-    const filtered = symbols.filter((s) =>
-        s.symbol.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    const handleAssetSelect = (assetSymbol: string) => {
-        setSelectedSymbol(assetSymbol);
-        setSearchQuery(assetSymbol); // Update input to show selected asset
+    const handleAssetSelect = (asset: SymbolSearchResult) => {
+        setSelectedSymbol(asset);
+        setSearchQuery(asset.displayName || asset.symbol); // Update input to show selected asset
     };
 
     const handleSubmit = async () => {
@@ -67,7 +51,7 @@ export function AddMonitorModal({ open, onClose, onSuccess }: AddMonitorModalPro
                 'Price Spike': 'spike', 'Price Drop': 'drop'
             }
             await apiClient.post('/monitors', {
-                symbol: selectedSymbol,
+                symbolId: selectedSymbol.symbolId,
                 thresholdPercentage: Number(threshold),
                 timeWindowMinutes: Number(timeWindow),
                 trigger: triggervalue[selectedTrigger]
@@ -78,7 +62,7 @@ export function AddMonitorModal({ open, onClose, onSuccess }: AddMonitorModalPro
 
             // Reset form states for the next time it opens
             setSearchQuery('');
-            setSelectedSymbol('');
+            setSelectedSymbol(null);
             setThreshold('5.0');
             setTimeWindow('15');
 
@@ -120,22 +104,39 @@ export function AddMonitorModal({ open, onClose, onSuccess }: AddMonitorModalPro
                                 value={searchQuery}
                                 onChange={(e) => {
                                     setSearchQuery(e.target.value);
-                                    setSelectedSymbol(''); // Clear selection if user starts typing again
+                                    setSelectedSymbol(null); // Clear selection if user starts typing again
                                 }}
                                 className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-white/5 border border-white/[0.08] text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500/50 transition-colors"
                             />
                         </div>
 
                         {/* Dropdown Menu - Only show if typing and no exact match is selected yet */}
-                        {searchQuery && !selectedSymbol && filtered.length > 0 && (
+                        {searchQuery.trim().length >= 2 && !selectedSymbol && (
                             <div className="absolute z-10 w-full mt-1 bg-zinc-800 border border-white/[0.08] rounded-lg max-h-48 overflow-y-auto shadow-xl">
-                                {filtered.map((s) => (
+                                {isSearching && (
+                                    <div className="px-3 py-3 text-xs text-zinc-500 flex items-center gap-2">
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                        Searching symbols...
+                                    </div>
+                                )}
+                                {!isSearching && searchError && (
+                                    <div className="px-3 py-3 text-xs text-red-300">{searchError}</div>
+                                )}
+                                {!isSearching && !searchError && symbolResults.length === 0 && (
+                                    <div className="px-3 py-3 text-xs text-zinc-500">No symbols found.</div>
+                                )}
+                                {!isSearching && !searchError && symbolResults.map((s) => (
                                     <button
-                                        key={s.symbol}
+                                        key={`${s.provider || 'UNKNOWN'}:${s.exchange || 'UNKNOWN'}:${s.instrumentToken || s.symbol}`}
                                         className="w-full text-left px-3 py-2.5 text-sm text-zinc-300 hover:bg-white/10 hover:text-white transition-colors border-b border-white/[0.02] last:border-0"
-                                        onClick={() => handleAssetSelect(s.symbol)}
+                                        onClick={() => handleAssetSelect(s)}
                                     >
-                                        {s.symbol}
+                                        <span className="block font-medium">{s.displayName || s.symbol}</span>
+                                        <span className="block text-[11px] text-zinc-500">
+                                            {[s.provider, s.exchange, s.marketType, s.instrumentType].filter(Boolean).join(' · ')}
+                                            {s.expiry ? ` · ${new Date(s.expiry).toLocaleDateString()}` : ''}
+                                            {s.requiresBrokerLogin ? ' · Broker login required' : ''}
+                                        </span>
                                     </button>
                                 ))}
                             </div>

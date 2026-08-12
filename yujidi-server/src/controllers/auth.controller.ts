@@ -1,12 +1,13 @@
 import type { Request, Response, NextFunction } from "express";
 // Adjust the import path/extension if needed
 import { AppError } from "../errors/AppError.js";
-import { AuthService } from "../services/auth.service.js";
+import { AuthService } from "../services/access/auth.service.js";
 import { UserModel } from "../models/User.js";
-import { TripwireConfigModel } from "../models/TripwireConfig.js";
 import { AlertModel } from "../models/Alert.js";
+import { MonitorService } from "../services/trading/monitor.service.js";
 
 const authService = new AuthService();
+const monitorService = new MonitorService();
 
 const ACCESS_COOKIE_NAME = "accessToken";
 const REFRESH_COOKIE_NAME = "refreshToken";
@@ -54,24 +55,22 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   // 3. Seed 2 Default Algorithmic Monitors
   const defaultMonitors = [
     {
-      user: result.user.id,
       symbol: "BTCUSDT",
-      trigger: "drop", // Liquidity sweep detection
+      trigger: "drop" as const, // Liquidity sweep detection
       thresholdPercentage: 2.5,
       timeWindowMinutes: 5,
-      isActive: true
     },
     {
-      user: result.user.id,
       symbol: "ETHUSDT",
-      trigger: "spike", // Upside breakout detection
+      trigger: "spike" as const, // Upside breakout detection
       thresholdPercentage: 3.5,
       timeWindowMinutes: 5,
-      isActive: true
-    }
+    },
   ];
 
-  await TripwireConfigModel.insertMany(defaultMonitors);
+  await Promise.all(
+    defaultMonitors.map((monitor) => monitorService.createMonitor(result.user.id, monitor)),
+  );
   // 2. Fetch the latest market alerts to use as a template
   const latestAlerts = await AlertModel.find({ symbol: { $in: ["BTCUSDT", "ETHUSDT"] } })
     .sort({ createdAt: -1 })

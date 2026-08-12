@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { X, Rocket, Search } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { apiClient } from "../api/client";
+import { type SymbolSearchResult } from "../api/symbols";
+import { useSymbolSearch } from "../hooks/useSymbolSearch";
 
 interface AddMonitorModalProps {
   open: boolean;
@@ -16,38 +18,27 @@ const triggerTypes = ["Price Drop", "Price Spike"] as const;
 export function AddMonitorModal({ open, onClose, onSuccess }: AddMonitorModalProps) {
   const [selectedTrigger, setSelectedTrigger] = useState<string>("Price Drop");
   const [searchQuery, setSearchQuery] = useState("");
-  const [symbols, setSymbols] = useState<{ symbol: string }[]>([]);
+  const [selectedSymbol, setSelectedSymbol] = useState<SymbolSearchResult | null>(null);
   const [threshold, setThreshold] = useState("5");
   const [timeWindow, setTimeWindow] = useState("15");
   const [isDeploying, setIsDeploying] = useState(false);
-
-  useEffect(() => {
-    if (open) {
-      const fetchSymbols = async () => {
-        try {
-          const { data } = await apiClient.get('/monitors/symbols');
-          const symbolArray = Array.isArray(data) ? data : (data?.data || []);
-          setSymbols(symbolArray);
-        } catch (error) {
-          console.error('Failed to fetch symbols', error);
-        }
-      };
-      fetchSymbols();
-    }
-  }, [open]);
+  const { results, isLoading } = useSymbolSearch(open ? searchQuery : "", { limit: 20 });
 
   if (!open) return null;
 
-  const filteredAssets = symbols.filter((a) => a.symbol.toLowerCase().includes(searchQuery.toLowerCase()));
-
   const handleDeploy = async () => {
-    if (!searchQuery) return;
+    if (!selectedSymbol) return;
     setIsDeploying(true);
     try {
+      const triggervalue: Record<string, "drop" | "spike"> = {
+        "Price Spike": "spike",
+        "Price Drop": "drop",
+      };
       await apiClient.post('/monitors', {
-        symbol: searchQuery.toUpperCase(),
+        symbolId: selectedSymbol.symbolId,
         thresholdPercentage: Number(threshold),
-        timeWindowMinutes: Number(timeWindow)
+        timeWindowMinutes: Number(timeWindow),
+        trigger: triggervalue[selectedTrigger],
       });
       onSuccess(); // Refresh the dashboard
       onClose();   // Close modal
@@ -77,19 +68,29 @@ export function AddMonitorModal({ open, onClose, onSuccess }: AddMonitorModalPro
               <Input
                 placeholder="Search assets..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setSelectedSymbol(null);
+                }}
                 className="pl-9 bg-secondary/50 border-border uppercase"
               />
             </div>
-            {searchQuery && filteredAssets.length > 0 && filteredAssets.length < 50 && (
+            {searchQuery.trim().length >= 2 && !selectedSymbol && (
               <div className="bg-secondary/60 border border-border rounded-lg max-h-32 overflow-y-auto">
-                {filteredAssets.map((asset) => (
+                {isLoading && <div className="px-3 py-2 text-sm text-muted-foreground">Searching...</div>}
+                {!isLoading && results.map((asset) => (
                   <button
-                    key={asset.symbol}
+                    key={asset.symbolId}
                     className="w-full text-left px-3 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
-                    onClick={() => setSearchQuery(asset.symbol)}
+                    onClick={() => {
+                      setSelectedSymbol(asset);
+                      setSearchQuery(asset.displayName || asset.symbol);
+                    }}
                   >
-                    {asset.symbol}
+                    <span className="block">{asset.displayName || asset.symbol}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {[asset.provider, asset.exchange, asset.instrumentType].filter(Boolean).join(" · ")}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -103,9 +104,8 @@ export function AddMonitorModal({ open, onClose, onSuccess }: AddMonitorModalPro
                 <button
                   key={type}
                   onClick={() => setSelectedTrigger(type)}
-                  className={`flex-1 px-3 py-2.5 text-xs font-medium transition-all duration-200 ${
-                    selectedTrigger === type ? "bg-primary text-primary-foreground" : "bg-secondary/30 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
-                  }`}
+                  className={`flex-1 px-3 py-2.5 text-xs font-medium transition-all duration-200 ${selectedTrigger === type ? "bg-primary text-primary-foreground" : "bg-secondary/30 text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+                    }`}
                 >
                   {type}
                 </button>
@@ -124,7 +124,7 @@ export function AddMonitorModal({ open, onClose, onSuccess }: AddMonitorModalPro
             </div>
           </div>
 
-          <Button onClick={handleDeploy} disabled={isDeploying} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-12 text-sm transition-all duration-200 glow-green">
+          <Button onClick={handleDeploy} disabled={isDeploying || !selectedSymbol} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold h-12 text-sm transition-all duration-200 glow-green">
             <Rocket className="w-4 h-4 mr-2" />
             {isDeploying ? 'Deploying...' : 'Deploy AI Tripwire'}
           </Button>

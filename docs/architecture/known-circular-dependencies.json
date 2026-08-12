@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "cycles": [
+    {
+      "id": "LEGACY-CYCLE-001",
+      "paths": [
+        "src/services/trading/active-trade-subscription.service.ts",
+        "src/services/trading/active-trade-live-monitor.service.ts",
+        "src/services/trading/active-trade-subscription.service.ts"
+      ],
+      "reason": "Legacy shared service contracts create a type-only back-edge between subscription and live monitoring.",
+      "owner": "architecture",
+      "introducedBefore": "Phase 1H",
+      "remediation": "Extract live-tick and cached-trade projection contracts into a neutral lower-level type module.",
+      "targetPhase": "Deferred"
+    },
+    {
+      "id": "LEGACY-CYCLE-002",
+      "paths": [
+        "src/services/trading/trade-event.service.ts",
+        "src/services/trading/trade-event-delivery.service.ts",
+        "src/services/trading/trade-event.service.ts"
+      ],
+      "reason": "Trade-event delivery depends on the event record contract owned by the service that constructs delivery.",
+      "owner": "architecture",
+      "introducedBefore": "Phase 1H",
+      "remediation": "Move the trade-event record contract to a neutral monitoring type module and inject the delivery port.",
+      "targetPhase": "Deferred"
+    },
+    {
+      "id": "LEGACY-CYCLE-003",
+      "paths": [
+        "src/services/trading/active-trade-live-monitor.service.ts",
+        "src/services/trading/trade-monitoring.service.ts",
+        "src/services/trading/trade-event.service.ts",
+        "src/services/trading/trade-event-delivery.service.ts",
+        "src/services/trading/websocket.service.ts",
+        "src/services/trading/active-trade-live-monitor.service.ts"
+      ],
+      "reason": "Legacy live-monitoring, event-delivery, and WebSocket services construct and call one another at runtime.",
+      "owner": "architecture",
+      "introducedBefore": "Phase 1H",
+      "remediation": "Introduce narrow injected delivery and live-monitoring ports at the application composition boundary.",
+      "targetPhase": "Deferred"
+    },
+    {
+      "id": "LEGACY-CYCLE-004",
+      "paths": [
+        "src/services/trading/active-trade-subscription.service.ts",
+        "src/services/trading/active-trade-live-monitor.service.ts",
+        "src/services/trading/trade-monitoring.service.ts",
+        "src/services/trading/trade-event.service.ts",
+        "src/services/trading/trade-event-delivery.service.ts",
+        "src/services/trading/websocket.service.ts",
+        "src/services/trading/active-trade-subscription.service.ts"
+      ],
+      "reason": "The legacy subscription path participates in the runtime live-monitoring, delivery, and WebSocket service cluster.",
+      "owner": "architecture",
+      "introducedBefore": "Phase 1H",
+      "remediation": "Compose subscription, monitoring, and delivery services through lower-level ports instead of cross-imported singletons.",
+      "targetPhase": "Deferred"
+    },
+    {
+      "id": "LEGACY-CYCLE-005",
+      "paths": [
+        "src/services/trading/active-trade.service.ts",
+        "src/services/trading/active-trade-subscription.service.ts",
+        "src/services/trading/active-trade.service.ts"
+      ],
+      "reason": "The subscription service consumes an active-trade record type from the service that calls subscription behavior.",
+      "owner": "architecture",
+      "introducedBefore": "Phase 1H",
+      "remediation": "Extract the active-trade record projection into a neutral trade contract module.",
+      "targetPhase": "Deferred"
+    },
+    {
+      "id": "LEGACY-CYCLE-006",
+      "paths": [
+        "src/services/scoring/scoring-rule-evaluator-registry.service.ts",
+        "src/services/scoring/india-equity-scoring-evaluators.ts",
+        "src/services/scoring/scoring-rule-evaluator-registry.service.ts"
+      ],
+      "reason": "The evaluator implementation imports registry-owned evaluator contracts while the registry imports the evaluator collection.",
+      "owner": "architecture",
+      "introducedBefore": "Phase 1H",
+      "remediation": "Move evaluator interfaces into a neutral scoring contract module without changing authoritative scoring semantics.",
+      "targetPhase": "Deferred"
+    }
+  ]
+}

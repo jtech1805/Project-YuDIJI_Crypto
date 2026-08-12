@@ -6,9 +6,11 @@ import mongoose from "mongoose";
 import { z } from "zod";
 
 import { app, logger } from "./app.js";
-import { syncBinanceSymbols } from "./services/binance.service.js";
-// import { WebSocketManager } from "./services/websocket.service.js";
-import { sharedWebsocketManager } from "./services/websocket.service.js";
+import { syncAngelMcxSymbols } from "./integrations/market-data/angel/angel-symbol-sync.service.js";
+import { syncBinanceSymbols } from "./services/market-data/binance.service.js";
+import { sharedActiveTradeSubscriptionService } from "./services/trading/active-trade-subscription.service.js";
+// import { WebSocketManager } from "./services/trading/websocket.service.js";
+import { sharedWebsocketManager } from "./services/trading/websocket.service.js";
 const envSchema = z.object({
   MONGO_URI: z.string().min(1, "MONGO_URI is required"),
   PORT: z.coerce.number().int().positive("PORT must be a positive integer"),
@@ -90,7 +92,69 @@ const runBinanceSymbolSyncLoop = (): void => {
   void syncOnce();
 };
 
+const runAngelSymbolSyncOnceIfEnabled = (): void => {
+  if (process.env.ANGEL_SYMBOL_SYNC_ON_STARTUP !== "true") {
+    logger.info("Angel MCX symbol sync on startup is disabled");
+    return;
+  }
+
+  const syncOnce = async (): Promise<void> => {
+    try {
+      const result = await syncAngelMcxSymbols();
+      if (!result.enabled) {
+        logger.info(
+          {
+            dryRun: result.dryRun,
+            exchanges: result.exchanges,
+            marketTypes: result.marketTypes,
+            supportedNames: result.supportedNames,
+          },
+          "Angel MCX symbol sync skipped because ANGEL_SYMBOL_SYNC_ENABLED is false",
+        );
+        return;
+      }
+
+      logger.info(
+        {
+          fetchedCount: result.fetchedCount,
+          filteredCount: result.filteredCount,
+          mappedCount: result.mappedCount,
+          skippedCount: result.skippedCount,
+          upsertedCount: result.upsertedCount,
+          modifiedCount: result.modifiedCount,
+          batchesWritten: result.batchesWritten,
+        },
+        "Angel MCX symbols synchronized",
+      );
+    } catch (error: unknown) {
+      logger.warn(
+        { error },
+        "Angel MCX symbol synchronization failed; startup will continue",
+      );
+    }
+  };
+
+  void syncOnce();
+};
+
+const warmActiveTradeMonitoring = (): void => {
+  void sharedActiveTradeSubscriptionService
+    .warmActiveTradeSubscriptions()
+    .then((result): void => {
+      logger.info(result, "ActiveTrade monitoring subscriptions warmed");
+    })
+    .catch((error: unknown): void => {
+      logger.warn(
+        { error },
+        "ActiveTrade monitoring warm-up failed; startup will continue",
+      );
+    });
+};
+
 const startServer = async (): Promise<void> => {
+  const { createFeatureFlagService } = await import("./config/feature-flags.js");
+  createFeatureFlagService(process.env);
+
   await connectMongoWithRetry();
 
   server = app.listen(PORT, (): void => {
@@ -101,7 +165,9 @@ const startServer = async (): Promise<void> => {
   // 3. USE THE SHARED INSTANCE HERE
   sharedWebsocketManager.initialize(server);
   logger.info("WebSocket manager initialized");
+  warmActiveTradeMonitoring();
   runBinanceSymbolSyncLoop();
+  runAngelSymbolSyncOnceIfEnabled();
 };
 
 const shutdown = async (signal: string): Promise<void> => {

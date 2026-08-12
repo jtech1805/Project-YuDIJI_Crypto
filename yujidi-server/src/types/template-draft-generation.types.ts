@@ -1,0 +1,108 @@
+import type {
+  TemplateDraftCandidate,
+  TemplateDraftingRequest,
+} from "./template-draft-candidate.types.js";
+import type { TemplateDraftRegistryProjection } from "./template-draft-registry-projection.types.js";
+import type { TemplateDraftReviewReport } from "./template-draft-review-report.types.js";
+import type {
+  TemplateDraftValidationReport,
+  ValidatedTemplateDraftCandidate,
+} from "./template-draft-validation.types.js";
+
+export type TemplateDraftGenerationRequest = Readonly<{
+  requestId: string;
+  generationAttemptId: string;
+  traceId: string;
+  draftingRequest: TemplateDraftingRequest;
+  registryProjection: TemplateDraftRegistryProjection;
+  currentAuthorities: import("./template-draft-registry-projection.types.js").TemplateDraftRegistryProjectionRequest;
+  promptIdentity: Readonly<{ promptId: string; promptVersion: number }>;
+  candidateSchemaVersion: number;
+  requestedAt: Date;
+}>;
+export type TemplateDraftGenerationLineage = Readonly<{
+  requestId: string;
+  generationAttemptId: string;
+  provider: string | null;
+  model: string | null;
+  promptId: string;
+  promptVersion: number;
+  candidateSchemaVersion: number;
+  registryProjectionId: string;
+  registryProjectionVersion: number;
+  registryProjectionDigest: string;
+  requestedAt: Date;
+  completedAt: Date | null;
+}>;
+type ProviderMetadata = Readonly<{
+  providerOutcome?: import("./ai-provider-execution.types.js").AiProviderExecutionOutcome;
+}>;
+type Success = Readonly<{
+  status: "COMPLETED" | "PARTIAL";
+  candidate: TemplateDraftCandidate;
+  validation: TemplateDraftValidationReport;
+  validatedCandidate: ValidatedTemplateDraftCandidate;
+  reviewReport: TemplateDraftReviewReport;
+  generationLineage: TemplateDraftGenerationLineage;
+}> &
+  ProviderMetadata;
+type Failure = Readonly<{
+  status:
+    | "FEATURE_DISABLED"
+    | "VALIDATION_FAILED"
+    | "PROVIDER_FAILED"
+    | "UNSUPPORTED_REQUEST";
+  reasonCode: string;
+  generationLineage: TemplateDraftGenerationLineage;
+  reviewReport?: TemplateDraftReviewReport;
+}> &
+  ProviderMetadata;
+export type TemplateDraftGenerationResult = Success | Failure;
+
+export type TemplateDraftPromptContext = Readonly<{
+  promptId: string;
+  promptVersion: number;
+  candidateSchemaVersion: number;
+  request: Readonly<{
+    requestId: string;
+    userPrompt: string;
+    requestedConcepts: TemplateDraftingRequest["requestedConcepts"];
+    requestedSubject: TemplateDraftingRequest["requestedSubject"] | null;
+  }>;
+  registryProjection: TemplateDraftRegistryProjection;
+  constraints: Readonly<{
+    exactReferencesOnly: true;
+    preserveAllConcepts: true;
+    weightsAccepted: false;
+    ragEnabled: false;
+  }>;
+}>;
+export type TemplateDraftModelRequest = Readonly<{
+  correlationId: string;
+  schemaId: "TEMPLATE_DRAFT_CANDIDATE";
+  schemaVersion: number;
+  messages: readonly Readonly<{ role: "system" | "user"; content: string }>[];
+  context: TemplateDraftPromptContext;
+}>;
+export type TemplateDraftModelResult =
+  | Readonly<{
+      completed: true;
+      output: unknown;
+      provider: string;
+      model: string | null;
+      completedAt: Date;
+      tokenUsage?: Readonly<{
+        promptTokens?: number;
+        completionTokens?: number;
+        totalTokens?: number;
+      }>;
+      providerOutcome?: import("./ai-provider-execution.types.js").AiProviderExecutionOutcome;
+    }>
+  | Readonly<{
+      completed: false;
+      code: "PROVIDER_FAILED" | "EMPTY_RESPONSE";
+      provider: string;
+      model: string | null;
+      completedAt: Date;
+      providerOutcome?: import("./ai-provider-execution.types.js").AiProviderExecutionOutcome;
+    }>;
