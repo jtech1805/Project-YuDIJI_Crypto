@@ -1,6 +1,7 @@
 import { AxiosError } from 'axios'
-import { Activity, BookOpen, ClipboardCheck, RefreshCw, ShieldCheck } from 'lucide-react'
+import { Activity, BookOpen, ClipboardCheck, RefreshCw, ShieldCheck, Sparkles } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
   closeActiveTrade,
   evaluateActiveTrade,
@@ -105,9 +106,25 @@ export function TradingWorkflow() {
   const [showRestartModal, setShowRestartModal] = useState(false)
   const [templateEditor, setTemplateEditor] = useState<ScoringTemplateDetail | null>(null)
   const [showTemplateCreator, setShowTemplateCreator] = useState(false)
+  const [showTemplateCreationMethod, setShowTemplateCreationMethod] = useState(false)
   const [requestedScoreTemplateSelection, setRequestedScoreTemplateSelection] = useState<string | undefined>()
   const { checkAuth } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
   const { connectionStatus, tradeEvents, setInitialTradeEvents } = useWebSocket()
+
+  useEffect(() => {
+    const templateId = (location.state as { acceptedTemplateId?: string } | null)?.acceptedTemplateId
+    if (!templateId) return
+    let active = true
+    void getUserScoringTemplate(templateId).then((template) => {
+      if (!active) return
+      setTemplateEditor(template)
+      void listScoringTemplates().then((templates) => active && setScoringTemplates(templates))
+      navigate(location.pathname, { replace: true, state: null })
+    }).catch((loadError: unknown) => active && setError(getErrorMessage(loadError)))
+    return () => { active = false }
+  }, [location.pathname, location.state, navigate])
 
   const selectedPlan = useMemo(
     () => plans.find((plan) => plan._id === selectedPlanId),
@@ -303,7 +320,7 @@ export function TradingWorkflow() {
           <ScoringTemplateManager
             templates={scoringTemplates}
             busy={busy}
-            onCreate={() => setShowTemplateCreator(true)}
+            onCreate={() => setShowTemplateCreationMethod(true)}
             onDuplicate={async (templateKey, templateName) =>
               run(async () => {
                 if (!templateName?.trim()) return
@@ -336,6 +353,15 @@ export function TradingWorkflow() {
                 document.getElementById('score-check-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
               }, 0)
             }}
+          />
+          <TemplateCreationMethodDialog
+            open={showTemplateCreationMethod}
+            onCancel={() => setShowTemplateCreationMethod(false)}
+            onManual={() => {
+              setShowTemplateCreationMethod(false)
+              setShowTemplateCreator(true)
+            }}
+            onCopilot={() => navigate('/copilot', { state: { from: '/trading-workflow' } })}
           />
           <ScoringTemplateCreateModal
             busy={busy}
@@ -907,6 +933,55 @@ type TemplateCreateInput = {
   allowedTradableSymbols?: string[]
   sectionOverrides?: ScoringTemplateSectionOverride[]
   snapshotPolicy?: ScoringTemplateSnapshotPolicy
+}
+
+function TemplateCreationMethodDialog({
+  open,
+  onCancel,
+  onManual,
+  onCopilot,
+}: {
+  open: boolean
+  onCancel: () => void
+  onManual: () => void
+  onCopilot: () => void
+}) {
+  if (!open) return null
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+      <div className="w-full max-w-xl rounded-lg border border-cyan-500/30 bg-zinc-950 p-4 shadow-2xl">
+        <h3 className="text-sm font-semibold text-white">Create scoring template</h3>
+        <p className="mt-1 text-xs text-zinc-500">How would you like to start?</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={onManual}
+            className="rounded-lg border border-white/10 bg-white/[0.02] p-4 text-left transition hover:border-cyan-500/40 hover:bg-cyan-500/[0.04]"
+          >
+            <ShieldCheck className="h-5 w-5 text-cyan-300" />
+            <span className="mt-3 block text-sm font-semibold text-white">Create Manually</span>
+            <span className="mt-1 block text-xs leading-5 text-zinc-500">
+              Start from an approved template and customize it.
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={onCopilot}
+            className="rounded-lg border border-white/10 bg-white/[0.02] p-4 text-left transition hover:border-purple-500/40 hover:bg-purple-500/[0.04]"
+          >
+            <Sparkles className="h-5 w-5 text-purple-300" />
+            <span className="mt-3 block text-sm font-semibold text-white">Create with Copilot</span>
+            <span className="mt-1 block text-xs leading-5 text-zinc-500">
+              Describe your idea and review a generated draft before saving.
+            </span>
+          </button>
+        </div>
+        <div className="mt-4 flex justify-end">
+          <button className={buttonClass} type="button" onClick={onCancel}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 function ScoringTemplateCreateModal({

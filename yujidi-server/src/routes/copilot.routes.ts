@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createCopilotTemplateDraft } from "../controllers/copilot-template-draft.controller.js";
+import { acceptCopilotDraft, createCopilotTemplateDraft } from "../controllers/copilot-template-draft.controller.js";
 import { asyncHandler } from "../middlewares/errorHandler.js";
 import { requireAuth } from "../middlewares/requireAuth.js";
 
@@ -9,6 +9,11 @@ copilotRouter.post(
   "/template-drafts",
   requireAuth,
   asyncHandler(createCopilotTemplateDraft),
+);
+copilotRouter.post(
+  "/template-drafts/:reviewId/accept",
+  requireAuth,
+  asyncHandler(acceptCopilotDraft),
 );
 
 export { copilotRouter };

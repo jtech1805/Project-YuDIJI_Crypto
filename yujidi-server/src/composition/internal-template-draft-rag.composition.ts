@@ -59,6 +59,15 @@ import { GeminiTemplateDraftIntentAdapter } from "../adapters/ai/gemini-template
 import { TemplateDraftIntentExtractionService } from "../services/template-draft-intent-extraction.service.js";
 import { TemplateDraftPromptApplicationService } from "../services/template-draft-prompt-application.service.js";
 import { CopilotTemplateDraftApplicationService } from "../services/copilot-template-draft-application.service.js";
+import { CopilotDraftReviewRepository } from "../repositories/copilot-draft-review.repository.js";
+import { CopilotDraftReviewService } from "../services/copilot-draft-review.service.js";
+import { CopilotDraftAcceptanceService } from "../services/copilot-draft-acceptance.service.js";
+import { TemplateDraftAcceptanceValidatorService } from "../services/template-draft-acceptance-validator.service.js";
+import { TemplateDraftProjectionService } from "../services/template-draft-projection.service.js";
+import { TemplateDraftingWorkflowService } from "../services/template-drafting-workflow.service.js";
+import { ScoringTemplateCrudService } from "../services/scoring-template-crud.service.js";
+import { TemplateDraftRegistryProjectionService } from "../services/template-draft-registry-projection.service.js";
+import { createDefaultTemplateDraftAuthorities } from "../services/internal-template-draft-rag-request-assembly.service.js";
 
 export const createInternalTemplateDraftRagApplicationService = (
   environment: NodeJS.ProcessEnv = process.env,
@@ -257,10 +266,34 @@ export const createTemplateDraftPromptApplicationService = (
 
 export const createCopilotTemplateDraftApplicationService = (
   environment: NodeJS.ProcessEnv = process.env,
-): CopilotTemplateDraftApplicationService =>
-  new CopilotTemplateDraftApplicationService(
+): CopilotTemplateDraftApplicationService => {
+  const reviewRepository = new CopilotDraftReviewRepository();
+  return new CopilotTemplateDraftApplicationService(
     createFeatureFlagService(environment),
     createTemplateDraftPromptApplicationService(environment),
     undefined,
     new PinoInternalRagLifecycleLogger(),
+    undefined,
+    undefined,
+    new CopilotDraftReviewService(reviewRepository),
   );
+};
+
+export const createCopilotDraftAcceptanceService = (): CopilotDraftAcceptanceService => {
+  const reviews = new CopilotDraftReviewRepository();
+  const templates = new ScoringTemplateCrudService();
+  const workflow = new TemplateDraftingWorkflowService({
+    generation: { generate: async () => { throw new Error("GENERATION_NOT_AVAILABLE_IN_ACCEPTANCE"); } },
+    acceptance: new TemplateDraftAcceptanceValidatorService(),
+    projection: new TemplateDraftProjectionService(),
+    registryProjection: new TemplateDraftRegistryProjectionService(),
+    validator: new TemplateDraftCandidateValidatorService(),
+    templates,
+  });
+  return new CopilotDraftAcceptanceService(
+    reviews,
+    workflow,
+    templates,
+    createDefaultTemplateDraftAuthorities,
+  );
+};

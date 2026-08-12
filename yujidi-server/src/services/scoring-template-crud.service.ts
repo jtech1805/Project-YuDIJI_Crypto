@@ -235,6 +235,21 @@ export class ScoringTemplateCrudService {
     return this.docToResolved((created as unknown as { toObject: () => ScoringTemplate }).toObject());
   }
 
+  public async findOwnedDraftByTemplateKey(
+    userId: string,
+    templateKey: string,
+  ): Promise<ResolvedScoringTemplateDefinition | null> {
+    const userObjectId = this.toObjectId(userId, "user id");
+    const template = await ScoringTemplateModel.findOne({
+      scope: "USER",
+      userId: userObjectId,
+      templateKey: templateKey.trim().toUpperCase(),
+      version: 1,
+      status: "DRAFT",
+    }).lean();
+    return template ? this.docToResolved(template as ScoringTemplate) : null;
+  }
+
   public async updateUserTemplate(
     userId: string,
     templateId: string,

@@ -16,6 +16,7 @@ import { TemplateDraftRagRuntimeBindingService } from "./template-draft-rag-runt
 import { freezeClone } from "./knowledge-document-admission.service.js";
 import { sharedFeatureFlagService } from "../config/feature-flags.js";
 import type { RagRuntimeFeatures } from "../types/template-draft-rag-shadow.types.js";
+import type { TemplateDraftRegistryProjectionRequest } from "../types/template-draft-registry-projection.types.js";
 
 const identifier = z
   .string()
@@ -132,19 +133,7 @@ export class InternalTemplateDraftRagRequestAssemblyService {
         assembled: false,
         code: "NO_ELIGIBLE_DOCUMENTS",
       });
-    const authorities = {
-      projectionId: "DEFAULT_TEMPLATE_DRAFT_REGISTRY",
-      projectionVersion: 1,
-      factors: DEFAULT_VERSIONED_FACTOR_DEFINITIONS,
-      evaluatorDeclarations: DEFAULT_VERSIONED_EVALUATOR_DECLARATIONS,
-      providerAuthorities: DEFAULT_PROVIDER_AUTHORITY_REGISTRATIONS,
-      compilationMappings: [BTC_ETF_FLOW_TEMPLATE_RULE_MAPPING],
-      validationPolicy: DEFAULT_TEMPLATE_DRAFT_VALIDATION_POLICY,
-      capabilities: {
-        weightProposalsEnabled: false as const,
-        ragEnabled: false as const,
-      },
-    };
+    const authorities = createDefaultTemplateDraftAuthorities();
     const projection = this.projections.create(authorities);
     const executionId = `${parsed.data.requestId}_EXECUTION_1`;
     const draftingRequest = {
@@ -235,3 +224,18 @@ export class InternalTemplateDraftRagRequestAssemblyService {
       : assembled;
   }
 }
+
+export const createDefaultTemplateDraftAuthorities = (): TemplateDraftRegistryProjectionRequest =>
+  freezeClone({
+    projectionId: "DEFAULT_TEMPLATE_DRAFT_REGISTRY",
+    projectionVersion: 1,
+    factors: DEFAULT_VERSIONED_FACTOR_DEFINITIONS,
+    evaluatorDeclarations: DEFAULT_VERSIONED_EVALUATOR_DECLARATIONS,
+    providerAuthorities: DEFAULT_PROVIDER_AUTHORITY_REGISTRATIONS,
+    compilationMappings: [BTC_ETF_FLOW_TEMPLATE_RULE_MAPPING],
+    validationPolicy: DEFAULT_TEMPLATE_DRAFT_VALIDATION_POLICY,
+    capabilities: {
+      weightProposalsEnabled: false as const,
+      ragEnabled: false as const,
+    },
+  });

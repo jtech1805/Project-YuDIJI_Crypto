@@ -71,3 +71,80 @@ test("ScoreCheck resolution rejects owned DRAFT and preserves owned ACTIVE eligi
   try { const service = new ScoringTemplateCrudService(undefined, noopValidator as never); await assert.rejects(() => service.resolveForScoreCheck({ userId, scoringTemplateId: String(id) }), /SCORING_TEMPLATE_NOT_ACTIVE/); status = "ACTIVE"; const active = await service.resolveForScoreCheck({ userId, scoringTemplateId: String(id) }); assert.equal(active.templateKey, "USER_TEMPLATE"); }
   finally { (ScoringTemplateModel as any).findOne = original; }
 });
+
+test("createUserDraft persists an exact registry-authorized generic factor binding", async () => {
+  const original = (ScoringTemplateModel as any).create;
+  let payload: any;
+  (ScoringTemplateModel as any).create = async (value: any) => {
+    payload = value;
+    return {
+      toObject: () => ({ ...value, _id: new Types.ObjectId(), usedCount: 0 }),
+    };
+  };
+  try {
+    const service = new ScoringTemplateCrudService();
+    const created = await service.createUserDraft({
+      userId,
+      templateKey: "USER_AI_DRAFT_REVIEW_1",
+      baseTemplateKey: "CRYPTO_SPOT_INTRADAY_V1",
+      templateName: "BTC ETF Flow Draft",
+      marketType: "CRYPTO",
+      tradeStyle: "DAILY",
+      instrumentType: "SPOT",
+      sections: [{
+        sectionKey: "AI_DRAFT_FACTORS",
+        label: "Accepted draft factors",
+        weight: 100,
+        enabled: true,
+        missingDataPolicy: "BLOCK",
+        evaluators: [{
+          evaluatorKey: "GENERIC_FACTOR:CRYPTO.ETF_NET_FLOW",
+          label: "ETF flow",
+          weight: 100,
+          enabled: true,
+          missingDataPolicy: "BLOCK",
+          config: {
+            factorVersion: 1,
+            relationshipType: "DIRECT",
+            subjectBinding: { type: "ASSET", key: "BTC" },
+          },
+        }],
+      }],
+    });
+    assert.equal(payload.status, "DRAFT");
+    assert.equal(created.templateKey, "USER_AI_DRAFT_REVIEW_1");
+  } finally {
+    (ScoringTemplateModel as any).create = original;
+  }
+});
+
+test("createUserDraft rejects a generic factor binding with mismatched authority", async () => {
+  const service = new ScoringTemplateCrudService();
+  await assert.rejects(() => service.createUserDraft({
+    userId,
+    templateKey: "USER_AI_DRAFT_INVALID",
+    baseTemplateKey: "CRYPTO_SPOT_INTRADAY_V1",
+    templateName: "Invalid Draft",
+    marketType: "CRYPTO",
+    tradeStyle: "DAILY",
+    instrumentType: "SPOT",
+    sections: [{
+      sectionKey: "AI_DRAFT_FACTORS",
+      label: "Accepted draft factors",
+      weight: 100,
+      enabled: true,
+      missingDataPolicy: "BLOCK",
+      evaluators: [{
+        evaluatorKey: "GENERIC_FACTOR:CRYPTO.ETF_NET_FLOW",
+        label: "ETF flow",
+        weight: 100,
+        enabled: true,
+        config: {
+          factorVersion: 2,
+          relationshipType: "DIRECT",
+          subjectBinding: { type: "ASSET", key: "BTC" },
+        },
+      }],
+    }],
+  }), /Unknown scoring evaluator/);
+});

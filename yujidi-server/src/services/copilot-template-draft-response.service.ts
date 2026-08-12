@@ -1,8 +1,11 @@
 import type { TemplateDraftPromptApplicationResult } from "../types/template-draft-intent.types.js";
 import type {
+  CopilotBindingPreview,
+  CopilotDraftReviewHandle,
   CopilotConceptPreview,
   CopilotTemplateDraftResult,
 } from "../types/copilot-template-draft.types.js";
+import type { TemplateDraftGenerationResult } from "../types/template-draft-generation.types.js";
 import { freezeClone } from "./knowledge-document-admission.service.js";
 
 type ValidatedCandidate = Readonly<{
@@ -20,6 +23,11 @@ type ValidatedCandidate = Readonly<{
 export class CopilotTemplateDraftResponseService {
   public project(
     result: TemplateDraftPromptApplicationResult,
+    persistable?: Readonly<{
+      generation: TemplateDraftGenerationResult;
+      review: CopilotDraftReviewHandle;
+      bindings: readonly CopilotBindingPreview[];
+    }>,
   ): CopilotTemplateDraftResult {
     if (result.status === "needs_clarification")
       return freezeClone({
@@ -32,7 +40,9 @@ export class CopilotTemplateDraftResponseService {
         code: mapFailure(result.code),
       });
 
-    const candidate = selectCandidate(result);
+    const candidate = persistable && (persistable.generation.status === "COMPLETED" || persistable.generation.status === "PARTIAL")
+      ? persistable.generation.validatedCandidate
+      : selectCandidate(result);
     if (
       !candidate &&
       result.intent.requestedConcepts.every((concept) => !concept.registered)
@@ -44,6 +54,7 @@ export class CopilotTemplateDraftResponseService {
           authority: "NON_AUTHORITATIVE_PREVIEW" as const,
           subject: result.intent.subject,
           supportedConcepts: [],
+          bindings: [],
           unresolvedConcepts: result.intent.requestedConcepts.map(
             ({ conceptId, label }) => ({ conceptId, label }),
           ),
@@ -81,9 +92,27 @@ export class CopilotTemplateDraftResponseService {
       .filter((conceptId) => !supportedIds.has(conceptId))
       .map(concept)
       .filter((value): value is CopilotConceptPreview => value !== null);
+    if (supportedConcepts.length > 0 && !persistable)
+      return Object.freeze({ status: "unavailable", code: "COPILOT_UNAVAILABLE" });
     const interpreted = candidate.interpretedRequest;
+    if (supportedConcepts.length === 0)
+      return freezeClone({
+        status: "unsupported" as const,
+        draft: {
+          preview: true as const,
+          authority: "NON_AUTHORITATIVE_PREVIEW" as const,
+          subject: result.intent.subject,
+          ...(interpreted?.title ? { title: interpreted.title } : {}),
+          ...(interpreted?.description ? { description: interpreted.description } : {}),
+          supportedConcepts,
+          bindings: [],
+          unresolvedConcepts,
+          requiresUserWeights: false,
+        },
+      });
     return freezeClone({
-      status: supportedConcepts.length === 0 ? "unsupported" : "success",
+      status: "success" as const,
+      review: persistable!.review,
       draft: {
         preview: true as const,
         authority: "NON_AUTHORITATIVE_PREVIEW" as const,
@@ -93,6 +122,7 @@ export class CopilotTemplateDraftResponseService {
           ? { description: interpreted.description }
           : {}),
         supportedConcepts,
+        bindings: persistable!.bindings,
         unresolvedConcepts,
         requiresUserWeights: (candidate.supportedBindings ?? []).some(
           (binding) => binding.weightStatus === "REQUIRES_USER_INPUT",
@@ -104,14 +134,16 @@ export class CopilotTemplateDraftResponseService {
 
 const selectCandidate = (
   result: Extract<TemplateDraftPromptApplicationResult, { status: "success" }>,
-): ValidatedCandidate | null =>
-  (result.draft.ragShadow?.ragResult?.validatedCandidate as
+): ValidatedCandidate | null => {
+  const baseline = result.draft.authoritativeBaseline;
+  return (result.draft.ragShadow?.ragResult?.validatedCandidate as
     | ValidatedCandidate
     | undefined) ??
-  (result.draft.authoritativeBaseline?.validatedCandidate as
-    | ValidatedCandidate
-    | undefined) ??
-  null;
+    (baseline?.status === "COMPLETED" || baseline?.status === "PARTIAL"
+      ? baseline.validatedCandidate
+      : undefined) ??
+    null;
+};
 
 const mapFailure = (
   code: Extract<TemplateDraftPromptApplicationResult, { status: "error" }>["code"],

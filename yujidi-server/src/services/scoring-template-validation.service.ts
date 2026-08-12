@@ -1,9 +1,12 @@
 import { AppError } from "../errors/AppError.js";
+import { factorRegistry } from "../registries/factor.registry.js";
+import type { FactorRegistry } from "../types/factor-registry.types.js";
 import {
   MISSING_DATA_POLICIES,
   type EditableScoringSectionDefinition,
   type ScoringPermissionThresholds,
 } from "../types/scoring.types.js";
+import { parseGenericFactorEvaluatorKey } from "./generic-factor-legacy-compatibility.service.js";
 import { ScoringRuleEvaluatorRegistryService } from "./scoring-rule-evaluator-registry.service.js";
 
 const unsafeStringPatterns = [
@@ -49,6 +52,7 @@ const assertNoUnsafeConfig = (value: unknown, path = "config"): void => {
 export class ScoringTemplateValidationService {
   public constructor(
     private readonly evaluatorRegistry = new ScoringRuleEvaluatorRegistryService(),
+    private readonly factors: Pick<FactorRegistry, "get"> = factorRegistry,
   ) {}
 
   public validateTemplate(input: {
@@ -84,7 +88,10 @@ export class ScoringTemplateValidationService {
       );
 
       for (const evaluator of enabledEvaluators) {
-        if (!this.evaluatorRegistry.has(evaluator.evaluatorKey)) {
+        if (
+          !this.evaluatorRegistry.has(evaluator.evaluatorKey)
+          && !this.isValidGenericFactorEvaluator(evaluator)
+        ) {
           throw new AppError(`Unknown scoring evaluator: ${evaluator.evaluatorKey}`, 400);
         }
         if (evaluator.missingDataPolicy && !MISSING_DATA_POLICIES.includes(evaluator.missingDataPolicy)) {
@@ -93,6 +100,27 @@ export class ScoringTemplateValidationService {
         assertNoUnsafeConfig(evaluator.config ?? {});
       }
     }
+  }
+
+  private isValidGenericFactorEvaluator(
+    evaluator: EditableScoringSectionDefinition["evaluators"][number],
+  ): boolean {
+    const factorKey = parseGenericFactorEvaluatorKey(evaluator.evaluatorKey);
+    if (!factorKey) return false;
+    const definition = this.factors.get(factorKey);
+    if (
+      !definition
+      || definition.status !== "ACTIVE"
+      || definition.scoringEligibility !== "ELIGIBLE"
+    ) return false;
+
+    const config = evaluator.config;
+    if (!config || config.factorVersion !== definition.version) return false;
+    if (config.relationshipType !== "DIRECT" && config.relationshipType !== "INVERSE") return false;
+    const subjectBinding = config.subjectBinding;
+    if (!isRecord(subjectBinding)) return false;
+    return typeof subjectBinding.type === "string"
+      && definition.subjectTypes.includes(subjectBinding.type as never);
   }
 
   private validatePermissionThresholds(thresholds: ScoringPermissionThresholds): void {
@@ -114,3 +142,6 @@ export class ScoringTemplateValidationService {
     }
   }
 }
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);

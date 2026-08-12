@@ -9,6 +9,8 @@ import type { TemplateDraftPromptApplicationService } from "./template-draft-pro
 import { CopilotTemplateDraftResponseService } from "./copilot-template-draft-response.service.js";
 import { InternalTemplateDraftRagApplicationError } from "./internal-template-draft-rag-application.service.js";
 import type { TemplateDraftPromptApplicationResult } from "../types/template-draft-intent.types.js";
+import type { TemplateDraftGenerationResult } from "../types/template-draft-generation.types.js";
+import type { CopilotDraftReviewService } from "./copilot-draft-review.service.js";
 
 export class CopilotTemplateDraftApplicationService {
   public constructor(
@@ -22,6 +24,7 @@ export class CopilotTemplateDraftApplicationService {
     private readonly requestId: () => string = () =>
       `COPILOT_${crypto.randomUUID().replaceAll("-", "").toUpperCase()}`,
     private readonly now: () => number = Date.now,
+    private readonly reviews?: Pick<CopilotDraftReviewService, "create">,
   ) {}
 
   public async execute(
@@ -67,7 +70,37 @@ export class CopilotTemplateDraftApplicationService {
       });
       return response;
     }
-    const response = this.responses.project(internal);
+    const generation = selectPersistableGeneration(internal);
+    let persistable:
+      | Readonly<{
+          generation: TemplateDraftGenerationResult;
+          review: Readonly<{ reviewId: string; reviewVersion: 1; expiresAt: Date }>;
+          bindings: readonly Readonly<{
+            bindingReviewId: string;
+            label: string;
+            relationship: "DIRECT" | "INVERSE";
+          }>[];
+        }>
+      | undefined;
+    if (generation && this.reviews) {
+      const created = await this.reviews.create(principal.userId, generation);
+      if (created.created) {
+        persistable = {
+          generation,
+          review: {
+            reviewId: created.review.reviewId,
+            reviewVersion: created.review.reviewVersion,
+            expiresAt: created.review.expiresAt,
+          },
+          bindings: created.review.bindings.map(({ bindingReviewId, label, relationship }) => ({
+            bindingReviewId,
+            label,
+            relationship,
+          })),
+        };
+      }
+    }
+    const response = this.responses.project(internal, persistable);
     const intent =
       internal.status === "success"
         ? internal.intent
@@ -89,4 +122,14 @@ export class CopilotTemplateDraftApplicationService {
     return response;
   }
 }
+
+const selectPersistableGeneration = (
+  result: TemplateDraftPromptApplicationResult,
+): TemplateDraftGenerationResult | null => {
+  if (result.status !== "success") return null;
+  const generation = result.draft.authoritativeBaseline;
+  return generation?.status === "COMPLETED" || generation?.status === "PARTIAL"
+    ? generation
+    : null;
+};
 import crypto from "node:crypto";

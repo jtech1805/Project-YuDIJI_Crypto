@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import test from "node:test";
-import { createCopilotTemplateDraftController } from "../../../src/controllers/copilot-template-draft.controller.js";
+import { createAcceptCopilotDraftController, createCopilotTemplateDraftController } from "../../../src/controllers/copilot-template-draft.controller.js";
 import { AppError } from "../../../src/errors/AppError.js";
 import { CopilotTemplateDraftApplicationService } from "../../../src/services/copilot-template-draft-application.service.js";
 import { InternalTemplateDraftRagApplicationError } from "../../../src/services/internal-template-draft-rag-application.service.js";
+import { generation } from "../../fixtures/template-draft-workflow.fixture.js";
 
 const prompt = "Create a BTC strategy using ETF net flow.";
 const success = (change: Record<string, unknown> = {}) => ({
@@ -44,7 +45,7 @@ const success = (change: Record<string, unknown> = {}) => ({
         circuitStates: { GENERATION_PROVIDER: "CLOSED" },
       },
     },
-    authoritativeBaseline: { baseline: "SECRET_BASELINE" },
+    authoritativeBaseline: generation(),
     comparison: { outcome: "MATCH" },
     runtime: { bindingId: "SECRET_BINDING" },
     telemetry: { projectionDigest: "SECRET_DIGEST" },
@@ -62,6 +63,28 @@ const service = (
     undefined,
     undefined,
     () => "COPILOT_SERVER_1",
+    undefined,
+    {
+      create: async (_ownerId: string, storedGeneration: any) => ({
+        created: true as const,
+        review: {
+          reviewId: "rvw_public_test",
+          reviewVersion: 1 as const,
+          ownerId: "NORMAL_USER",
+          generation: storedGeneration,
+          bindings: [{
+            bindingReviewId: "bnd_public_test",
+            bindingCandidateId: "BINDING_1",
+            label: "ETF net flow",
+            relationship: "DIRECT" as const,
+          }],
+          createdAt: new Date("2026-08-12T00:00:00Z"),
+          expiresAt: new Date("2026-08-12T00:30:00Z"),
+          consumedAt: null,
+          acceptedTemplateId: null,
+        },
+      }),
+    } as any,
   );
 
 test("Copilot defaults unavailable and never invokes prompt flow while disabled", async () => {
@@ -96,6 +119,8 @@ test("authenticated product flow reuses prompt application and returns bounded p
   assert.equal(result.draft.preview, true);
   assert.equal(result.draft.authority, "NON_AUTHORITATIVE_PREVIEW");
   assert.equal(result.draft.requiresUserWeights, true);
+  assert.equal(result.review.reviewId, "rvw_public_test");
+  assert.equal(result.draft.bindings[0]?.bindingReviewId, "bnd_public_test");
   assert.equal(received[0].prompt, prompt);
   assert.equal(received[1].userId, "NORMAL_USER");
   assert.equal(received[2], signal);
@@ -138,6 +163,38 @@ test("clarification is an HTTP-success product result without inventing BTC", as
   );
   assert.equal(result.status, "needs_clarification");
   assert.equal(JSON.stringify(result).includes("BTC"), false);
+});
+
+test("clarification and failed generation create no review record", async () => {
+  let reviewCreates = 0;
+  const withReviewProbe = (execute: (...args: any[]) => Promise<any>) =>
+    new CopilotTemplateDraftApplicationService(
+      { isEnabled: () => true } as any,
+      { execute },
+      undefined,
+      undefined,
+      () => "COPILOT_REVIEW_PROBE",
+      undefined,
+      { create: async () => { reviewCreates += 1; throw new Error("must not create"); } } as any,
+    );
+  const clarification = await withReviewProbe(async () => ({
+    status: "needs_clarification",
+    questions: ["Which asset?"],
+  })).execute({ prompt }, { userId: "USER_1" });
+  assert.equal(clarification.status, "needs_clarification");
+  const failed = await withReviewProbe(async () => success({
+    draft: {
+      ...success().draft,
+      ragShadow: undefined,
+      authoritativeBaseline: {
+        status: "PROVIDER_FAILED",
+        reasonCode: "PROVIDER_FAILED",
+        generationLineage: generation().generationLineage,
+      },
+    },
+  })).execute({ prompt }, { userId: "USER_1" });
+  assert.equal(failed.status, "unavailable");
+  assert.equal(reviewCreates, 0);
 });
 
 test("Tata unsupported concepts remain explicit with no silent substitution", async () => {
@@ -315,6 +372,41 @@ test("controller maps malformed, unavailable, and timeout failures safely", asyn
     await handler(req as any, res as any);
     assert.equal(res.statusCode, statusCode);
     assert.deepEqual(res.payload, { status: "unavailable", code });
+  }
+});
+
+test("acceptance controller admits only bounded reviewed fields", async () => {
+  let received: any;
+  const handler = createAcceptCopilotDraftController(() => ({
+    accept: async (...args: any[]) => {
+      received = args;
+      return {
+        status: "created" as const,
+        template: { id: "TEMPLATE_1", templateKey: "USER_AI_DRAFT_REVIEW_1", version: 1, scope: "USER" as const, status: "DRAFT" as const },
+      };
+    },
+  }));
+  const valid = {
+    reviewVersion: 1,
+    template: { baseTemplateKey: "CRYPTO_SPOT_INTRADAY_V1", templateName: "ETF Draft", marketType: "CRYPTO", tradeStyle: "DAILY", instrumentType: "SPOT" },
+    acceptedBindings: [{ bindingReviewId: "bnd_public_test", weight: 100 }],
+  };
+  const res = response();
+  await handler(Object.assign(new EventEmitter(), { body: valid, params: { reviewId: "rvw_public_test" }, user: { id: "USER_1" } }) as any, res as any);
+  assert.equal(res.statusCode, 201);
+  assert.equal(received[0], "rvw_public_test");
+  assert.deepEqual(received[2], { userId: "USER_1" });
+
+  for (const injected of [
+    { ...valid, status: "ACTIVE" },
+    { ...valid, candidate: {} },
+    { ...valid, template: { ...valid.template, provider: "INJECTED" } },
+    { ...valid, acceptedBindings: [{ ...valid.acceptedBindings[0], factorKey: "MARKET.SECRET" }] },
+  ]) {
+    await assert.rejects(
+      handler(Object.assign(new EventEmitter(), { body: injected, params: { reviewId: "rvw_public_test" }, user: { id: "USER_1" } }) as any, response() as any),
+      (error: unknown) => error instanceof AppError && error.statusCode === 400,
+    );
   }
 });
 

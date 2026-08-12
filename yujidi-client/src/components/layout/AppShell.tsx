@@ -55,7 +55,7 @@
 //   )
 // }
 import React, { useState } from 'react'
-import { Activity, FileText, LayoutDashboard, LogOut, ShieldCheck } from 'lucide-react'
+import { Activity, FileText, LayoutDashboard, LogOut, ShieldCheck, Sparkles } from 'lucide-react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 // Make sure this path matches where you saved the modal component
@@ -64,6 +64,7 @@ import { AddMonitorModal } from '../dashboard/AddMonitorModal'
 // 1. Removed 'Setup Monitor' from the standard routing array
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/copilot', label: 'Copilot', icon: Sparkles },
   { to: '/trading-workflow', label: 'Trading Workflow', icon: ShieldCheck },
   { to: '/report', label: 'Detailed Report', icon: FileText },
 ]
@@ -78,15 +79,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-gray-100 relative">
       <header className="border-b border-gray-800 bg-black/50 backdrop-blur z-40 relative">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
           <Link to="/dashboard" className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-purple-400" />
-            <span className="font-semibold tracking-wide text-purple-300">
+            <span className="hidden font-semibold tracking-wide text-purple-300 sm:inline">
               Project YuJiDi
             </span>
           </Link>
-          <div className="flex items-center gap-6">
-            <nav className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-6">
+            <nav className="flex min-w-0 items-center gap-1 overflow-x-auto sm:gap-2">
               {/* Standard Nav Links */}
               {navItems.map(({ to, label, icon: Icon }) => (
                 <NavLink
@@ -100,7 +101,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   }
                 >
                   <Icon className="h-4 w-4" />
-                  {label}
+                  <span className="sr-only sm:not-sr-only">{label}</span>
                 </NavLink>
               ))}
 
@@ -122,13 +123,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               className="flex items-center gap-2 rounded-md border border-gray-800 px-3 py-1.5 text-sm text-gray-300 transition hover:border-green-500/50 hover:text-green-300"
             >
               <LogOut className="h-4 w-4" />
-              {user?.email ?? 'Logout'}
+              <span className="sr-only lg:not-sr-only">{user?.email ?? 'Logout'}</span>
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl px-6 py-8">{children}</main>
+      <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8">{children}</main>
 
       {/* 4. Mount the Modal outside the main flow */}
       <AddMonitorModal
