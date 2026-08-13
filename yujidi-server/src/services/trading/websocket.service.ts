@@ -1126,5 +1126,6 @@ export class WebSocketManager {
     }
   }
 }
+
 // This creates the single "bucket" that the whole app will share
 export const sharedWebsocketManager = new WebSocketManager();
