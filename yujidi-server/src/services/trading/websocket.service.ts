@@ -102,7 +102,6 @@ interface OutboundTradeEventPayload {
   type: "TRADE_EVENT_CREATED";
   payload: unknown;
 }
-
 type UserScopedOutboundPayload = OutboundAlertPayload | OutboundTradeEventPayload;
 export interface BinanceDepthMessage {
   lastUpdateId: number;
