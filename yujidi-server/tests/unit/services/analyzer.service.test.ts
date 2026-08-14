@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   ALERT_REPORT_PROMPT_VERSION,
   AnalyzerEngine,
+  type AnalyzerMonitorStatus,
 } from "../../../src/services/trading/analyzer.service.js";
 import type { CreateLlmTraceInput } from "../../../src/types/llm-trace.types.js";
 
@@ -30,6 +31,7 @@ type TestHarness = {
   emittedAlerts: Array<{ userId: string; payload: unknown }>;
   createdAlerts: Record<string, unknown>[];
   traces: CreateLlmTraceInput[];
+  monitorStatuses: AnalyzerMonitorStatus[];
   calls: {
     findActiveMonitors: number;
     fetchRecentHeadlines: number;
@@ -79,6 +81,7 @@ const createHarness = (
   const emittedAlerts: Array<{ userId: string; payload: unknown }> = [];
   const createdAlerts: Record<string, unknown>[] = [];
   const traces: CreateLlmTraceInput[] = [];
+  const monitorStatuses: AnalyzerMonitorStatus[] = [];
   let nowIndex = 0;
   let idIndex = 0;
   const calls = {
@@ -177,6 +180,9 @@ const createHarness = (
           }),
         } as never;
       },
+      emitMonitorStatus: (_userId, status) => {
+        monitorStatuses.push(status);
+      },
     },
   );
 
@@ -185,6 +191,7 @@ const createHarness = (
     emittedAlerts,
     createdAlerts,
     traces,
+    monitorStatuses,
     calls,
   };
 };
@@ -243,6 +250,11 @@ test("processTick creates a drop alert when drop threshold is breached", async (
     resistanceLength: 26,
     summaryLength: 12,
   });
+  assert.equal(harness.monitorStatuses[0]?.historyReady, false);
+  assert.equal(harness.monitorStatuses[1]?.historyReady, true);
+  assert.equal(harness.monitorStatuses[1]?.changePercentage, -2.5);
+  assert.equal(harness.monitorStatuses[1]?.triggerMovementPercentage, 2.5);
+  assert.equal(harness.monitorStatuses[1]?.thresholdBreached, true);
 });
 
 test("processTick creates a spike alert when spike threshold is breached", async () => {
@@ -318,7 +330,24 @@ test("processTick does not save alert when LLM report generation fails", async (
     semanticSucceeded: false,
   });
   assert.equal(JSON.stringify(harness.traces).includes("LLM failed"), false);
-  assert.equal(harness.engine.cooldowns.get("monitor-1"), START_AT + 60_000);
+  assert.equal(harness.engine.cooldowns.get("monitor-1"), undefined);
+});
+
+test("failed trigger retries only after the bounded failure delay", async () => {
+  const harness = createHarness([makeMonitor({ trigger: "drop" })], {
+    generateAlertReport: async () => {
+      throw new Error("LLM failed");
+    },
+  });
+
+  await harness.engine.processTick(SYMBOL, 100, START_AT, false, 1);
+  await harness.engine.processTick(SYMBOL, 97.5, START_AT + 60_000, true, 1);
+  await harness.engine.processTick(SYMBOL, 97, START_AT + 61_000, true, 1);
+  assert.equal(harness.calls.generateAlertReport, 1);
+
+  await harness.engine.processTick(SYMBOL, 96.5, START_AT + 91_000, true, 1);
+  assert.equal(harness.calls.generateAlertReport, 2);
+  assert.equal(harness.engine.cooldowns.get("monitor-1"), undefined);
 });
 
 test("analyzer trace timing is deterministic and negative latency is clamped", async () => {

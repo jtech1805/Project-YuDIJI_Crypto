@@ -24,11 +24,28 @@ export interface Alert {
   cvdAtTrigger: number;
   createdAt: string;
 }
+export interface MonitorStatus {
+  monitorId: string;
+  symbol: string;
+  triggerType: 'drop' | 'spike';
+  thresholdPercentage: number;
+  timeWindowMinutes: number;
+  historyReady: boolean;
+  historyCoveredMs: number;
+  requiredHistoryMs: number;
+  changePercentage?: number;
+  movementMagnitude?: number;
+  triggerMovementPercentage?: number;
+  direction?: 'up' | 'down';
+  thresholdBreached: boolean;
+  evaluatedAt: number;
+}
 
 interface WebSocketContextType {
   connectionStatus: 'disconnected' | 'connecting' | 'connected';
   livePrices: Record<string, number>;
   livePriceschange: Record<string, number>;
+  monitorStatuses: Record<string, MonitorStatus>;
   alerts: Alert[];
   tradeEvents: TradeEvent[];
   updateSubscriptions: (subscribe: string[], unsubscribe: string[]) => void;
@@ -65,6 +82,7 @@ const livePriceKeysFromPayload = (data: Record<string, unknown>): string[] => {
 export const WebSocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [livePrices, setLivePrices] = useState<Record<string, number>>({});
   const [livePriceschange, setLivePriceschange] = useState<Record<string, number>>({});
+  const [monitorStatuses, setMonitorStatuses] = useState<Record<string, MonitorStatus>>({});
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [tradeEvents, setTradeEvents] = useState<TradeEvent[]>([]);
   const [connectionStatus, setConnectionStatus] =
@@ -78,6 +96,7 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
       desiredSubscriptionsRef.current.clear();
       setLivePrices({});
       setLivePriceschange({});
+      setMonitorStatuses({});
       setAlerts([]);
       setTradeEvents([]);
       setConnectionStatus('disconnected');
@@ -142,6 +161,12 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
           }
           if (data.type === 'NEW_ALERT' && data.payload) {
             setAlerts((prev) => [data.payload, ...prev]);
+          }
+          if (data.type === 'MONITOR_STATUS' && data.payload?.monitorId) {
+            setMonitorStatuses((previous) => ({
+              ...previous,
+              [data.payload.monitorId]: data.payload as MonitorStatus,
+            }));
           }
           if (data.type === 'TRADE_EVENT_CREATED' && data.payload) {
             setTradeEvents((previous) => {
@@ -217,6 +242,7 @@ export const WebSocketProvider = ({ children }: { children: React.ReactNode }) =
         livePrices,
         connectionStatus,
         livePriceschange,
+        monitorStatuses,
         alerts,
         tradeEvents,
         updateSubscriptions,

@@ -8,6 +8,7 @@ import {
   createMonitorCacheSnapshot,
   evaluateMonitorThreshold,
   MONITOR_CACHE_TTL_MS,
+  normalizeMonitorTrigger,
 } from "./analyzer.rules.js";
 import { llmTraceService, type LlmTraceService } from "../ai-runtime/llm-trace.service.js";
 import { sharedLlmService } from "../ai-runtime/llm.service.js";
@@ -43,9 +44,27 @@ interface AlertEmitterPayload {
   payload: Alert;
 }
 
-type AlertEmitter = (userId: string, payload: AlertEmitterPayload) => void;
+type AlertEmitter = (userId: string, payload: AlertEmitterPayload) => number | void;
 
 const COOLDOWN_MS = 15 * 60 * 1000;
+const TRIGGER_FAILURE_RETRY_DELAY_MS = 30 * 1000;
+const MONITOR_STATUS_EMIT_INTERVAL_MS = 1000;
+export type AnalyzerMonitorStatus = Readonly<{
+  monitorId: string;
+  symbol: string;
+  triggerType: "drop" | "spike";
+  thresholdPercentage: number;
+  timeWindowMinutes: number;
+  historyReady: boolean;
+  historyCoveredMs: number;
+  requiredHistoryMs: number;
+  changePercentage?: number;
+  movementMagnitude?: number;
+  triggerMovementPercentage?: number;
+  direction?: "up" | "down";
+  thresholdBreached: boolean;
+  evaluatedAt: number;
+}>;
 type ActiveMonitorDocument = Awaited<ReturnType<typeof TripwireConfigModel.find>>[number];
 type ActiveMonitorCacheEntry = {
   monitors: ActiveMonitorDocument[];
@@ -69,6 +88,7 @@ type AnalyzerDependencies = {
   findActiveMonitors: (symbol: string) => Promise<ActiveMonitorDocument[]>;
   findActiveMonitorsForNormalizedTick: (tick: NormalizedMarketTick) => Promise<ActiveMonitorDocument[]>;
   createAlert: (payload: Record<string, unknown>) => Promise<AnalyzerAlertDocument>;
+  emitMonitorStatus: (userId: string, status: AnalyzerMonitorStatus) => void;
 };
 
 type ProcessTickContext = {
@@ -115,6 +135,7 @@ const defaultAnalyzerDependencies: AnalyzerDependencies = {
   createAlert: async (payload: Record<string, unknown>): Promise<AnalyzerAlertDocument> => {
     return AlertModel.create(payload) as Promise<AnalyzerAlertDocument>;
   },
+  emitMonitorStatus: () => undefined,
 };
 
 export class AnalyzerEngine {
@@ -130,6 +151,9 @@ export class AnalyzerEngine {
   // 1. ADD THE ORDER BOOK PROPERTY HERE
   public readonly orderBookSnapshot: Map<string, { bids: string[][], asks: string[][] }>;
   private readonly activeMonitorCache: Map<string, ActiveMonitorCacheEntry>;
+  private readonly triggerFailureRetryAfter: Map<string, number>;
+  private readonly triggerPipelinesInFlight: Set<string>;
+  private readonly lastMonitorStatusEmittedAt: Map<string, number>;
 
   public constructor(emitAlert: AlertEmitter, dependencies: Partial<AnalyzerDependencies> = {}) {
     this.emitAlert = emitAlert;
@@ -143,6 +167,9 @@ export class AnalyzerEngine {
     // 2. INITIALIZE IT IN THE CONSTRUCTOR HERE
     this.orderBookSnapshot = new Map<string, { bids: string[][], asks: string[][] }>();
     this.activeMonitorCache = new Map<string, ActiveMonitorCacheEntry>();
+    this.triggerFailureRetryAfter = new Map<string, number>();
+    this.triggerPipelinesInFlight = new Set<string>();
+    this.lastMonitorStatusEmittedAt = new Map<string, number>();
   }
   public updateOrderBook(symbol: string, bids: string[][], asks: string[][]): void {
     // This overwrites the old snapshot with the newest one every 100ms
@@ -412,6 +439,25 @@ export class AnalyzerEngine {
 
     for (const monitor of activeMonitors) {
       const monitorId = monitor._id.toString();
+      const monitorTrigger = normalizeMonitorTrigger(monitor.trigger);
+      if (!monitorTrigger) {
+        logger.warn(
+          {
+            event: "ANALYZER_MONITOR_INVALID_TRIGGER",
+            symbol: normalizedSymbol,
+            monitorId,
+            userId: monitor.user.toString(),
+            trigger: monitor.trigger,
+          },
+          "Skipped monitor with invalid trigger type",
+        );
+        continue;
+      }
+      const requiredHistoryMs = monitor.timeWindowMinutes * 60 * 1000;
+      const oldestTick = ticks[0];
+      const historyCoveredMs = oldestTick
+        ? Math.max(0, currentTimestamp - oldestTick.timestamp)
+        : 0;
       const lastTriggeredAt = this.cooldowns.get(monitorId) ?? 0;
       const cooldownRemainingMs = COOLDOWN_MS - (currentTimestamp - lastTriggeredAt);
       const isInCooldown = cooldownRemainingMs > 0;
@@ -422,6 +468,18 @@ export class AnalyzerEngine {
       const windowStart = currentTimestamp - monitor.timeWindowMinutes * 60 * 1000;
       const baseTick = findAnalyzerBaseTick(ticks, windowStart);
       if (!baseTick) {
+        this.emitMonitorStatus(monitor.user.toString(), {
+          monitorId,
+          symbol: normalizedSymbol,
+          triggerType: monitorTrigger,
+          thresholdPercentage: monitor.thresholdPercentage,
+          timeWindowMinutes: monitor.timeWindowMinutes,
+          historyReady: false,
+          historyCoveredMs,
+          requiredHistoryMs,
+          thresholdBreached: false,
+          evaluatedAt: currentTimestamp,
+        });
         // logger.info(
         //   {
         //     event: "ANALYZER_MONITOR_NO_BASE_TICK",
@@ -446,19 +504,26 @@ export class AnalyzerEngine {
         thresholdBreached,
       } = evaluateMonitorThreshold(percentChange, monitor.thresholdPercentage, monitor.trigger);
 
-      if (!triggerType) {
-        logger.warn(
-          {
-            event: "ANALYZER_MONITOR_INVALID_TRIGGER",
-            symbol: normalizedSymbol,
-            monitorId,
-            userId: monitor.user.toString(),
-            trigger: monitor.trigger,
-          },
-          "Skipped monitor with invalid trigger type",
-        );
-        continue;
-      }
+      if (!triggerType) continue;
+      this.emitMonitorStatus(monitor.user.toString(), {
+        monitorId,
+        symbol: normalizedSymbol,
+        triggerType,
+        thresholdPercentage: monitor.thresholdPercentage,
+        timeWindowMinutes: monitor.timeWindowMinutes,
+        historyReady: true,
+        historyCoveredMs,
+        requiredHistoryMs,
+        changePercentage,
+        movementMagnitude,
+        triggerMovementPercentage: Math.max(
+          0,
+          triggerType === "drop" ? -changePercentage : changePercentage,
+        ),
+        direction,
+        thresholdBreached,
+        evaluatedAt: currentTimestamp,
+      }, thresholdBreached);
       // logger.info(
       //   {
       //     event: "ANALYZER_THRESHOLD_EVALUATED",
@@ -482,10 +547,22 @@ export class AnalyzerEngine {
         continue;
       }
 
-      this.cooldowns.set(monitorId, currentTimestamp);
+      if (this.triggerPipelinesInFlight.has(monitorId)) {
+        continue;
+      }
+      const retryAfter = this.triggerFailureRetryAfter.get(monitorId) ?? 0;
+      if (currentTimestamp < retryAfter) {
+        continue;
+      }
+
+      const pipelineId = `${monitorId}:${currentTimestamp}`;
+      const pipelineStartedAt = Date.now();
+      this.triggerPipelinesInFlight.add(monitorId);
       logger.warn(
         {
           event: "ANALYZER_TRIGGER_BREACH",
+          pipelineId,
+          pipelineStep: "THRESHOLD_BREACHED",
           symbol: normalizedSymbol,
           monitorId,
           userId: monitor.user.toString(),
@@ -496,15 +573,19 @@ export class AnalyzerEngine {
           direction,
           streamKey,
           monitorCacheKey,
-          cooldownUntil: currentTimestamp + COOLDOWN_MS,
+          successCooldownMs: COOLDOWN_MS,
         },
         "Threshold breached; starting trigger pipeline",
       );
 
+      let pipelineStage = "NEWS_FETCH";
       try {
+        const newsStartedAt = Date.now();
         logger.info(
           {
             event: "ANALYZER_NEWS_FETCH_START",
+            pipelineId,
+            pipelineStep: "NEWS_FETCH_STARTED",
             symbol: normalizedSymbol,
             monitorId,
             userId: monitor.user.toString(),
@@ -515,18 +596,25 @@ export class AnalyzerEngine {
         logger.info(
           {
             event: "ANALYZER_NEWS_FETCH_SUCCESS",
+            pipelineId,
+            pipelineStep: "NEWS_FETCHED",
             symbol: normalizedSymbol,
             monitorId,
             userId: monitor.user.toString(),
             newsLength: newsContext.length,
             hasFallback: newsContext === "No recent news available.",
+            stageDurationMs: Date.now() - newsStartedAt,
           },
           "News context fetched",
         );
 
+        pipelineStage = "LLM_GENERATION";
+        const llmStartedAt = Date.now();
         logger.info(
           {
             event: "ANALYZER_LLM_REPORT_START",
+            pipelineId,
+            pipelineStep: "LLM_GENERATION_STARTED",
             symbol: normalizedSymbol,
             monitorId,
             userId: monitor.user.toString(),
@@ -625,9 +713,12 @@ export class AnalyzerEngine {
         logger.info(
           {
             event: "ANALYZER_LLM_REPORT_SUCCESS",
+            pipelineId,
+            pipelineStep: "LLM_RESPONSE_VALIDATED",
             symbol: normalizedSymbol,
             monitorId,
             userId: monitor.user.toString(),
+            stageDurationMs: Date.now() - llmStartedAt,
             // aiRootCauseLength: report.aiRootCause.length,
           },
           "LLM report generated successfully",
@@ -642,6 +733,19 @@ export class AnalyzerEngine {
         //   sentiment: report.sentiment,
         //   createdAt: new Date(currentTimestamp),
         // });
+        pipelineStage = "ALERT_PERSISTENCE";
+        const persistenceStartedAt = Date.now();
+        logger.info(
+          {
+            event: "ANALYZER_ALERT_PERSIST_START",
+            pipelineId,
+            pipelineStep: "ALERT_PERSISTENCE_STARTED",
+            symbol: normalizedSymbol,
+            monitorId,
+            userId: monitor.user.toString(),
+          },
+          "Persisting generated alert",
+        );
         const alertDocument = await this.dependencies.createAlert(buildAnalyzerAlertPayload({
           monitor,
           ...(context.metadata ? { metadata: context.metadata } : {}),
@@ -656,36 +760,55 @@ export class AnalyzerEngine {
           currentCvd: runningCVD,
           currentTimestamp,
         }));
+        this.cooldowns.set(monitorId, currentTimestamp);
+        this.triggerFailureRetryAfter.delete(monitorId);
         logger.warn(
           {
             event: "ANALYZER_ALERT_SAVED",
+            pipelineId,
+            pipelineStep: "ALERT_GENERATED",
             symbol: normalizedSymbol,
             monitorId,
             userId: monitor.user.toString(),
             alertId: alertDocument._id.toString(),
+            stageDurationMs: Date.now() - persistenceStartedAt,
+            totalDurationMs: Date.now() - pipelineStartedAt,
             // sentiment: report.sentiment,
           },
           "Persisted alert document to MongoDB",
         );
 
-        this.emitAlert(monitor.user.toString(), {
+        pipelineStage = "WEBSOCKET_DELIVERY";
+        const deliveredSocketCount = this.emitAlert(monitor.user.toString(), {
           type: "NEW_ALERT",
           payload: alertDocument.toObject() as Alert,
-        });
+        }) ?? 0;
         logger.warn(
           {
             event: "ANALYZER_ALERT_EMITTED",
+            pipelineId,
+            pipelineStep: "ALERT_DELIVERY_ATTEMPTED",
             symbol: normalizedSymbol,
             monitorId,
             userId: monitor.user.toString(),
             alertId: alertDocument._id.toString(),
+            deliveredSocketCount,
           },
-          "Emitted NEW_ALERT to subscribed user sockets",
+          "Completed NEW_ALERT delivery attempt",
         );
       } catch (error: unknown) {
+        this.triggerFailureRetryAfter.set(
+          monitorId,
+          currentTimestamp + TRIGGER_FAILURE_RETRY_DELAY_MS,
+        );
         logger.error(
           {
             event: "ANALYZER_TRIGGER_PIPELINE_FAILED",
+            pipelineId,
+            pipelineStep: "PIPELINE_FAILED",
+            failedStage: pipelineStage,
+            retryAfter: currentTimestamp + TRIGGER_FAILURE_RETRY_DELAY_MS,
+            totalDurationMs: Date.now() - pipelineStartedAt,
             error,
             symbol: normalizedSymbol,
             monitorId,
@@ -693,6 +816,8 @@ export class AnalyzerEngine {
           },
           "Analyzer failed to process trigger event",
         );
+      } finally {
+        this.triggerPipelinesInFlight.delete(monitorId);
       }
     }
   }
@@ -744,5 +869,18 @@ export class AnalyzerEngine {
       cooldowns: this.cooldowns,
       orderBookSnapshot: this.orderBookSnapshot,
     });
+  }
+
+  private emitMonitorStatus(
+    userId: string,
+    status: AnalyzerMonitorStatus,
+    force = false,
+  ): void {
+    const lastEmittedAt = this.lastMonitorStatusEmittedAt.get(status.monitorId) ?? 0;
+    if (!force && status.evaluatedAt - lastEmittedAt < MONITOR_STATUS_EMIT_INTERVAL_MS) {
+      return;
+    }
+    this.lastMonitorStatusEmittedAt.set(status.monitorId, status.evaluatedAt);
+    this.dependencies.emitMonitorStatus(userId, Object.freeze({ ...status }));
   }
 }
