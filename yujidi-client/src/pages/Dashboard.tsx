@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { useWebSocket } from '../context/WebSocketContext';
+import type { MonitorStatus } from '../context/WebSocketContext';
 import { AddMonitorModal } from '../components/dashboard/AddMonitorModal';
 import { FullAnalysisModal } from '../components/dashboard/FullAnalysisModal';
 import { formatGlobalTime } from '../lib/utils';
@@ -121,11 +122,13 @@ function MonitorItem({
   monitor,
   price,
   change,
+  monitorStatus,
   onDelete,
 }: {
   monitor: Monitor;
   price: number | undefined;
   change: number;
+  monitorStatus: MonitorStatus | undefined;
   onDelete: (id: string, symbol: string) => void;
 }) {
   // Simulate a subtle change % for display (real data would come from WS)
@@ -137,12 +140,15 @@ function MonitorItem({
   // const positive = change ? change >= 0 : 0;
   const meta = triggerMeta[trigger];
   const TriggerIcon = meta?.icon;
-  // Determine if the move toward the trigger direction has breached threshold
-  const movement = trigger === "drop" ? -change : change; // Drop watches negative moves
-  const breached =
-    trigger === "Pattern" ? Math.abs(change) >= threshold : movement >= threshold;
-  const progress = Math.min(100, (Math.abs(movement) / threshold) * 100);
+  const historyReady = monitorStatus?.historyReady === true;
+  const movement = monitorStatus?.triggerMovementPercentage ?? 0;
+  const breached = monitorStatus?.thresholdBreached === true;
+  const progress = historyReady ? Math.min(100, (movement / threshold) * 100) : 0;
   const distance = +(threshold - movement).toFixed(2);
+  const collectedMinutes = Math.min(
+    monitor.timeWindowMinutes,
+    Math.floor((monitorStatus?.historyCoveredMs ?? 0) / 60_000),
+  );
   return (
     <div className="flex flex-col gap-2 px-3 py-3 hover:bg-secondary/40 rounded-lg transition-colors cursor-pointer group border border-transparent hover:border-border">
       {/* Top row: identity + price */}
@@ -190,7 +196,7 @@ function MonitorItem({
             <MiniSparkline symbol={symbol ?? 'DEFAULT'} positive={positive} />
             <span className={`text-xs font-mono flex items-center gap-0.5 ${positive ? "text-bullish" : "text-bearish"}`}>
               {positive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {positive ? "+" : ""}{change}%
+              {positive ? "+" : ""}{change}% <span className="text-zinc-600">24h</span>
             </span>
           </div>
         </div>
@@ -208,7 +214,12 @@ function MonitorItem({
           </span>
         </div>
         <div className="flex items-center gap-1">
-          {breached ? (
+          {!historyReady ? (
+            <span className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground">
+              <Activity className="w-3 h-3" />
+              Collecting {collectedMinutes}/{monitor.timeWindowMinutes}m
+            </span>
+          ) : breached ? (
             <span className="flex items-center gap-1 text-[10px] font-mono text-bullish">
               <AlertTriangle className="w-3 h-3" />
               TRIGGERED
@@ -247,12 +258,14 @@ function DashboardSidebar({
   monitors,
   livePrices,
   livePriceschange,
+  monitorStatuses,
   onAddMonitor,
   onDelete,
 }: {
   monitors: Monitor[];
   livePrices: Record<string, number>;
   livePriceschange: Record<string, number>;
+  monitorStatuses: Record<string, MonitorStatus>;
   onAddMonitor: () => void;
   onDelete: (id: string, symbol: string) => void;
 }) {
@@ -295,6 +308,7 @@ function DashboardSidebar({
                 monitor={m}
                 price={getMonitorLiveValue(livePrices, m)}
                 change={getMonitorLiveValue(livePriceschange, m) ?? 0}
+                monitorStatus={monitorStatuses[m._id]}
                 onDelete={onDelete}
               />
             ))}
@@ -584,7 +598,14 @@ function AlertFeed({ alerts }: { alerts: Alert[] }) {
 export function Dashboard() {
   const [monitors, setMonitors] = useState<Monitor[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const { livePrices, alerts, setInitialAlerts, updateSubscriptions, livePriceschange } = useWebSocket();
+  const {
+    livePrices,
+    alerts,
+    setInitialAlerts,
+    updateSubscriptions,
+    livePriceschange,
+    monitorStatuses,
+  } = useWebSocket();
   // const navigate = useNavigate();
   const fetchData = async () => {
     try {
@@ -635,6 +656,7 @@ export function Dashboard() {
         monitors={monitors}
         livePrices={livePrices}
         livePriceschange={livePriceschange}
+        monitorStatuses={monitorStatuses}
         onAddMonitor={() => setShowModal(true)}
         onDelete={deleteMonitor}
       />

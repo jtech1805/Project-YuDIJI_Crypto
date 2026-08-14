@@ -6,7 +6,7 @@ import { z } from "zod";
 import WebSocket, { WebSocketServer } from "ws";
 
 import { AppError } from "../../errors/AppError.js";
-import { AnalyzerEngine } from "./analyzer.service.js";
+import { AnalyzerEngine, type AnalyzerMonitorStatus } from "./analyzer.service.js";
 import { ActiveTradeLiveMonitorService } from "./active-trade-live-monitor.service.js";
 import { sharedTradeMonitoringHealthService } from "./trade-monitoring-health.service.js";
 import {
@@ -98,11 +98,18 @@ interface OutboundAlertPayload {
   type: "NEW_ALERT";
   payload: unknown;
 }
+interface OutboundMonitorStatusPayload {
+  type: "MONITOR_STATUS";
+  payload: AnalyzerMonitorStatus;
+}
 interface OutboundTradeEventPayload {
   type: "TRADE_EVENT_CREATED";
   payload: unknown;
 }
-type UserScopedOutboundPayload = OutboundAlertPayload | OutboundTradeEventPayload;
+type UserScopedOutboundPayload =
+  | OutboundAlertPayload
+  | OutboundMonitorStatusPayload
+  | OutboundTradeEventPayload;
 export interface BinanceDepthMessage {
   lastUpdateId: number;
   bids: string[][];
@@ -168,9 +175,16 @@ export class WebSocketManager {
       subscribe: (userId, subscription) => this.subscribeActiveTradeStream(userId, subscription),
       unsubscribe: (userId, subscription) => this.unsubscribeActiveTradeStream(userId, subscription),
     });
-    this.analyzerEngine = new AnalyzerEngine((userId, payload): void => {
-      this.emitToUser(userId, payload);
-    });
+    this.analyzerEngine = new AnalyzerEngine(
+      (userId, payload): number => {
+        return this.emitToUser(userId, payload);
+      },
+      {
+        emitMonitorStatus: (userId, status): void => {
+          this.emitToUser(userId, { type: "MONITOR_STATUS", payload: status });
+        },
+      },
+    );
     this.activeTradeLiveMonitorService = new ActiveTradeLiveMonitorService();
   }
 
@@ -247,26 +261,31 @@ export class WebSocketManager {
   public emitToUser(userId: string, payload: UserScopedOutboundPayload): number {
     const sockets = this.userSockets.get(userId);
     if (!sockets || sockets.size === 0) {
-      logger.warn(
-        {
-          event: "WS_ALERT_EMIT_SKIPPED",
-          userId,
-          reason: "NO_ACTIVE_SOCKETS",
-        },
-        "Alert emission skipped because user has no active sockets",
-      );
+      if (payload.type !== "MONITOR_STATUS") {
+        logger.warn(
+          {
+            event: "WS_ALERT_EMIT_SKIPPED",
+            userId,
+            payloadType: payload.type,
+            reason: "NO_ACTIVE_SOCKETS",
+          },
+          "User-scoped delivery skipped because user has no active sockets",
+        );
+      }
       return 0;
     }
 
-    logger.warn(
-      {
-        event: "WS_ALERT_EMIT_START",
-        userId,
-        socketCount: sockets.size,
-        payloadType: payload.type,
-      },
-      "Emitting alert payload to user sockets",
-    );
+    if (payload.type !== "MONITOR_STATUS") {
+      logger.warn(
+        {
+          event: "WS_ALERT_EMIT_START",
+          userId,
+          socketCount: sockets.size,
+          payloadType: payload.type,
+        },
+        "Emitting user-scoped payload to sockets",
+      );
+    }
     let deliveredSocketCount = 0;
     for (const socket of sockets) {
       if (this.sendToClient(socket, payload)) {
@@ -1044,6 +1063,7 @@ export class WebSocketManager {
       | OutboundAckPayload
       | OutboundErrorPayload
       | OutboundAlertPayload
+      | OutboundMonitorStatusPayload
       | OutboundTradeEventPayload
       | OutboundSubscriptionUpdateResultPayload
       | OutboundMarketTickPayload,
